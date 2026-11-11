@@ -22,26 +22,26 @@ public sealed partial class RouterGateway
 
         var issues=new List<string>();
         var state=await client.CommandAsync("/user-manager/print",
-            new Dictionary<string,string>{{".proplist"]="enabled,use-profiles"},ct);
+            new Dictionary<string,string> { [".proplist"]="enabled,use-profiles" },ct);
         if(state.Count!=1 || !IsYes(Get(state[0],"enabled").ToLowerInvariant()))
             issues.Add("خدمة User Manager غير مفعلة أو لم يمكن إثبات تفعيلها.");
         if(state.Count!=1 || !IsYes(Get(state[0],"use-profiles").ToLowerInvariant()))
             issues.Add("خيار use-profiles غير مفعل أو غير معروف.");
 
         var nas=await client.CommandAsync("/user-manager/router/print",
-            new Dictionary<string,string>{{".proplist"]="name,address,disabled"},ct);
+            new Dictionary<string,string> { [".proplist"]="name,address,disabled" },ct);
         if(!nas.Any(x=>!IsYes(Get(x,"disabled").ToLowerInvariant()) &&
             !string.IsNullOrWhiteSpace(Get(x,"address"))))
             issues.Add("لا يوجد NAS مسجل ومفعل بعنوان صالح في User Manager v7.");
 
         var servers=await client.CommandAsync("/ip/hotspot/print",
-            new Dictionary<string,string>{{".proplist"]="name,profile,disabled"},ct);
+            new Dictionary<string,string> { [".proplist"]="name,profile,disabled" },ct);
         var active=servers.Where(x=>!IsYes(Get(x,"disabled").ToLowerInvariant())).ToArray();
         if(active.Length==0)
             issues.Add("لا يوجد سيرفر Hotspot محلي مفعل؛ إن كان NAS خارجيا فافحصه منفصلا.");
 
         var profiles=await client.CommandAsync("/ip/hotspot/profile/print",
-            new Dictionary<string,string>{{".proplist"]="name,use-radius"},ct);
+            new Dictionary<string,string> { [".proplist"]="name,use-radius" },ct);
         foreach(var server in active)
         {
             var name=Get(server,"profile");
@@ -51,7 +51,7 @@ public sealed partial class RouterGateway
         }
 
         var radius=await client.CommandAsync("/radius/print",
-            new Dictionary<string,string>{{".proplist"]="service,address,disabled"},ct);
+            new Dictionary<string,string> { [".proplist"]="service,address,disabled" },ct);
         if(!radius.Any(x=>!IsYes(Get(x,"disabled").ToLowerInvariant()) &&
             !string.IsNullOrWhiteSpace(Get(x,"address")) &&
             Get(x,"service").Split(',',StringSplitOptions.TrimEntries |
