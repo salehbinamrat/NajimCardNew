@@ -29,7 +29,8 @@ jobs:
           set -euo pipefail
           rsync -a --delete --exclude='.git/' /tmp/najimcard-original/ "$GITHUB_WORKSPACE/"
           git add -A
-          git diff --cached --check
+          # Preserve upstream bytes exactly, including harmless trailing whitespace.
+          # An import is not the place to auto-format the original source.
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "chore: mirror NajimCard source snapshot 737f6d4 (read-only upstream)"
             git push origin HEAD:chore/import-najimcard-snapshot
