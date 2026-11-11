@@ -1,6 +1,5 @@
 """NajimCardNew must install and store data independently of the original NajmCard."""
 from pathlib import Path
-import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,7 +14,7 @@ class IndependentProductContract(unittest.TestCase):
         iss = read("installer/NajmCard.iss")
         self.assertIn("AppId={{CF6AAB62-DA00-49AF-B3D2-1DD83FF90143}", iss)
         self.assertIn("AppName=Najm Card New", iss)
-        self.assertIn(r"DefaultDirName={localappdata}\\Programs\\NajmCardNew", iss)
+        self.assertIn(r"DefaultDirName={localappdata}\Programs\NajmCardNew", iss)
         self.assertIn("DefaultGroupName=Najm Card New", iss)
         self.assertNotIn("8498D687-CB0C-4984-A140-8432B88394D0", iss)
 
@@ -43,8 +42,8 @@ class IndependentProductContract(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIn('"NajmCardNew"', read(path))
         self.assertIn('"najmcardnew.db"', read(paths[0]))
-        self.assertIn(r"Software\\NajmCardNew\\Licensing", read(paths[2]))
-        self.assertNotIn(r"Software\\NajmCard\\Licensing", read(paths[2]))
+        self.assertIn(r"Software\NajmCardNew\Licensing", read(paths[2]))
+        self.assertNotIn(r"Software\NajmCard\Licensing", read(paths[2]))
 
     def test_original_routeros_code_remains_shared_in_functionality(self):
         # The copy deliberately keeps the existing router-service types and printing flow.
