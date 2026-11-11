@@ -12,6 +12,7 @@ public sealed class UserManagerV7RadiusReadinessTests
         public bool RadiusHotspot=true;
         public bool NasRegistered=true;
         public bool HotspotUsesRadius=true;
+        public bool RadiusAccountingEnabled=true;
         public bool OmitNasDisabled;
         public bool OmitHotspotDisabled;
         public bool OmitRadiusDisabled;
@@ -33,7 +34,8 @@ public sealed class UserManagerV7RadiusReadinessTests
                 "/ip/hotspot/print" =>
                     [new Dictionary<string,string>{{"name","hotspot1"},{"profile","hsprof"},{"disabled",OmitHotspotDisabled?"":"no"}}],
                 "/ip/hotspot/profile/print" =>
-                    [new Dictionary<string,string>{{"name","hsprof"},{"use-radius",HotspotUsesRadius?"yes":"no"}}],
+                    [new Dictionary<string,string>{{"name","hsprof"},{"use-radius",HotspotUsesRadius?"yes":"no"},
+                        {"radius-accounting",RadiusAccountingEnabled?"yes":"no"}}],
                 "/radius/print" =>
                     [new Dictionary<string,string>{{"service",RadiusHotspot?"hotspot":"login"},
                         {"address","127.0.0.1"},{"disabled",OmitRadiusDisabled?"":RadiusEnabled?"no":"yes"}}],
@@ -85,6 +87,16 @@ public sealed class UserManagerV7RadiusReadinessTests
         Assert.False(report.ConfigurationReady);
         Assert.False(report.LiveLoginVerified);
         Assert.NotEmpty(report.Issues);
+    }
+
+    [Fact]
+    public async Task DisabledRadiusAccounting_CannotBeReportedQuotaReady()
+    {
+        var spy=new Spy { RadiusAccountingEnabled=false };
+        var report=await new RouterGateway(spy).DiagnoseUserManagerV7RadiusAsync();
+        Assert.False(report.ConfigurationReady);
+        Assert.False(report.LiveLoginVerified);
+        Assert.Contains(report.Issues,x=>x.Contains("accounting",StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
