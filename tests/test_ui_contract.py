@@ -18,11 +18,11 @@ class UiDesignContract(unittest.TestCase):
         source = (DESKTOP / "MainWindow.xaml.cs").read_text(encoding="utf-8")
         key_view = {
             "dashboard":"DashboardView", "generator":"VoucherWorkspaceView",
-            "cards":"CardsView", "profiles":"ProfilesView", "sessions":"SessionsView",
+            "cards":"CardsView", "profiles":"ProfilesView", "usermanager":"UserManagerView", "sessions":"SessionsView",
             "servers":"ServersView", "reports":"ReportsView",
             "activity":"ActivityView", "tools":"NetworkMaintenanceView", "settings":"SettingsView"
         }
-        self.assertEqual(len(key_view), 10)
+        self.assertEqual(len(key_view), 11)
         for key, view in key_view.items():
             with self.subTest(key=key):
                 self.assertEqual(len(re.findall(r'Entry\("' + key + r'",', source)), 1)
@@ -102,7 +102,7 @@ class UiDesignContract(unittest.TestCase):
         view = (DESKTOP / "MainWindow.xaml.cs").read_text(encoding="utf-8")
         used = set(re.findall(r'Entry\("[a-z]+",\s*"(Icon\w+)"', view))
         self.assertTrue(used.issubset(set(keys)))
-        self.assertEqual(len(used), 10)
+        self.assertEqual(len(used), 11)
 
     def test_dashboard_charts_derive_from_real_router_data(self):
         view=(DESKTOP / "Views" / "DashboardView.xaml.cs").read_text(encoding="utf-8")
