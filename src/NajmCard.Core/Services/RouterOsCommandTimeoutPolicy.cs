@@ -11,8 +11,9 @@ public static class RouterOsCommandTimeoutPolicy
 {
     public static RouterOsCommandTimeoutProfile For(string command)
     {
-        bool largeInventory = string.Equals(command,
-            "/tool/user-manager/user/print", StringComparison.Ordinal);
+        bool largeInventory = command is
+            "/tool/user-manager/user/print" or "/user-manager/user/print"
+            or "/tool/user-manager/session/print" or "/user-manager/session/print";
         return largeInventory
             ? new RouterOsCommandTimeoutProfile(
                 TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(2),
