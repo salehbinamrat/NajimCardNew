@@ -22,7 +22,7 @@ public sealed record SavedRouterConnection(string Host, int Port, string Usernam
 public sealed class SavedRouterConnectionStore
 {
     private readonly string _filename;
-    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("NajmCard.ConnectionProfiles.v1");
+    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("NajmCardNew.ConnectionProfiles.v1");
     private const int MaximumProfiles = 50;
     private const long MaximumFileBytes = 1024 * 1024;
 
@@ -30,7 +30,7 @@ public sealed class SavedRouterConnectionStore
     {
         string root = directory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NajmCard", "Connections");
+            "NajmCardNew", "Connections");
         _filename = Path.Combine(root, "profiles.json");
     }
 

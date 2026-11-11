@@ -20,7 +20,7 @@ public sealed partial class VoucherStore : IDisposable
     {
         DirectoryPath = rootDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NajmCard", "Data");
+            "NajmCardNew", "Data");
         Directory.CreateDirectory(DirectoryPath);
         _filename = Path.Combine(DirectoryPath, "najmcard.db");
         using var db = Open();
@@ -434,7 +434,7 @@ public sealed partial class VoucherStore : IDisposable
         Directory.CreateDirectory(directory);
         // Never overwrite an earlier backup when the button is clicked twice
         // in the same second. Keep the filename sortable and unique.
-        string backup = Path.Combine(directory, "NajmCard-" +
+        string backup = Path.Combine(directory, "NajmCardNew-" +
             DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) +
             "-" + Guid.NewGuid().ToString("N")[..8] + ".db");
         using var original = Open();

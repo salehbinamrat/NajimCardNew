@@ -115,9 +115,9 @@ public sealed class LocalTrialService(
 public sealed class ProtectedLocalTrialStore
     : ITrialStateStore
 {
-    private const string RegistryPath=@"Software\NajmCard\Licensing";
+    private const string RegistryPath=@"Software\NajmCardNew\Licensing";
     private const string ValueName="OfflineTrialV1";
-    private static readonly byte[] Entropy=Encoding.UTF8.GetBytes("NajmCard-Offline-Trial-V1");
+    private static readonly byte[] Entropy=Encoding.UTF8.GetBytes("NajmCardNew-Offline-Trial-V1");
     private readonly string _file;
     private readonly bool _mirrorRegistry;
 
@@ -126,7 +126,7 @@ public sealed class ProtectedLocalTrialStore
         _mirrorRegistry=mirrorRegistry;
         var folder=directory??Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NajmCard","Licensing");
+            "NajmCardNew","Licensing");
         _file=Path.Combine(folder,"trial-v1.dat");
     }
 
