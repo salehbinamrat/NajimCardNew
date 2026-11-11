@@ -41,7 +41,7 @@ class IndependentProductContract(unittest.TestCase):
         for path in paths:
             with self.subTest(path=path):
                 self.assertIn('"NajmCardNew"', read(path))
-        self.assertIn('"najmcardnew.db"', read(paths[0]))
+        self.assertIn('"najmcard.db"', read(paths[0]))
         self.assertIn(r"Software\NajmCardNew\Licensing", read(paths[2]))
         self.assertNotIn(r"Software\NajmCard\Licensing", read(paths[2]))
 
