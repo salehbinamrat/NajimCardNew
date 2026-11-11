@@ -39,7 +39,9 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
         command.EndsWith("/print",StringComparison.Ordinal);
 
     private Lane For(string command)=>
-        command=="/tool/user-manager/user/print"?_inventory:_fast;
+        command is "/tool/user-manager/user/print" or "/user-manager/user/print"
+            or "/tool/user-manager/session/print" or "/user-manager/session/print"
+                ?_inventory:_fast;
 
     private static bool Disconnected(IRouterCommandClient current,Exception error)=>
         current is RouterOsClient { IsUsable:false } ||
