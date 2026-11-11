@@ -1,0 +1,19 @@
+.vs/
+**/bin/
+**/obj/
+TestResults/
+dist/
+*.user
+*.suo
+*.pfx
+.env
+*.db
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.log
+appsettings.Local.json
+.vscode/
+
+# Generated distributables (not source files)
+out/
