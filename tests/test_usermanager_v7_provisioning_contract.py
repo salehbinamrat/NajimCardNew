@@ -27,10 +27,10 @@ class V7ProvisioningContracts(unittest.TestCase):
             "QueryByIdAsync",
             "AssignUserManagerV7ProfileAsync",
             '"password"]=password',
-            "AccountCreated",
+            "UserManagerV7ProvisionResult",
         ):
             self.assertIn(value,code)
-        self.assertNotIn("password=username",code)
+        self.assertNotIn('["password"]=username',code)
         self.assertNotIn("/tool/user-manager/user/add",code)
         self.assertNotIn("/ip/hotspot/user/add",code)
         self.assertNotIn("VoucherGenerator",code)
