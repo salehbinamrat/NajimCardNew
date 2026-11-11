@@ -105,6 +105,7 @@ public sealed class UserManagerView : UserControl
         IReadOnlyList<UserManagerCatalogRow> loaded=[];
         bool hasLoaded=false;
         RouterOsGeneration? loadedGeneration=null;
+        RouterOsGeneration? detectedGeneration=null;
         int page=0;
         bool busy=false;
         CancellationTokenSource? pending=null;
@@ -136,8 +137,7 @@ public sealed class UserManagerView : UserControl
             userActions.Visibility=hasLoaded &&
                 SelectedSection()==UserManagerCatalogSection.Users?
                     Visibility.Visible:Visibility.Collapsed;
-            creationBar.Visibility=hasLoaded &&
-                loadedGeneration==RouterOsGeneration.V7 &&
+            creationBar.Visibility=detectedGeneration==RouterOsGeneration.V7 &&
                 SelectedSection()==UserManagerCatalogSection.Users?
                     Visibility.Visible:Visibility.Collapsed;
             createAccount.IsEnabled=!busy && creationBar.Visibility==Visibility.Visible;
@@ -193,6 +193,7 @@ public sealed class UserManagerView : UserControl
                 if(requested!=SelectedSection())return;
                 loaded=result.Rows;
                 loadedGeneration=result.Generation;
+                detectedGeneration=result.Generation;
                 hasLoaded=true;
                 page=0;
                 status.Text=$"RouterOS {(int)result.Generation} | تمت قراءة {loaded.Count} سجل. "+
@@ -293,8 +294,8 @@ public sealed class UserManagerView : UserControl
 
         async Task CreateAccountAsync()
         {
-            if(busy || loadedGeneration!=RouterOsGeneration.V7 ||
-                SelectedSection()!=UserManagerCatalogSection.Users || !hasLoaded)
+            if(busy || detectedGeneration!=RouterOsGeneration.V7 ||
+                SelectedSection()!=UserManagerCatalogSection.Users)
                 return;
             var name=accountName.Text.Trim();
             var password=accountPassword.Password;
@@ -350,6 +351,8 @@ public sealed class UserManagerView : UserControl
             try
             {
                 var generation=await gateway.ReadRouterOsGenerationAsync();
+                if(IsLoaded)detectedGeneration=generation;
+                if(IsLoaded)UpdateActionButtons();
                 if(IsLoaded && !hasLoaded)
                     status.Text=$"تم اكتشاف RouterOS {(int)generation}. اختر البيانات ثم اضغط قراءة البيانات.";
             }
