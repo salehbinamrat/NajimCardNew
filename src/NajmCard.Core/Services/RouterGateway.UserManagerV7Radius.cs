@@ -41,13 +41,15 @@ public sealed partial class RouterGateway
             issues.Add("لا يوجد سيرفر Hotspot محلي مفعل؛ إن كان NAS خارجيا فافحصه منفصلا.");
 
         var profiles=await client.CommandAsync("/ip/hotspot/profile/print",
-            new Dictionary<string,string> { [".proplist"]="name,use-radius" },ct);
+            new Dictionary<string,string> { [".proplist"]="name,use-radius,radius-accounting" },ct);
         foreach(var server in active)
         {
             var name=Get(server,"profile");
             var matching=profiles.Where(x=>Get(x,"name")==name).ToArray();
             if(matching.Length!=1 || !IsYes(Get(matching[0],"use-radius").ToLowerInvariant()))
                 issues.Add("ملف Hotspot «"+name+"» لا يثبت استخدام RADIUS.");
+            if(matching.Length==1 && !IsYes(Get(matching[0],"radius-accounting").Trim().ToLowerInvariant()))
+                issues.Add("ملف Hotspot «"+name+"» لا يثبت تفعيل RADIUS accounting؛ لن يمكن اعتماد حدود الاستهلاك.");
         }
 
         var radius=await client.CommandAsync("/radius/print",
