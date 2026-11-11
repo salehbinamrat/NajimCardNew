@@ -8,12 +8,12 @@
   #error SourceDir must be passed from the packaging workflow
 #endif
 [Setup]
-AppId={{8498D687-CB0C-4984-A140-8432B88394D0}
-AppName=Najm Card
+AppId={{CF6AAB62-DA00-49AF-B3D2-1DD83FF90143}
+AppName=Najm Card New
 AppVersion={#AppVersion}
-AppPublisher=Najm Card
-DefaultDirName={localappdata}\Programs\NajmCard
-DefaultGroupName=Najm Card
+AppPublisher=Najm Card New
+DefaultDirName={localappdata}\Programs\NajmCardNew
+DefaultGroupName=Najm Card New
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 WizardStyle=modern
@@ -40,8 +40,8 @@ Name: "desktopicon"; Description: "Create desktop shortcut"; GroupDescription: "
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Najm Card"; Filename: "{app}\NajmCard.exe"
-Name: "{autodesktop}\Najm Card"; Filename: "{app}\NajmCard.exe"; Tasks: desktopicon
+Name: "{group}\Najm Card New"; Filename: "{app}\NajmCard.exe"
+Name: "{autodesktop}\Najm Card New"; Filename: "{app}\NajmCard.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\NajmCard.exe"; Description: "Launch Najm Card"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\NajmCard.exe"; Description: "Launch Najm Card New"; Flags: nowait postinstall skipifsilent
