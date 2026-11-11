@@ -45,7 +45,7 @@ public sealed class UserManagerView : UserControl
             toolbar.Children.Add(element);
 
         var status=PageUi.Status();
-        status.Text="حدد القسم ثم اضغط قراءة البيانات. جميع الخيارات للقراءة فقط.";
+        status.Text="حدد القسم ثم اضغط قراءة البيانات. يتم تنفيذ عمليات الإدارة بعد التأكيد فقط.";
         var grid=PageUi.Table(
             ("الاسم","Name"),("الباقة","Profile"),("الحالة","Status"),
             ("السعة","Limit"),("الوقت","Uptime"),("تنزيل","Download"),
@@ -69,6 +69,24 @@ public sealed class UserManagerView : UserControl
             activate,deactivate,PageUi.Label("باقة التجديد (v7)"),profileInput,assign
         })
             userActions.Children.Add(element);
+        var accountName=PageUi.Input();
+        accountName.Width=115;
+        accountName.ToolTip="اسم المستخدم الجديد دون مسافات";
+        var accountPassword=new PasswordBox {Width=115,MinHeight=30,
+            FlowDirection=FlowDirection.LeftToRight,Margin=new Thickness(4,2,4,2)};
+        accountPassword.ToolTip="اتركها فارغة لإنشاء حساب باسم مستخدم فقط";
+        var accountProfile=PageUi.Input();
+        accountProfile.Width=140;
+        accountProfile.ToolTip="اسم باقة User Manager v7 الموجودة مسبقا";
+        var createAccount=PageUi.Button("إنشاء مستخدم v7");
+        var creationBar=new WrapPanel {Margin=new Thickness(0,3,0,8)};
+        foreach(var element in new UIElement[]
+        {
+            PageUi.Label("المستخدم الجديد"),accountName,
+            PageUi.Label("كلمة المرور"),accountPassword,
+            PageUi.Label("الباقة"),accountProfile,createAccount
+        })
+            creationBar.Children.Add(element);
         var footer=PageUi.Hint(
             "البيانات من RouterOS API مباشرة. في الإصدار 7 يرتبط المستخدم بباقة عبر user-profile "+
             "وليس من جدول المستخدمين. البيانات غير المتاحة تظهر (غير معروف)، دون تخمين.");
@@ -77,6 +95,7 @@ public sealed class UserManagerView : UserControl
         body.Children.Add(toolbar);
         body.Children.Add(status);
         body.Children.Add(userActions);
+        body.Children.Add(creationBar);
         body.Children.Add(grid);
         body.Children.Add(footer);
         Content=PageUi.Wrap("إدارة User Manager",
@@ -117,6 +136,11 @@ public sealed class UserManagerView : UserControl
             userActions.Visibility=hasLoaded &&
                 SelectedSection()==UserManagerCatalogSection.Users?
                     Visibility.Visible:Visibility.Collapsed;
+            creationBar.Visibility=hasLoaded &&
+                loadedGeneration==RouterOsGeneration.V7 &&
+                SelectedSection()==UserManagerCatalogSection.Users?
+                    Visibility.Visible:Visibility.Collapsed;
+            createAccount.IsEnabled=!busy && creationBar.Visibility==Visibility.Visible;
         }
 
         void Display()
@@ -267,6 +291,51 @@ public sealed class UserManagerView : UserControl
             }
         }
 
+        async Task CreateAccountAsync()
+        {
+            if(busy || loadedGeneration!=RouterOsGeneration.V7 ||
+                SelectedSection()!=UserManagerCatalogSection.Users || !hasLoaded)
+                return;
+            var name=accountName.Text.Trim();
+            var password=accountPassword.Password;
+            var profile=accountProfile.Text.Trim();
+            if(name.Length==0 || profile.Length==0)
+            {
+                status.Text="حدد اسم المستخدم والباقة قبل عملية الإنشاء.";
+                return;
+            }
+            var credentialMode=password.Length==0?"اسم مستخدم فقط":"اسم مستخدم وكلمة مرور";
+            if(!PageUi.Confirm(
+                "إنشاء المستخدم «"+name+"» على RouterOS 7 بباقة «"+profile+
+                "» وبوضع «"+credentialMode+"»؟ ستضاف الباقة بعد إنشاء الحساب، "+
+                "ولا يعتمد اتصال الإنترنت دون اختبار RADIUS فعلي."))
+                return;
+            busy=true;
+            UpdateActionButtons();
+            try
+            {
+                var result=await gateway.CreateUserManagerV7AccountAsync(name,password,profile);
+                Reset();
+                status.Text=result.Message;
+                if(result.AccountCreated&&!result.ProfileAssigned)
+                    status.Text+=" الحساب موجود لكن الباقة لم تثبت. لا تستخدمه ككرت جاهز.";
+                if(result.Uncertain)
+                    status.Text+=" نتيجة غير مؤكدة؛ افحص الراوتر ولا تعاود الإنشاء مباشرة.";
+            }
+            catch(Exception ex)
+            {
+                Reset();
+                status.Text="لم يبدأ الإنشاء أو تعذر تأكيده: "+ex.Message;
+            }
+            finally
+            {
+                accountPassword.Clear();
+                busy=false;
+                UpdateActionButtons();
+            }
+        }
+
+        createAccount.Click+=async (_,_)=>await CreateAccountAsync();
         grid.SelectionChanged+=(_,_)=>UpdateActionButtons();
         activate.Click+=async (_,_)=>await ChangeAccountAsync(false);
         deactivate.Click+=async (_,_)=>await ChangeAccountAsync(true);
