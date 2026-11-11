@@ -11,7 +11,7 @@ namespace NajmCard.Core.Services;
 /// No automatic connection is made after explicit logout.
 /// </summary>
 public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceiptClient,
-    IRouterQueryClient, IAsyncDisposable
+    IRouterQueryClient, IRouterNameQueryClient, IAsyncDisposable
 {
     private sealed class Lane(IRouterCommandClient? current=null)
     {
@@ -126,6 +126,18 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
                 :throw new InvalidOperationException(
                     "الاتصال لا يدعم قراءة السجل المحدد."),
             true,cancellationToken);
+
+    public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByNameAsync(
+        string command,string name,IReadOnlyDictionary<string,string>? attributes=null,
+        CancellationToken cancellationToken=default)
+    {
+        RouterOsCommandPolicy.Validate(command,attributes);
+        return ExecuteAsync(For(command),(current,ct)=>
+            current is IRouterNameQueryClient query
+                ?query.QueryByNameAsync(command,name,attributes,ct)
+                :throw new NotSupportedException(
+                    "الاتصال لا يدعم استعلام اسم الحساب بشكل مقيّد."),true,cancellationToken);
+    }
 
     public async ValueTask DisposeAsync()
     {
