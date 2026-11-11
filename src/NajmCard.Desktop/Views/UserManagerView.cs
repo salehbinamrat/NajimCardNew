@@ -56,6 +56,19 @@ public sealed class UserManagerView : UserControl
         grid.EnableRowVirtualization=true;
         grid.MinHeight=330;
         grid.MaxHeight=470;
+        var activate=PageUi.Button("تفعيل الحساب");
+        var deactivate=PageUi.Button("تعطيل الحساب");
+        var profileInput=PageUi.Input();
+        profileInput.MinWidth=155;
+        profileInput.Width=155;
+        profileInput.ToolTip="اسم باقة User Manager 7 الموجودة على الراوتر";
+        var assign=PageUi.Button("إسناد/تجديد الباقة");
+        var userActions=new WrapPanel {Margin=new Thickness(0,2,0,8)};
+        foreach(var element in new UIElement[]
+        {
+            activate,deactivate,PageUi.Label("باقة التجديد (v7)"),profileInput,assign
+        })
+            userActions.Children.Add(element);
         var footer=PageUi.Hint(
             "البيانات من RouterOS API مباشرة. في الإصدار 7 يرتبط المستخدم بباقة عبر user-profile "+
             "وليس من جدول المستخدمين. البيانات غير المتاحة تظهر (غير معروف)، دون تخمين.");
@@ -63,6 +76,7 @@ public sealed class UserManagerView : UserControl
         body.Children.Add(heading);
         body.Children.Add(toolbar);
         body.Children.Add(status);
+        body.Children.Add(userActions);
         body.Children.Add(grid);
         body.Children.Add(footer);
         Content=PageUi.Wrap("إدارة User Manager",
@@ -71,6 +85,7 @@ public sealed class UserManagerView : UserControl
 
         IReadOnlyList<UserManagerCatalogRow> loaded=[];
         bool hasLoaded=false;
+        RouterOsGeneration? loadedGeneration=null;
         int page=0;
         bool busy=false;
         CancellationTokenSource? pending=null;
@@ -78,6 +93,31 @@ public sealed class UserManagerView : UserControl
         UserManagerCatalogSection SelectedSection() =>
             section.SelectedItem is ComboBoxItem {Tag:UserManagerCatalogSection value}
                 ?value:UserManagerCatalogSection.Profiles;
+
+        UserManagerAccountSelection? SelectedUser()
+        {
+            if(!hasLoaded || loadedGeneration is null ||
+                SelectedSection()!=UserManagerCatalogSection.Users ||
+                grid.SelectedItem is not UserManagerCatalogRow row ||
+                row.Status is not ("مفعل" or "معطل"))
+                return null;
+            return new UserManagerAccountSelection(
+                loadedGeneration.Value,row.Id,row.Name,row.Status=="معطل");
+        }
+
+        void UpdateActionButtons()
+        {
+            var selected=SelectedUser();
+            bool enabled=selected is not null && !busy;
+            activate.IsEnabled=enabled && selected!.Disabled;
+            deactivate.IsEnabled=enabled && !selected!.Disabled;
+            profileInput.IsEnabled=enabled && loadedGeneration==RouterOsGeneration.V7;
+            assign.IsEnabled=enabled && loadedGeneration==RouterOsGeneration.V7 &&
+                !selected!.Disabled;
+            userActions.Visibility=hasLoaded &&
+                SelectedSection()==UserManagerCatalogSection.Users?
+                    Visibility.Visible:Visibility.Collapsed;
+        }
 
         void Display()
         {
@@ -99,12 +139,14 @@ public sealed class UserManagerView : UserControl
                 :"لم يتم تحميل البيانات";
             previous.IsEnabled=hasLoaded && page>0;
             next.IsEnabled=hasLoaded && page<maxPage;
+            UpdateActionButtons();
         }
 
         void Reset()
         {
             loaded=[];
             hasLoaded=false;
+            loadedGeneration=null;
             page=0;
             status.Text="حدد القسم ثم اضغط قراءة البيانات. لا يتم جلب قوائم المستخدمين الكبيرة تلقائيا.";
             Display();
@@ -126,6 +168,7 @@ public sealed class UserManagerView : UserControl
                 if(!IsLoaded || request.IsCancellationRequested)return;
                 if(requested!=SelectedSection())return;
                 loaded=result.Rows;
+                loadedGeneration=result.Generation;
                 hasLoaded=true;
                 page=0;
                 status.Text=$"RouterOS {(int)result.Generation} | تمت قراءة {loaded.Count} سجل. "+
@@ -142,6 +185,7 @@ public sealed class UserManagerView : UserControl
                 // Do not retain stale rows after a failed read or unsupported menu.
                 loaded=[];
                 hasLoaded=false;
+                loadedGeneration=null;
                 page=0;
                 Display();
                 status.Text="تعذرت قراءة User Manager: "+ex.Message;
@@ -155,6 +199,78 @@ public sealed class UserManagerView : UserControl
             }
         }
 
+        async Task ChangeAccountAsync(bool disabled)
+        {
+            var selected=SelectedUser();
+            if(selected is null || busy)return;
+            if(!PageUi.Confirm(
+                (disabled?"تعطيل":"تفعيل")+" الحساب «"+selected.Name+
+                "» على RouterOS "+(int)selected.Generation+"؟"))
+                return;
+            busy=true;
+            UpdateActionButtons();
+            try
+            {
+                var result=await gateway.SetUserManagerAccountDisabledAsync(
+                    selected,disabled);
+                // After any mutation/uncertain result the last snapshot is stale.
+                Reset();
+                status.Text=result.Message+
+                    (result.Uncertain?" يلزم فحص حساب المستخدم قبل إعادة المحاولة.":"");
+            }
+            catch(Exception ex)
+            {
+                Reset();
+                status.Text="لم تُنفذ العملية: "+ex.Message;
+            }
+            finally
+            {
+                busy=false;
+                UpdateActionButtons();
+            }
+        }
+
+        async Task AssignProfileAsync()
+        {
+            var selected=SelectedUser();
+            if(selected is null || selected.Generation!=RouterOsGeneration.V7 ||
+                selected.Disabled || busy)return;
+            string package=profileInput.Text.Trim();
+            if(package.Length==0)
+            {
+                status.Text="ادخل اسم باقة موجودة في User Manager v7.";
+                return;
+            }
+            if(!PageUi.Confirm(
+                "إسناد باقة «"+package+"» للمستخدم «"+selected.Name+
+                "»؟ قد تبدأ مدة الباقة فورا وفق خيار starts-when. "+
+                "تحقق من الباقة الحالية قبل التجديد."))
+                return;
+            busy=true;
+            UpdateActionButtons();
+            try
+            {
+                var result=await gateway.AssignUserManagerV7ProfileAsync(selected,package);
+                Reset();
+                status.Text=result.Message+
+                    (result.Uncertain?" افحص سجلات user-profile قبل تكرار العملية.":"");
+            }
+            catch(Exception ex)
+            {
+                Reset();
+                status.Text="لم يتم تأكيد الإسناد: "+ex.Message;
+            }
+            finally
+            {
+                busy=false;
+                UpdateActionButtons();
+            }
+        }
+
+        grid.SelectionChanged+=(_,_)=>UpdateActionButtons();
+        activate.Click+=async (_,_)=>await ChangeAccountAsync(false);
+        deactivate.Click+=async (_,_)=>await ChangeAccountAsync(true);
+        assign.Click+=async (_,_)=>await AssignProfileAsync();
         section.SelectionChanged+=(_,_)=>Reset();
         search.TextChanged+=(_,_)=>{page=0;Display();};
         previous.Click+=(_,_)=>{if(page>0){page--;Display();}};
