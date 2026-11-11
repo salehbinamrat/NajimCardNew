@@ -1,3 +1,4 @@
+using NajmCard.Core.Models;
 using NajmCard.Core.Services;
 using Xunit;
 
