@@ -33,7 +33,7 @@ public sealed class UserManagerView : UserControl
         section.SelectedIndex=1;
 
         var refresh=PageUi.Button("قراءة البيانات");
-        var diagnose=PageUi.Button("فحص اتصال RADIUS (v7)",false);
+        var diagnose=PageUi.Button("فحص إعدادات RADIUS (v7)",false);
         var search=PageUi.SearchInput();
         search.ToolTip="بحث محلي في النتائج المحملة؛ لا يرسل كل حرف إلى الراوتر.";
         var searchLabel=PageUi.Label("بحث");
