@@ -1,0 +1,47 @@
+name: Import pinned NajimCard snapshot into NajimCardNew only
+on:
+  push:
+    branches:
+      - chore/import-najimcard-snapshot
+    paths:
+      - .github/workflows/bootstrap-najimcardnew.yml
+permissions:
+  contents: write
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out destination (NajimCardNew only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Fetch read-only pinned original NajimCard commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout --filter=blob:none https://github.com/salehbinamrat/NajimCard.git /tmp/najimcard-original
+          git -C /tmp/najimcard-original fetch --depth 1 origin 737f6d4f1104f7371231161582e6b4e55cc0300a
+          git -C /tmp/najimcard-original checkout --detach 737f6d4f1104f7371231161582e6b4e55cc0300a
+          test "$(git -C /tmp/najimcard-original rev-parse HEAD)" = "737f6d4f1104f7371231161582e6b4e55cc0300a"
+      - name: Copy full tracked source snapshot into destination
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -a --delete --exclude='.git/' /tmp/najimcard-original/ "$GITHUB_WORKSPACE/"
+          git add -A
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "chore: mirror NajimCard source snapshot 737f6d4 (read-only upstream)"
+            git push origin HEAD:chore/import-najimcard-snapshot
+          fi
+      - name: Verify byte-identical tracked snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C /tmp/najimcard-original ls-files -z | sort -z > /tmp/original-paths
+          git ls-files -z | sort -z > /tmp/new-paths
+          cmp /tmp/original-paths /tmp/new-paths
+          git -C /tmp/najimcard-original ls-files -z | xargs -0 -r sha256sum > /tmp/original-sha
+          while IFS= read -r -d '' file; do
+            cmp "/tmp/najimcard-original/$file" "$GITHUB_WORKSPACE/$file"
+          done < /tmp/original-paths
