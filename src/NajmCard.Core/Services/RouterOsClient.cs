@@ -185,11 +185,13 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
         string command, string id, IReadOnlyDictionary<string,string>? attributes = null,
         CancellationToken cancellationToken = default)
     {
-        if (command is not ("/tool/user-manager/user/print" or "/ppp/secret/print" or "/ppp/active/print" or "/ppp/profile/print" or
+        if (command is not ("/tool/user-manager/user/print" or
+            "/user-manager/user/print" or "/user-manager/user-profile/print" or
+            "/ppp/secret/print" or "/ppp/active/print" or "/ppp/profile/print" or
             "/ip/hotspot/print" or "/ip/hotspot/active/print" or
             "/ip/hotspot/user/profile/print"))
             throw new ArgumentException(
-                "الاستعلام المقيّد بمعرّف واحد مخصص لحسابات User Manager v6 وPPP فقط.",
+                "الاستعلام المقيّد بمعرّف واحد محصور في قوائم الحسابات المصرح بها.",
                 nameof(command));
         if (string.IsNullOrEmpty(id) || id.Length is < 2 or > 40 ||
             id[0] != '*' || id.Skip(1).Any(c => !char.IsAsciiHexDigit(c)))
