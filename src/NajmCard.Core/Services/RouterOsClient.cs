@@ -27,7 +27,7 @@ public interface IRouterReceiptClient
         CancellationToken cancellationToken = default);
 }
 
-public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRouterCommandClient, IRouterQueryClient
+public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRouterCommandClient, IRouterQueryClient, IRouterNameQueryClient
 {
     private readonly TcpClient _tcp;
     private readonly Stream _stream;
@@ -208,6 +208,27 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
         words.Add("?.id=" + id);
         return RouterOsReplyDecoder.Decode(
             await ExchangeAsync(words, cancellationToken)).Records;
+    }
+
+    /// <summary>Exact-name API query, restricted to three account name menus.</summary>
+    public async Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByNameAsync(
+        string command,string name,IReadOnlyDictionary<string,string>? attributes=null,
+        CancellationToken cancellationToken=default)
+    {
+        if(command is not ("/user-manager/user/print" or
+            "/ip/hotspot/user/print" or "/ppp/secret/print"))
+            throw new ArgumentException("استعلام الاسم غير مصرح به لهذا القسم.",nameof(command));
+        if(string.IsNullOrWhiteSpace(name) || name.Length>64 ||
+           name.Any(c=>char.IsControl(c)||char.IsWhiteSpace(c)))
+            throw new ArgumentException("اسم الحساب غير صالح للاستعلام.",nameof(name));
+        RouterOsCommandPolicy.Validate(command,attributes);
+        var words=new List<string> { command };
+        if(attributes is not null)
+            foreach(var (key,value) in attributes)
+                words.Add("="+key+"="+value);
+        words.Add("?name="+name);
+        return RouterOsReplyDecoder.Decode(
+            await ExchangeAsync(words,cancellationToken)).Records;
     }
 
     public async ValueTask DisposeAsync()
