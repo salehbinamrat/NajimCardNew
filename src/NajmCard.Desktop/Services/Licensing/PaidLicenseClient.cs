@@ -261,11 +261,11 @@ public sealed class PaidLicenseClient(HttpClient http,string deviceId,byte[]? tr
 
 public sealed class ProtectedPaidCodeStore(string? directory=null)
 {
-    private static readonly byte[] Entropy=Encoding.UTF8.GetBytes("NajmCard-Paid-Code-V1");
+    private static readonly byte[] Entropy=Encoding.UTF8.GetBytes("NajmCardNew-Paid-Code-V1");
     private readonly string _path=Path.Combine(directory??
         Path.Combine(Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData),
-            "NajmCard","Licensing"),"paid-code-v1.bin");
+            "NajmCardNew","Licensing"),"paid-code-v1.bin");
     public string Load()
     {
         try
@@ -302,10 +302,10 @@ public interface ISignedPaidLicenseCache
 /// <summary>Device/user-protected copy of the signed grant, never a cached boolean.</summary>
 public sealed class SignedPaidLicenseCache(string? directory=null):ISignedPaidLicenseCache
 {
-    private static readonly byte[] Entropy=Encoding.UTF8.GetBytes("NajmCard-Signed-Paid-Feed-V1");
+    private static readonly byte[] Entropy=Encoding.UTF8.GetBytes("NajmCardNew-Signed-Paid-Feed-V1");
     private readonly string _path=Path.Combine(directory??Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "NajmCard","Licensing"),"paid-feed-v1.bin");
+        "NajmCardNew","Licensing"),"paid-feed-v1.bin");
     public byte[]? Read()
     {
         try
