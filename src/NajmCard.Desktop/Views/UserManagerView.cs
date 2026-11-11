@@ -33,6 +33,7 @@ public sealed class UserManagerView : UserControl
         section.SelectedIndex=1;
 
         var refresh=PageUi.Button("قراءة البيانات");
+        var diagnose=PageUi.Button("فحص إعدادات RADIUS (v7)",false);
         var search=PageUi.SearchInput();
         search.ToolTip="بحث محلي في النتائج المحملة؛ لا يرسل كل حرف إلى الراوتر.";
         var searchLabel=PageUi.Label("بحث");
@@ -41,7 +42,7 @@ public sealed class UserManagerView : UserControl
         var pageLabel=PageUi.Status();
         pageLabel.MinWidth=190;
         var toolbar=new WrapPanel {Margin=new Thickness(0,4,0,8)};
-        foreach(var element in new UIElement[]{mode,section,refresh,searchLabel,search,previous,next,pageLabel})
+        foreach(var element in new UIElement[]{mode,section,refresh,diagnose,searchLabel,search,previous,next,pageLabel})
             toolbar.Children.Add(element);
 
         var status=PageUi.Status();
@@ -141,6 +142,7 @@ public sealed class UserManagerView : UserControl
                 SelectedSection()==UserManagerCatalogSection.Users?
                     Visibility.Visible:Visibility.Collapsed;
             createAccount.IsEnabled=!busy && creationBar.Visibility==Visibility.Visible;
+            diagnose.IsEnabled=!busy && detectedGeneration==RouterOsGeneration.V7;
         }
 
         void Display()
@@ -336,6 +338,28 @@ public sealed class UserManagerView : UserControl
             }
         }
 
+        diagnose.Click+=async (_,_)=>
+        {
+            if(busy || detectedGeneration!=RouterOsGeneration.V7)return;
+            busy=true;
+            UpdateActionButtons();
+            status.Text="يجري فحص إعدادات User Manager وRADIUS وNAS دون تغيير الراوتر...";
+            try
+            {
+                var result=await gateway.DiagnoseUserManagerV7RadiusAsync();
+                status.Text=result.Message+
+                    (result.Issues.Count==0?"":" التفاصيل: "+string.Join(" | ",result.Issues));
+            }
+            catch(Exception ex)
+            {
+                status.Text="تعذر إكمال تشخيص RADIUS: "+ex.Message;
+            }
+            finally
+            {
+                busy=false;
+                UpdateActionButtons();
+            }
+        };
         createAccount.Click+=async (_,_)=>await CreateAccountAsync();
         grid.SelectionChanged+=(_,_)=>UpdateActionButtons();
         activate.Click+=async (_,_)=>await ChangeAccountAsync(false);
