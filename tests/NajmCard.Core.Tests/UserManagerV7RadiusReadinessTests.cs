@@ -12,6 +12,9 @@ public sealed class UserManagerV7RadiusReadinessTests
         public bool RadiusHotspot=true;
         public bool NasRegistered=true;
         public bool HotspotUsesRadius=true;
+        public bool OmitNasDisabled;
+        public bool OmitHotspotDisabled;
+        public bool OmitRadiusDisabled;
         public readonly List<string> Paths=[];
         public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> CommandAsync(
             string command,IReadOnlyDictionary<string,string>? attributes=null,
@@ -25,15 +28,15 @@ public sealed class UserManagerV7RadiusReadinessTests
                 "/user-manager/print" =>
                     [new Dictionary<string,string>{{"enabled","yes"},{"use-profiles","yes"}}],
                 "/user-manager/router/print" when NasRegistered =>
-                    [new Dictionary<string,string>{{"name","nas"},{"address","127.0.0.1"},{"disabled","no"}}],
+                    [new Dictionary<string,string>{{"name","nas"},{"address","127.0.0.1"},{"disabled",OmitNasDisabled?"":"no"}}],
                 "/user-manager/router/print" => [],
                 "/ip/hotspot/print" =>
-                    [new Dictionary<string,string>{{"name","hotspot1"},{"profile","hsprof"},{"disabled","no"}}],
+                    [new Dictionary<string,string>{{"name","hotspot1"},{"profile","hsprof"},{"disabled",OmitHotspotDisabled?"":"no"}}],
                 "/ip/hotspot/profile/print" =>
                     [new Dictionary<string,string>{{"name","hsprof"},{"use-radius",HotspotUsesRadius?"yes":"no"}}],
                 "/radius/print" =>
                     [new Dictionary<string,string>{{"service",RadiusHotspot?"hotspot":"login"},
-                        {"address","127.0.0.1"},{"disabled",RadiusEnabled?"no":"yes"}}],
+                        {"address","127.0.0.1"},{"disabled",OmitRadiusDisabled?"":RadiusEnabled?"no":"yes"}}],
                 _ => throw new InvalidOperationException(command)
             };
             return Task.FromResult(rows);
@@ -61,6 +64,23 @@ public sealed class UserManagerV7RadiusReadinessTests
     {
         var spy=new Spy { RadiusEnabled=enabled,RadiusHotspot=service,
             NasRegistered=nas,HotspotUsesRadius=hotspot };
+        var report=await new RouterGateway(spy).DiagnoseUserManagerV7RadiusAsync();
+        Assert.False(report.ConfigurationReady);
+        Assert.False(report.LiveLoginVerified);
+        Assert.NotEmpty(report.Issues);
+    }
+
+    [Theory]
+    [InlineData(true,false,false)]
+    [InlineData(false,true,false)]
+    [InlineData(false,false,true)]
+    public async Task MissingDisabledFlag_MustNotBeTreatedAsEnabled(
+        bool nas,bool hotspot,bool radius)
+    {
+        var spy=new Spy
+        {
+            OmitNasDisabled=nas, OmitHotspotDisabled=hotspot, OmitRadiusDisabled=radius
+        };
         var report=await new RouterGateway(spy).DiagnoseUserManagerV7RadiusAsync();
         Assert.False(report.ConfigurationReady);
         Assert.False(report.LiveLoginVerified);
