@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rsync -a --delete --exclude='.git/' /tmp/najimcard-original/ "$GITHUB_WORKSPACE/"
+          rsync -a --delete --exclude='.git/' --exclude='.github/workflows/' /tmp/najimcard-original/ "$GITHUB_WORKSPACE/"
           git add -A
           # Preserve upstream bytes exactly, including harmless trailing whitespace.
           # An import is not the place to auto-format the original source.
@@ -39,8 +39,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git -C /tmp/najimcard-original ls-files -z | sort -z > /tmp/original-paths
-          git ls-files -z | sort -z > /tmp/new-paths
+          git -C /tmp/najimcard-original ls-files -z | grep -zv '^.github/workflows/' | sort -z > /tmp/original-paths
+          git ls-files -z | grep -zv '^.github/workflows/' | sort -z > /tmp/new-paths
           cmp /tmp/original-paths /tmp/new-paths
           git -C /tmp/najimcard-original ls-files -z | xargs -0 -r sha256sum > /tmp/original-sha
           while IFS= read -r -d '' file; do
