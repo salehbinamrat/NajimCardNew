@@ -49,16 +49,16 @@ $machine = [BitConverter]::ToUInt16($bytes, $offset+4)
 $expected = if ($Arch -eq 'x86') { 0x14c } else { 0x8664 }
 if ($machine -ne $expected) { throw "PE architecture mismatch: $machine != $expected" }
 
-$zip = Join-Path $outRoot "NajmCard-v$Version-$Arch-Portable.zip"
+$zip = Join-Path $outRoot "NajimCardNew-v$Version-$Arch-Portable.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
 Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zip -CompressionLevel Optimal
 
 $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
 if (!$iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
 if (!(Test-Path $iscc)) { throw "Inno Setup compiler ISCC.exe missing: $iscc" }
-& $iscc "/DSourceDir=$publishDir" "/DArch=$Arch" "/DAppVersion=$Version" "/O$outRoot" "/FNajmCard-v$Version-$Arch-Installer" /Q installer/NajmCard.iss
+& $iscc "/DSourceDir=$publishDir" "/DArch=$Arch" "/DAppVersion=$Version" "/O$outRoot" "/FNajimCardNew-v$Version-$Arch-Installer" /Q installer/NajmCard.iss
 if ($LASTEXITCODE -ne 0) { throw "Installer compilation failed for $Arch" }
-$installer = Join-Path $outRoot "NajmCard-v$Version-$Arch-Installer.exe"
+$installer = Join-Path $outRoot "NajimCardNew-v$Version-$Arch-Installer.exe"
 if (!(Test-Path $installer)) { throw "Installer missing: $installer" }
 foreach ($f in @($zip, $installer)) { if ((Get-Item $f).Length -lt 100000) { throw "Package suspiciously small: $f" } }
 @($zip,$installer) | ForEach-Object {
