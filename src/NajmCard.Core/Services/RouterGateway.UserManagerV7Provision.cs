@@ -43,12 +43,12 @@ public sealed partial class RouterGateway
                 "يلزم تفعيل User Manager وخيار use-profiles قبل إنشاء الحساب.");
 
         var packages=await client.CommandAsync("/user-manager/profile/print",
-            new Dictionary<string,string>{{".proplist"]="name"}},ct);
+            new Dictionary<string,string> { [".proplist"]="name" },ct);
         if(packages.Count(x=>Get(x,"name")==profile)!=1)
             throw new InvalidOperationException(
                 "الباقة غير موجودة أو غير فريدة؛ حدّث قائمة الباقات.");
 
-        var columns=new Dictionary<string,string>{{".proplist"]=".id,name"};
+        var columns=new Dictionary<string,string> { [".proplist"]=".id,name" };
         foreach(var menu in new[]
         {
             "/user-manager/user/print",
@@ -99,7 +99,7 @@ public sealed partial class RouterGateway
         try
         {
             var verified=await exact.QueryByIdAsync("/user-manager/user/print",newId!,
-                new Dictionary<string,string>{{".proplist"]=".id,name,disabled"},ct);
+                new Dictionary<string,string> { [".proplist"]=".id,name,disabled" },ct);
             if(verified.Count!=1 || Get(verified[0],".id")!=newId ||
                 Get(verified[0],"name")!=username || !verified[0].ContainsKey("disabled"))
                 return new UserManagerV7ProvisionResult(false,true,false,false,
