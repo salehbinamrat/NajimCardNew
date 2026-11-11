@@ -30,13 +30,13 @@ public sealed partial class RouterGateway
 
         var nas=await client.CommandAsync("/user-manager/router/print",
             new Dictionary<string,string> { [".proplist"]="name,address,disabled" },ct);
-        if(!nas.Any(x=>!IsYes(Get(x,"disabled").ToLowerInvariant()) &&
+        if(!nas.Any(x=>IsNo(Get(x,"disabled").Trim().ToLowerInvariant()) &&
             !string.IsNullOrWhiteSpace(Get(x,"address"))))
             issues.Add("لا يوجد NAS مسجل ومفعل بعنوان صالح في User Manager v7.");
 
         var servers=await client.CommandAsync("/ip/hotspot/print",
             new Dictionary<string,string> { [".proplist"]="name,profile,disabled" },ct);
-        var active=servers.Where(x=>!IsYes(Get(x,"disabled").ToLowerInvariant())).ToArray();
+        var active=servers.Where(x=>IsNo(Get(x,"disabled").Trim().ToLowerInvariant())).ToArray();
         if(active.Length==0)
             issues.Add("لا يوجد سيرفر Hotspot محلي مفعل؛ إن كان NAS خارجيا فافحصه منفصلا.");
 
@@ -52,7 +52,7 @@ public sealed partial class RouterGateway
 
         var radius=await client.CommandAsync("/radius/print",
             new Dictionary<string,string> { [".proplist"]="service,address,disabled" },ct);
-        if(!radius.Any(x=>!IsYes(Get(x,"disabled").ToLowerInvariant()) &&
+        if(!radius.Any(x=>IsNo(Get(x,"disabled").Trim().ToLowerInvariant()) &&
             !string.IsNullOrWhiteSpace(Get(x,"address")) &&
             Get(x,"service").Split(',',StringSplitOptions.TrimEntries |
                 StringSplitOptions.RemoveEmptyEntries).Any(s=>
