@@ -22,7 +22,7 @@ public sealed partial class VoucherStore : IDisposable
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "NajmCardNew", "Data");
         Directory.CreateDirectory(DirectoryPath);
-        _filename = Path.Combine(DirectoryPath, "najmcardnew.db");
+        _filename = Path.Combine(DirectoryPath, "najmcard.db");
         using var db = Open();
         EnsureSchema(db);
     }
