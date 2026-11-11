@@ -9,7 +9,7 @@ on:
 # workflow runs when the PR head changes instead of spending Windows minutes
 # on obsolete intermediate commits.
 concurrency:
-  group: najmcard-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: najimcardnew-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read
@@ -98,9 +98,9 @@ jobs:
       - name: Upload both packages with SHA-256
         uses: actions/upload-artifact@v4
         with:
-          name: NajmCard-v0.1.0-${{ matrix.arch }}
+          name: NajimCardNew-v0.1.0-${{ matrix.arch }}
           path: |
-            out/NajmCard-v0.1.0-${{ matrix.arch }}-Portable.zip
-            out/NajmCard-v0.1.0-${{ matrix.arch }}-Installer.exe
+            out/NajimCardNew-v0.1.0-${{ matrix.arch }}-Portable.zip
+            out/NajimCardNew-v0.1.0-${{ matrix.arch }}-Installer.exe
             out/SHA256SUMS-${{ matrix.arch }}.txt
           if-no-files-found: error
