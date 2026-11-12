@@ -1,8 +1,8 @@
 using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using Microsoft.Win32;
 using NajmCard.Core.Models;
 using NajmCard.Core.Services;
@@ -10,160 +10,303 @@ using NajmCard.Core.Services;
 namespace NajmCard.Desktop.Views;
 
 /// <summary>
-/// An explicit read-only User Manager report, backed by live RouterOS catalog
-/// data. Export never includes credentials and never sends write commands.
+/// Real RouterOS report: approved-payment revenue is never guessed from
+/// profile price. Daily transfer charts use dated accounting records only.
 /// </summary>
 public sealed class UserManagerReportsView : UserControl
 {
+    private static readonly Brush[] Palette=[
+        UmUi.Solid("#36A1E7"),UmUi.Solid("#10BDB6"),UmUi.Solid("#FFA631"),
+        UmUi.Solid("#6F58D6"),UmUi.Solid("#49BB7B"),UmUi.Solid("#E27496")];
+
     public UserManagerReportsView(RouterGateway gateway,Action back)
     {
-        var layout=PageUi.Column();
-        var returnButton=PageUi.Button("العودة إلى إدارة User Manager",false);
+        var header=UmUi.Header("التقارير",
+            "إحصاءات حقيقية من حسابات User Manager والجلسات والمدفوعات المعتمدة.");
+        var returnButton=UmUi.Action("العودة إلى إدارة User Manager");
         returnButton.Click+=(_,_)=>back();
-        layout.Children.Add(returnButton);
-        layout.Children.Add(PageUi.Title("تقارير User Manager"));
-        layout.Children.Add(PageUi.Hint(
-            "التقارير من بيانات User Manager المقروءة، وليست من جميع كروت Hotspot. "+
-            "لا تصدر كلمات مرور ولا تنفذ أوامر تعديل."));
-
-        var mode=new ComboBox {Width=165,Height=35,Margin=new Thickness(4)};
-        foreach(var (title,value) in new[]
-        {
-            ("المستخدمون",UserManagerCatalogSection.Users),
-            ("الباقات",UserManagerCatalogSection.Profiles),
-            ("القيود",UserManagerCatalogSection.Limitations),
-            ("الجلسات",UserManagerCatalogSection.Sessions)
-        })
-            mode.Items.Add(new ComboBoxItem {Content=title,Tag=value});
-        mode.SelectedIndex=0;
-        var load=PageUi.Button("قراءة التقرير");
-        var export=PageUi.Button("تصدير CSV",false);
+        var from=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
+        var until=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
+        var period=UmUi.Combo(new[]{"كل الفترات","اليوم","آخر 7 أيام",
+            "آخر 30 يوما","مخصص"},135);
+        var package=UmUi.Combo(new[]{"كل الباقات"},145);
+        var read=UmUi.Action("عرض التقرير",true,110);
+        var export=UmUi.Action("تصدير التقرير CSV");
         export.IsEnabled=false;
-        var actions=new WrapPanel();
-        actions.Children.Add(PageUi.Label("نوع التقرير"));
-        actions.Children.Add(mode);
-        actions.Children.Add(load);
-        actions.Children.Add(export);
-        layout.Children.Add(actions);
+        var filters=UmUi.Panel(UmUi.Stack(
+            UmUi.Row(returnButton,
+                UmUi.Label("الفترة",12,true),period,
+                UmUi.Label("من",12,true),from,
+                UmUi.Label("إلى",12,true),until),
+            UmUi.Row(UmUi.Label("الباقة",12,true),package,read,export)));
 
-        var status=PageUi.Status();
-        status.Text="اختر نوع التقرير واضغط قراءة التقرير لجلب البيانات من الراوتر.";
-        layout.Children.Add(status);
-        var grid=PageUi.Table(
-            ("الاسم","Name"),("الباقة","Profile"),("الحالة","Status"),
-            ("السعة","Limit"),("الوقت","Uptime"),("التنزيل","Download"),
-            ("الرفع","Upload"),("العنوان","Address"));
-        grid.IsReadOnly=true;
-        grid.CanUserAddRows=false;
-        grid.CanUserDeleteRows=false;
-        grid.MinHeight=275;
-        grid.MaxHeight=380;
-        layout.Children.Add(grid);
-        Content=PageUi.Wrap("تقارير User Manager",
-            "قراءة فعلية وتصدير محلي للنتائج غير الحساسة.",
-            PageUi.Surface(layout,"#0A8F9A"));
+        var summary=UmUi.Metrics(("عدد الحسابات","—"),("الجلسات النشطة","—"),
+            ("الاستهلاك المثبت","—"),("المدفوعات المعتمدة","—"));
+        TextBlock Metric(int at)=>(TextBlock)((StackPanel)
+            ((DockPanel)((Border)summary.Children[at]).Child).Children[1]).Children[1];
 
-        IReadOnlyList<UserManagerCatalogRow> snapshot=[];
-        UserManagerCatalogSection? loadedSection=null;
-        CancellationTokenSource? pending=null;
-        bool busy=false;
-        UserManagerCatalogSection Selected() =>
-            mode.SelectedItem is ComboBoxItem {Tag:UserManagerCatalogSection section}
-                ?section:UserManagerCatalogSection.Users;
-
-        void Clear()
+        var charts=new Grid {MinHeight=245};
+        charts.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
+        charts.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
+        charts.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
+        var distribution=UmUi.Stack(UmUi.Label("توزيع المستخدمين حسب الباقات",14,true));
+        var traffic=UmUi.Stack(UmUi.Label("الاستهلاك اليومي من RADIUS",14,true));
+        var revenue=UmUi.Stack(UmUi.Label("المدفوعات المعتمدة يوميا",14,true));
+        var chartContainers=new[]{distribution,traffic,revenue};
+        for(int i=0;i<3;i++)
         {
-            snapshot=[];
-            loadedSection=null;
-            grid.ItemsSource=null;
-            export.IsEnabled=false;
+            var panel=UmUi.Panel(chartContainers[i]);
+            Grid.SetColumn(panel,i);charts.Children.Add(panel);
+        }
+        var message=UmUi.Label(
+            "اختر الفترة ثم اضغط عرض التقرير. لا تعرض هذه الشاشة بيانات افتراضية.",
+            12,false,UmUi.Gray);
+        var info=UmUi.Panel(UmUi.Label(
+            "يتم جمع الاستهلاك من جلسات RADIUS ذات التاريخ الصالح فقط، "+
+            "ولا تعني قيمة باقة المستخدم أنها دفعة مالية. "+
+            "النسخ والصيانة لهما قسم مستقل يحفظ سلامة قاعدة الراوتر.",
+            12,false,UmUi.Gray));
+        Content=UmUi.Scroller(UmUi.Stack(header,filters,summary,charts,
+            UmUi.Panel(message),info));
+
+        UmDataSnapshot<UmAccountRow>? accounts=null;
+        UmDataSnapshot<UmSessionRow>? sessions=null;
+        UmDataSnapshot<UmApprovedPayment>? payments=null;
+        string paymentWarning="المدفوعات لم تُقرأ بعد";
+        bool busy=false;
+        CancellationTokenSource? pending=null;
+        static long Add(long a,long b)=>a>long.MaxValue-b?long.MaxValue:a+b;
+
+        DateTime? FromDate()
+        {
+            var now=DateTime.Now.Date;
+            return period.SelectedItem?.ToString() switch
+            {
+                "اليوم"=>now,
+                "آخر 7 أيام"=>now.AddDays(-6),
+                "آخر 30 يوما"=>now.AddDays(-29),
+                "مخصص"=>from.SelectedDate?.Date,
+                _=>null
+            };
+        }
+        DateTime? ToDate()=>period.SelectedItem?.ToString() switch
+        {
+            "اليوم" or "آخر 7 أيام" or "آخر 30 يوما"=>DateTime.Now.Date,
+            "مخصص"=>until.SelectedDate?.Date,
+            _=>null
+        };
+        bool Within(DateTime? value,DateTime? lower,DateTime? upper)
+            =>value.HasValue &&
+                (!lower.HasValue||value.Value.Date>=lower.Value.Date) &&
+                (!upper.HasValue||value.Value.Date<=upper.Value.Date);
+
+        static void ResetChart(StackPanel chart,string text)
+        {
+            while(chart.Children.Count>1)chart.Children.RemoveAt(1);
+            chart.Children.Add(UmUi.Label(text,12,false,UmUi.Gray));
         }
 
-        mode.SelectionChanged+=(_,_)=>Clear();
-        load.Click+=async (_,_) =>
+        void DrawBars(StackPanel target,IEnumerable<(DateTime Date,decimal Value)> rows,
+            string suffix)
         {
-            if(busy || !IsLoaded)return;
-            busy=true;
-            load.IsEnabled=false;
-            mode.IsEnabled=false;
-            Clear();
-            status.Text="يجري جلب التقرير من RouterOS...";
-            using var request=new CancellationTokenSource();
-            pending=request;
+            while(target.Children.Count>1)target.Children.RemoveAt(1);
+            var grouped=rows.GroupBy(x=>x.Date.Date)
+                .Select(g=>(Date:g.Key,Value:g.Sum(x=>x.Value)))
+                .OrderBy(x=>x.Date).TakeLast(12).ToArray();
+            if(grouped.Length==0)
+            {
+                target.Children.Add(UmUi.Label("لا توجد بيانات مؤرخة لهذه الفترة.",
+                    12,false,UmUi.Gray));
+                return;
+            }
+            var peak=Math.Max(1m,grouped.Max(x=>x.Value));
+            var graph=new StackPanel
+            {
+                Orientation=Orientation.Horizontal,
+                HorizontalAlignment=HorizontalAlignment.Center,
+                Margin=new Thickness(0,12,0,0)
+            };
+            foreach(var item in grouped)
+            {
+                var height=(double)(item.Value/peak)*123;
+                var single=new StackPanel {Width=29,VerticalAlignment=VerticalAlignment.Bottom};
+                single.Children.Add(new Border
+                {
+                    Height=Math.Max(2,height),Width=18,
+                    Background=UmUi.Solid("#0B8FB5"),
+                    VerticalAlignment=VerticalAlignment.Bottom,
+                    CornerRadius=new CornerRadius(3),
+                    ToolTip=item.Date.ToString("yyyy-MM-dd")+" : "+
+                        item.Value.ToString("N2",CultureInfo.InvariantCulture)+" "+suffix
+                });
+                single.Children.Add(UmUi.Label(item.Date.ToString("MM/dd"),
+                    9,false,UmUi.Gray));
+                graph.Children.Add(single);
+            }
+            target.Children.Add(graph);
+        }
+
+        void DrawDistribution(IReadOnlyList<UmAccountRow> users)
+        {
+            while(distribution.Children.Count>1)distribution.Children.RemoveAt(1);
+            var counts=users.Where(x=>!string.IsNullOrWhiteSpace(x.Profile) &&
+                x.Profile!="غير متاح")
+                .GroupBy(x=>x.Profile,StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(x=>x.Count()).ToArray();
+            if(counts.Length==0)
+            {
+                distribution.Children.Add(UmUi.Label("الباقات غير متاحة في البيانات المقروءة.",
+                    12,false,UmUi.Gray));return;
+            }
+            int total=counts.Sum(x=>x.Count());
+            var chart=new StackPanel();
+            foreach(var (group,i) in counts.Take(6).Select((x,i)=>(x,i)))
+            {
+                var pct=(double)group.Count()/Math.Max(1,total);
+                var bar=new Grid {Margin=new Thickness(3,6,3,3)};
+                bar.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(95)});
+                bar.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
+                bar.Children.Add(UmUi.Label(group.Key+" "+(pct*100).ToString("F0")+"%",
+                    11,true,UmUi.Navy));
+                var progress=new ProgressBar
+                {
+                    Value=pct*100,Maximum=100,Height=15,
+                    Foreground=Palette[i%Palette.Length],
+                    Background=UmUi.Light
+                };
+                Grid.SetColumn(progress,1);bar.Children.Add(progress);
+                chart.Children.Add(bar);
+            }
+            distribution.Children.Add(chart);
+        }
+
+        void Render()
+        {
+            if(accounts is null||sessions is null)return;
+            var lower=FromDate();
+            var upper=ToDate();
+            if(lower>upper)
+            {
+                message.Text="فترة التقرير غير صالحة: تاريخ البداية بعد النهاية.";
+                return;
+            }
+            var selected=package.SelectedItem?.ToString()??"كل الباقات";
+            var users=accounts.Rows.Where(x=>selected=="كل الباقات"||
+                x.Profile==selected).ToArray();
+            // Session rows are not historically linked to a specific profile.
+            // Do not apply current-user profile as if it were the session's
+            // original profile; this could silently misstate historical usage.
+            var dated=sessions.Rows.Where(x=>Within(x.StartedAt,lower,upper)).ToArray();
+            var known=sessions.Rows.Count(x=>x.IsActive.HasValue);
+            var active=dated.Count(x=>x.IsActive==true);
+            var amount=0L;int complete=0;
+            foreach(var row in dated)
+                if(row.TotalBytes is long bytes)
+                {
+                    amount=Add(amount,bytes);complete++;
+                }
+            Metric(0).Text=users.Length.ToString("N0",CultureInfo.InvariantCulture);
+            Metric(1).Text=known>0
+                ?active.ToString("N0",CultureInfo.InvariantCulture):"غير متاح";
+            Metric(2).Text=complete==0?"غير متاح":UmUi.Bytes(amount)+
+                (complete<dated.Length?" (جزئي)":"");
+            var paid=payments?.Rows.Where(x=>
+                (!lower.HasValue&&!upper.HasValue)||Within(x.Date,lower,upper)).ToArray();
+            var currencies=paid?.Select(x=>x.Currency)
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            Metric(3).Text=paid is null?"غير متاح":
+                currencies!.Length==0?"0 (مدفوعات)":currencies.Length>1
+                    ?"عملات متعددة":paid.Sum(x=>x.Amount).ToString("N2",
+                    CultureInfo.InvariantCulture)+" "+currencies[0];
+            DrawDistribution(users);
+            DrawBars(traffic,dated.Where(x=>x.TotalBytes.HasValue)
+                .Select(x=>(x.StartedAt!.Value,(decimal)x.TotalBytes!.Value/1073741824m)),
+                "GiB");
+            if(paid is null)
+                ResetChart(revenue,"لا تتوفر سجلات مدفوعات مؤكدة: "+paymentWarning);
+            else
+                DrawBars(revenue,paid.Where(x=>x.Date.HasValue)
+                    .Select(x=>(x.Date!.Value,x.Amount)),"وحدة عملة");
+            var undated=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
+            message.Text=$"RouterOS {(int)accounts.Generation} | "+
+                $"الحسابات: {users.Length} | الجلسات المؤرخة: {dated.Length} | "+
+                $"غير مؤرخة: {undated}. "+
+                "إيرادات البطاقات المباعة خارج User Manager ليست محسوبة. "+
+                (selected=="كل الباقات"?"":"فلتر الباقة لا يغير تاريخ الجلسات أو إيراداتها.");
+            export.IsEnabled=true;
+        }
+
+        async Task Load()
+        {
+            if(busy||!IsLoaded)return;
+            busy=true;read.IsEnabled=false;export.IsEnabled=false;
+            message.Text="يجري جلب حسابات وجلسات وباقات User Manager من الراوتر...";
+            using var request=new CancellationTokenSource();pending=request;
             try
             {
-                var result=await gateway.ReadUserManagerCatalogAsync(Selected(),request.Token);
-                if(!IsLoaded || request.IsCancellationRequested)return;
-                snapshot=result.Rows;
-                loadedSection=result.Section;
-                grid.ItemsSource=snapshot;
-                export.IsEnabled=true;
-                var enabled=result.Section==UserManagerCatalogSection.Users
-                    ?snapshot.Count(x=>x.Status=="مفعل"):0;
-                var disabled=result.Section==UserManagerCatalogSection.Users
-                    ?snapshot.Count(x=>x.Status=="معطل"):0;
-                status.Text=$"RouterOS {(int)result.Generation} | النتائج: {snapshot.Count}"+
-                    (result.Section==UserManagerCatalogSection.Users
-                        ?$" | المفعلة: {enabled} | المعطلة: {disabled}":"")+
-                    " | هذه إحصائيات القائمة المحملة فقط.";
+                var users=await gateway.ReadUmAccountsAsync(request.Token);
+                var connections=await gateway.ReadUmSessionsAsync(request.Token);
+                var plans=await gateway.ReadUmPlansAsync(request.Token);
+                UmDataSnapshot<UmApprovedPayment>? confirmed=null;
+                paymentWarning="";
+                if(users.Generation==RouterOsGeneration.V7)
+                {
+                    try{confirmed=await gateway.ReadUmApprovedPaymentsAsync(request.Token);}
+                    catch(OperationCanceledException) when(request.IsCancellationRequested){throw;}
+                    catch(Exception ex){paymentWarning=ex.Message;}
+                }
+                else paymentWarning="إصدار RouterOS 6 لا يدعم تقرير المدفوعات بهذا المسار.";
+                if(!IsLoaded||request.IsCancellationRequested)return;
+                accounts=users;sessions=connections;payments=confirmed;
+                package.Items.Clear();package.Items.Add("كل الباقات");
+                foreach(var plan in plans.Rows.Where(x=>x.Kind=="Profile"))
+                    package.Items.Add(plan.Name);
+                package.SelectedIndex=0;
+                Render();
             }
             catch(OperationCanceledException) when(request.IsCancellationRequested){}
             catch(Exception ex)
             {
                 if(!IsLoaded)return;
-                Clear();
-                status.Text="تعذر قراءة التقرير: "+ex.Message;
+                accounts=null;sessions=null;payments=null;
+                export.IsEnabled=false;
+                for(int i=0;i<4;i++)Metric(i).Text="—";
+                foreach(var chart in chartContainers)ResetChart(chart,"لا توجد بيانات مؤكدة.");
+                message.Text="فشلت قراءة التقرير؛ لم تُعرض أرقام افتراضية: "+ex.Message;
             }
-            finally
-            {
-                pending=null;
-                busy=false;
-                load.IsEnabled=true;
-                mode.IsEnabled=true;
-            }
-        };
-        export.Click+=async (_,_) =>
+            finally{busy=false;read.IsEnabled=true;pending=null;}
+        }
+
+        read.Click+=async(_,_)=>await Load();
+        period.SelectionChanged+=(_,_)=>Render();
+        from.SelectedDateChanged+=(_,_)=>Render();
+        until.SelectedDateChanged+=(_,_)=>Render();
+        package.SelectionChanged+=(_,_)=>Render();
+        export.Click+=(_,_) =>
         {
-            if(busy || loadedSection is null || loadedSection!=Selected())return;
-            var picker=new SaveFileDialog
-            {
-                Filter="CSV (*.csv)|*.csv",DefaultExt=".csv",AddExtension=true,
-                FileName="NajimCardNew-UserManager-"+loadedSection+"-"+
-                    DateTime.Now.ToString("yyyyMMdd-HHmmss",CultureInfo.InvariantCulture)+".csv"
-            };
-            if(picker.ShowDialog()!=true)return;
-            var rows=snapshot.ToArray();
-            busy=true;
-            load.IsEnabled=export.IsEnabled=false;
+            if(accounts is null||sessions is null)return;
+            var dialog=new SaveFileDialog{Filter="CSV (*.csv)|*.csv",
+                DefaultExt=".csv",AddExtension=true,
+                FileName="NajimCardNew-UserManager-Report-"+
+                    DateTime.Now.ToString("yyyyMMdd-HHmmss")+".csv"};
+            if(dialog.ShowDialog()!=true)return;
             try
             {
-                static string Escape(string value)
-                {
-                    // Avoid interpreting router-controlled cells as Excel formulae.
-                    if(value.Length>0 && "=+-@".Contains(value[0]))value="'"+value;
-                    return "\"" + value.Replace("\"","\"\"") + "\"";
-                }
-                var path=picker.FileName;
-                await Task.Run(()=>
-                {
-                    using var writer=new StreamWriter(path,false,new UTF8Encoding(true));
-                    writer.WriteLine("Id,Name,Profile,Status,Limit,Uptime,Download,Upload,Address,Extra");
-                    foreach(var row in rows)
-                        writer.WriteLine(string.Join(",",new[]{
-                            row.Id,row.Name,row.Profile,row.Status,row.Limit,
-                            row.Uptime,row.Download,row.Upload,row.Address,row.Extra
-                        }.Select(Escape)));
-                });
-                status.Text="تم تصدير "+rows.Length+" سجلا بدون كلمات مرور إلى "+path;
+                var lower=FromDate();var upper=ToDate();
+                var rows=sessions.Rows.Where(x=>
+                    (!lower.HasValue&&!upper.HasValue)||Within(x.StartedAt,lower,upper));
+                UmCsv.Export(dialog.FileName,
+                    ["المستخدم","وقت الاتصال","مدة الجلسة","IP","MAC","التنزيل",
+                        "الرفع","الحالة"],
+                    rows.Select(x=>(IReadOnlyList<string>)[x.Name,x.Started,x.Uptime,
+                        x.Address,x.Mac,UmUi.Bytes(x.DownloadBytes),
+                        UmUi.Bytes(x.UploadBytes),x.Status]));
+                message.Text="تم تصدير تقرير الجلسات الحقيقي دون بيانات اعتماد.";
             }
-            catch(Exception ex){status.Text="فشل التصدير: "+ex.Message;}
-            finally
-            {
-                busy=false;
-                load.IsEnabled=true;
-                export.IsEnabled=loadedSection==Selected();
-            }
+            catch(Exception ex){message.Text="فشل تصدير التقرير: "+ex.Message;}
         };
         Unloaded+=(_,_)=>pending?.Cancel();
+        foreach(var chart in chartContainers)
+            chart.Children.Add(UmUi.Label("اقرأ التقرير لرؤية الرسم البياني.",12,false,UmUi.Gray));
     }
 }
