@@ -332,7 +332,7 @@ internal static class UmUi
             HeadersVisibility=DataGridHeadersVisibility.Column,
             GridLinesVisibility=DataGridGridLinesVisibility.Horizontal,
             HorizontalGridLinesBrush=FromTheme("LineBrush","#76513E"),
-            RowBackground=Light,AlternatingRowBackground=FromTheme("SurfaceRaisedBrush","#F4E3D7"),
+            RowBackground=Light,AlternatingRowBackground=Solid("#F4E3D7"),
             AlternationCount=2,RowHeight=35,ColumnHeaderHeight=36,
             EnableRowVirtualization=true,EnableColumnVirtualization=true,
             BorderBrush=Gray,BorderThickness=new Thickness(1),
@@ -421,7 +421,7 @@ internal static class UmUi
     {
         var item=new Border
         {
-            Background=background??FromTheme("SurfaceRaisedBrush","#F4E3D7"),
+            Background=background??Solid("#F4E3D7"),
             Padding=new Thickness(7,4,7,4),
             CornerRadius=new CornerRadius(7),
             Margin=new Thickness(2)
