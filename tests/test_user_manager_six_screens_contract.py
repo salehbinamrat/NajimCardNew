@@ -32,17 +32,19 @@ class UserManagerSixScreensContract(unittest.TestCase):
         self.assertNotIn('"password"',core)
 
     def test_real_users_packages_sessions_and_advanced_search(self):
-        for file,read in (
-            ("UserManagerAccountsScreen.cs","ReadUmAccountsAsync"),
-            ("UserManagerPlansScreen.cs","ReadUmPlansAsync"),
-            ("UserManagerSessionsScreen.cs","ReadUmSessionsAsync"),
-            ("UserManagerSearchScreen.cs","ReadUmSessionsAsync")):
+        for file,read,refresh in (
+            ("UserManagerAccountsScreen.cs","ReadUmAccountsAsync","Draw()"),
+            ("UserManagerPlansScreen.cs","ReadUmPlansAsync","Draw()"),
+            ("UserManagerSessionsScreen.cs","ReadUmSessionsAsync","Update()"),
+            ("UserManagerSearchScreen.cs","ReadUmSessionsAsync","Draw()")):
             with self.subTest(file=file):
                 ui=(VIEWS/file).read_text(encoding="utf-8")
                 self.assertIn(read,ui)
                 self.assertIn("ItemsSource=",ui)
                 self.assertIn("CancellationTokenSource",ui)
-                self.assertIn("Draw()",ui)
+                self.assertIn(refresh,ui)
+                self.assertIn("Skip(page*",ui)
+                self.assertIn("Take(",ui)
         plans=(VIEWS/"UserManagerPlansScreen.cs").read_text(encoding="utf-8")
         for action in ("ChangeUmPlanAsync","LinkUmProfileLimitationAsync",
                        "Profiles (الباقات)","Limitations (القيود)"):
