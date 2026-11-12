@@ -672,6 +672,12 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     /// Never retry an ambiguous write. Only an explicit activation trap permits
     /// cleanup, which is restricted to the ID just returned by /add.
     /// </summary>
+    // RouterOS v6 builds differ in whether projected account fields are
+    // returned. Learn once per connected gateway instead of repeating a
+    // projected read followed by a full fallback for every voucher.
+    // 0=unknown, 1=projected fields supported, 2=full exact-ID read needed.
+    private int _umV6ReadProjectionMode;
+
     public async Task<UserManagerV6DeliveryResult> CreateAndActivateUserManagerV6Async(
         Voucher voucher, string customer, CancellationToken ct = default)
     {
@@ -760,12 +766,25 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
                 for (int attempt=0;attempt<3;attempt++)
                 {
                     if(attempt>0)await Task.Delay(attempt==1?150:300,ct);
-                    var found=await lookup.QueryByIdAsync(verifyPath,id,projection,ct);
+                    var mode=System.Threading.Volatile.Read(ref _umV6ReadProjectionMode);
+                    var found=mode==2
+                        ?await lookup.QueryByIdAsync(verifyPath,id,cancellationToken:ct)
+                        :await lookup.QueryByIdAsync(verifyPath,id,projection,ct);
                     // Older RouterOS 6 builds sometimes omit projected columns.
-                    // Retry the same ID with all fields, never read the full table.
-                    if(found.Count==1 && (!found[0].ContainsKey("username")
-                        || !found[0].ContainsKey("actual-profile")))
-                        found=await lookup.QueryByIdAsync(verifyPath,id,cancellationToken:ct);
+                    // Detect that once, then query only the exact ID with full
+                    // fields for subsequent cards. Never scan the entire user DB.
+                    if(mode!=2 && found.Count==1)
+                    {
+                        if(!found[0].ContainsKey("username") ||
+                           !found[0].ContainsKey("actual-profile"))
+                        {
+                            System.Threading.Volatile.Write(ref _umV6ReadProjectionMode,2);
+                            found=await lookup.QueryByIdAsync(verifyPath,id,
+                                cancellationToken:ct);
+                        }
+                        else if(mode==0)
+                            System.Threading.Volatile.Write(ref _umV6ReadProjectionMode,1);
+                    }
                     if(found.Count!=1)
                     {
                         lastVerificationError="لم يرجع الراوتر حسابا واحدا بالمعرف الذي أُنشئ.";

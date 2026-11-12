@@ -48,6 +48,9 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
         try
         {
             await tcp.ConnectAsync(endpoint.Host, endpoint.Port, limit.Token);
+            // Voucher issuance uses small request/reply packets. Disable
+            // Nagle so small RouterOS commands do not accumulate delayed ACKs.
+            tcp.NoDelay = true;
             stream = tcp.GetStream();
             if (endpoint.UseTls)
             {
@@ -59,6 +62,11 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
                 }, limit.Token);
                 stream = tls;
             }
+            // RouterOsProtocol reads a length byte, then a word for every API
+            // field. Without buffering, those tiny reads can cause thousands
+            // of socket/TLS reads on large User Manager inventories.
+            // BufferedStream keeps the exact wire protocol and cancellation.
+            stream = new BufferedStream(stream, 64 * 1024);
             var client = new RouterOsClient(tcp, stream);
             await client.AuthenticateAsync(endpoint.Username, endpoint.Password, limit.Token);
             return client;

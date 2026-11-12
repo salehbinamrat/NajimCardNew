@@ -75,6 +75,11 @@ public static class VoucherPdfExporter
             using(var pdf=new PdfDocument())
             {
                 pdf.Info.Title="NajmCard Voucher Printing";
+                // Reuse the PNG staging buffer across all pages. A 500-card
+                // job may render dozens of full-resolution pages; allocating
+                // a large new MemoryStream per page creates avoidable LOH
+                // pressure and GC pauses. Reuse preserves the original DPI.
+                using var imageBuffer=new MemoryStream(1024*1024);
                 foreach(PageContent content in document.Pages)
                 {
                     var source=content.GetPageRoot(false);
@@ -104,10 +109,11 @@ public static class VoucherPdfExporter
                     }
                     var encoder=new PngBitmapEncoder();
                     encoder.Frames.Add(BitmapFrame.Create(bitmap));
-                    using var memory=new MemoryStream();
-                    encoder.Save(memory);
-                    memory.Position=0;
-                    using var image=XImage.FromStream(memory);
+                    imageBuffer.Position=0;
+                    imageBuffer.SetLength(0);
+                    encoder.Save(imageBuffer);
+                    imageBuffer.Position=0;
+                    using var image=XImage.FromStream(imageBuffer);
                     var page=pdf.AddPage();
                     page.Width=PdfSharp.Drawing.XUnit.FromPoint(dipWidth*72/96d);
                     page.Height=PdfSharp.Drawing.XUnit.FromPoint(dipHeight*72/96d);

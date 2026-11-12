@@ -299,16 +299,17 @@ public sealed partial class VoucherStore : IDisposable
         BeginSendOnConnection(db, voucher);
     }
 
-    private static void BeginSendOnConnection(SqliteConnection db, Voucher voucher)
+    private static string BeginSendOnConnection(SqliteConnection db, Voucher voucher)
     {
         Validate(voucher);
         using var tx = db.BeginTransaction();
+        string previousState;
 
         using (var read = db.CreateCommand())
         {
             read.Transaction = tx;
             read.CommandText = """
-                SELECT password_protected FROM vouchers
+                SELECT password_protected,delivery_status FROM vouchers
                 WHERE service=$service AND username=$name AND batch_id=$batch
                   AND customer=$customer AND profile=$profile
                 """;
@@ -317,8 +318,12 @@ public sealed partial class VoucherStore : IDisposable
             read.Parameters.AddWithValue("$batch", voucher.BatchId);
             read.Parameters.AddWithValue("$customer", voucher.Customer);
             read.Parameters.AddWithValue("$profile", voucher.Profile);
-            var coded = read.ExecuteScalar() as string;
-            if (coded is null || !string.Equals(Unprotect(coded), voucher.Password,
+            using var reader=read.ExecuteReader();
+            if(!reader.Read() || reader.IsDBNull(0))
+                throw new InvalidOperationException("بيانات الكرت ليست محفوظة في هذه الدفعة.");
+            var coded=reader.GetString(0);
+            previousState=reader.GetString(1);
+            if(!string.Equals(Unprotect(coded),voucher.Password,
                     StringComparison.Ordinal))
                 throw new InvalidOperationException("بيانات الكرت تغيرت أو ليست محفوظة في هذه الدفعة.");
         }
@@ -341,6 +346,7 @@ public sealed partial class VoucherStore : IDisposable
             throw new InvalidOperationException(
                 "الكرت مُرسل أو قيد الإرسال أو نتيجته غير مؤكدة؛ لا يمكن إعادة إرساله.");
         tx.Commit();
+        return previousState;
     }
 
     /// <summary>Record the authoritative result; never convert UNKNOWN into retryable FAILED.</summary>
@@ -350,8 +356,44 @@ public sealed partial class VoucherStore : IDisposable
         FinishSendOnConnection(db, voucher, state, error);
     }
 
-    private static void FinishSendOnConnection(
-        SqliteConnection db, Voucher voucher, string state, string error)
+    private sealed record BatchProgress(long Total,long Successful,long Uncertain,long Failed)
+    {
+        internal BatchProgress WithOutcome(string state) => new(
+            Total,Successful+(state=="SENT"?1:0),
+            Uncertain+(state=="UNKNOWN"?1:0),
+            Failed+(state=="FAILED"?1:0));
+    }
+
+    private static BatchProgress ReadBatchProgress(
+        SqliteConnection db,SqliteTransaction? tx,Voucher voucher)
+    {
+        using var counts=db.CreateCommand();
+        counts.Transaction=tx;
+        counts.CommandText="""
+            SELECT COUNT(*),
+                COALESCE(SUM(CASE WHEN delivery_status='SENT' THEN 1 ELSE 0 END),0),
+                COALESCE(SUM(CASE WHEN delivery_status='UNKNOWN' THEN 1 ELSE 0 END),0),
+                COALESCE(SUM(CASE WHEN delivery_status='FAILED' THEN 1 ELSE 0 END),0)
+            FROM vouchers WHERE service=$svc AND batch_id=$batch
+            """;
+        counts.Parameters.AddWithValue("$svc",voucher.Service);
+        counts.Parameters.AddWithValue("$batch",voucher.BatchId);
+        using var reader=counts.ExecuteReader();
+        if(!reader.Read())throw new InvalidDataException("تعذر قراءة حالة دفعة الكروت.");
+        return new BatchProgress(reader.GetInt64(0),reader.GetInt64(1),
+            reader.GetInt64(2),reader.GetInt64(3));
+    }
+
+    private static long ReadDataVersion(SqliteConnection db)
+    {
+        using var cmd=db.CreateCommand();
+        cmd.CommandText="PRAGMA data_version";
+        return Convert.ToInt64(cmd.ExecuteScalar(),CultureInfo.InvariantCulture);
+    }
+
+    private static BatchProgress FinishSendOnConnection(
+        SqliteConnection db, Voucher voucher, string state, string error,
+        BatchProgress? cached=null)
     {
         ArgumentNullException.ThrowIfNull(voucher);
         if (state is not ("SENT" or "FAILED" or "UNKNOWN"))
@@ -376,34 +418,25 @@ public sealed partial class VoucherStore : IDisposable
         if (cmd.ExecuteNonQuery() != 1)
             throw new InvalidOperationException(
                 "تعذر مطابقة كرت قيد الإرسال؛ توقفت العملية لحماية سجل الراوتر.");
-        // Aggregate the batch from authoritative durable states: no per-card
-        // activity event explosion for large batches and no credential data.
-        using var counts=db.CreateCommand();
-        counts.Transaction=tx;
-        counts.CommandText="""
-            SELECT COUNT(*),
-                COALESCE(SUM(CASE WHEN delivery_status='SENT' THEN 1 ELSE 0 END),0),
-                COALESCE(SUM(CASE WHEN delivery_status='UNKNOWN' THEN 1 ELSE 0 END),0),
-                COALESCE(SUM(CASE WHEN delivery_status='FAILED' THEN 1 ELSE 0 END),0)
-            FROM vouchers WHERE service=$svc AND batch_id=$batch
-            """;
-        counts.Parameters.AddWithValue("$svc",voucher.Service);
-        counts.Parameters.AddWithValue("$batch",voucher.BatchId);
-        using(var reader=counts.ExecuteReader())
-        {
-            if(!reader.Read())throw new InvalidDataException("تعذر قراءة حالة دفعة الكروت.");
-            var total=reader.GetInt64(0);
-            var successful=reader.GetInt64(1);
-            var uncertain=reader.GetInt64(2);
-            var failed=reader.GetInt64(3);
-            string outcome=uncertain>0?"ERROR":successful==total?"SUCCESS":
-                failed>0?"PARTIAL":"INFO";
-            WriteActivity(db,tx,ActivityBatchKey(voucher.Service,voucher.BatchId),
-                "ROUTER","إرسال دفعة كروت",outcome,
-                "خدمة "+voucher.Service+" | ناجح "+successful+
-                " من "+total+" | فاشل "+failed+" | غير مؤكد "+uncertain);
-        }
+        // The fast batch session keeps an aggregate in memory after the first
+        // authoritative read. It still commits this audit together with EACH
+        // voucher receipt. Direct one-off calls always re-count from SQLite.
+        // PRAGMA data_version invalidates the session cache if another writer
+        // changes the database between vouchers.
+        var progress=cached is null
+            ?ReadBatchProgress(db,tx,voucher):cached.WithOutcome(state);
+        if(progress.Successful+progress.Uncertain+progress.Failed>progress.Total)
+            throw new InvalidDataException("عداد الدفعة غير متطابق مع الكروت المحفوظة.");
+        string outcome=progress.Uncertain>0?"ERROR":
+            progress.Successful==progress.Total?"SUCCESS":
+            progress.Failed>0?"PARTIAL":"INFO";
+        WriteActivity(db,tx,ActivityBatchKey(voucher.Service,voucher.BatchId),
+            "ROUTER","إرسال دفعة كروت",outcome,
+            "خدمة "+voucher.Service+" | ناجح "+progress.Successful+
+            " من "+progress.Total+" | فاشل "+progress.Failed+
+            " | غير مؤكد "+progress.Uncertain);
         tx.Commit();
+        return progress;
     }
 
     /// <summary>
@@ -417,13 +450,42 @@ public sealed partial class VoucherStore : IDisposable
     public sealed class SendSession : IDisposable
     {
         private readonly SqliteConnection _db;
+        private BatchProgress? _progress;
+        private string? _service;
+        private string? _batchId;
+        private long _dataVersion=-1;
 
         internal SendSession(VoucherStore store) => _db = store.Open();
 
-        public void BeginSend(Voucher voucher) => BeginSendOnConnection(_db, voucher);
+        public void BeginSend(Voucher voucher)
+        {
+            // A manual retry may legitimately move FAILED -> SENDING.
+            // Drop the fast summary so that a formerly failed row is not
+            // counted twice when its next receipt becomes SENT.
+            var previous=BeginSendOnConnection(_db,voucher);
+            if(previous=="FAILED")_progress=null;
+        }
 
-        public void FinishSend(Voucher voucher, string state, string error = "") =>
-            FinishSendOnConnection(_db, voucher, state, error);
+        public void FinishSend(Voucher voucher, string state, string error = "")
+        {
+            ArgumentNullException.ThrowIfNull(voucher);
+            // SQLite's data_version changes for commits from *other*
+            // connections. Never trust a cached summary after a concurrent
+            // process changes card delivery states.
+            var currentVersion=ReadDataVersion(_db);
+            if(_progress is null || _service!=voucher.Service ||
+                _batchId!=voucher.BatchId || _dataVersion!=currentVersion)
+            {
+                _progress=ReadBatchProgress(_db,null,voucher);
+                _service=voucher.Service;
+                _batchId=voucher.BatchId;
+                _dataVersion=currentVersion;
+            }
+            // Only advance the in-memory counters AFTER the SQL commit.
+            // On any failed transaction the caller stops; the old cache does
+            // not mistakenly confirm a card or mark it printable.
+            _progress=FinishSendOnConnection(_db,voucher,state,error,_progress);
+        }
 
         public void Dispose() => _db.Dispose();
     }
