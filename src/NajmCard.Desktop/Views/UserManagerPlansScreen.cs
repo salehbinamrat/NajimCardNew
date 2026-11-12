@@ -270,8 +270,8 @@ public sealed class UserManagerPlansScreen : UserControl
             }
             editing=row;
             name.Text=row.Name;
-            price.Text=row.Price=="غير متاح"?"0":row.Price;
-            duration.Text=row.Validity=="غير متاح"?"30d":row.Validity;
+            price.Text=row.Price=="غير متاح"?"":row.Price;
+            duration.Text=row.Validity=="غير متاح"?"":row.Validity;
             starts.SelectedItem=row.StartsWhen;
             quota.Text=long.TryParse(row.TransferLimit,out var bytes)
                 ?UserManagerQuotaMath.ToEditorGiB(bytes):"";
