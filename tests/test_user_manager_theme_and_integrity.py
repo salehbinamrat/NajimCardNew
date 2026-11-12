@@ -52,5 +52,15 @@ class UserManagerPaletteAndIntegrityTests(unittest.TestCase):
         self.assertIn("UserManagerQuotaMath.ParseGiBToByteString(quota.Text)",plans)
         self.assertNotIn('ToString("0.###"',plans)
 
+    def test_unknown_profile_prices_must_not_be_silently_overwritten(self):
+        plans=(VIEWS/"UserManagerPlansScreen.cs").read_text(encoding="utf-8")
+        self.assertIn('price.Text=row.Price=="غير متاح"?"":row.Price;',plans)
+        self.assertIn('duration.Text=row.Validity=="غير متاح"?"":row.Validity;',plans)
+
+    def test_unknown_payment_currencies_cannot_be_aggregated(self):
+        reports=(VIEWS/"UserManagerReportsView.cs").read_text(encoding="utf-8")
+        self.assertIn("UserManagerRevenueMath.TryTotalSingleCurrency(",reports)
+        self.assertIn("else if(!validRevenue)",reports)
+
 if __name__=="__main__":
     unittest.main()
