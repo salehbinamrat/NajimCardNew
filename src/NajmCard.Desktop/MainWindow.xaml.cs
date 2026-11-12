@@ -560,7 +560,7 @@ public partial class MainWindow : Window
     private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_gateway is null || NavList.SelectedItem is not NavEntry page) return;
-        bool isImmersive=page.Key is "dashboard" or "generator";
+        bool isImmersive=page.Key is "dashboard" or "generator" or "usermanager";
         // Both compact pages draw their own shared title frame.
         WorkspaceHeaderRow.Height=isImmersive ? new GridLength(0) : new GridLength(88);
         PageHost.Margin=isImmersive ? new Thickness(12,7,12,7)
@@ -574,7 +574,7 @@ public partial class MainWindow : Window
                 _pendingVoucherService,_pendingVoucherProfile),
             "cards" => new CardsView(_gateway,_store),
             "profiles" => new ProfilesView(_gateway, NavigateToVoucherPackage, _store),
-            "usermanager" => new UserManagerView(_gateway),
+            "usermanager" => new UserManagerView(_gateway,_store),
             "sessions" => new SessionsView(_gateway),
             "servers" => new ServersView(_gateway),
             "reports" => new ReportsView(_store),
