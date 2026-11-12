@@ -48,6 +48,16 @@ class VoucherIssuancePerformanceContracts(unittest.TestCase):
         self.assertIn("await stream.FlushAsync(token)",protocol)
         self.assertEqual(protocol.count("await stream.WriteAsync("),1)
 
+    def test_router_reply_prefix_reuses_sentence_scratch_without_changing_limits(self):
+        protocol=(CORE/"RouterOsProtocol.cs").read_text(encoding="utf-8")
+        self.assertIn("var prefix = new byte[5];",protocol)
+        self.assertIn("ReadLengthBufferedAsync(stream, prefix, token)",protocol)
+        self.assertIn("ReadExactIntoAsync(stream,prefix.AsMemory(1,extra),token)",protocol)
+        self.assertIn("BinaryPrimitives.ReadUInt32BigEndian(prefix.AsSpan(1,4))",protocol)
+        self.assertIn("length > 8 * 1024 * 1024",protocol)
+        self.assertIn("words.Count > 5000",protocol)
+        self.assertIn("ReadLengthAsync(Stream stream, CancellationToken token)",protocol)
+
     def test_pdf_staging_buffer_is_reused_but_quality_and_text_unchanged(self):
         pdf=(DESKTOP/"Services/VoucherPdfExporter.cs").read_text(encoding="utf-8")
         self.assertIn("using var imageBuffer=new MemoryStream(1024*1024)",pdf)
