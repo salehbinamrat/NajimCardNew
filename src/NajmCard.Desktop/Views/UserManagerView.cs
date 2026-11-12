@@ -103,7 +103,7 @@ public sealed class UserManagerView : UserControl
         body.Children.Add(footer);
         var explorerContent=PageUi.Wrap("إدارة User Manager",
             "قراءة مستقلة للمستخدمين والباقات والقيود والجلسات دون التأثير على الطباعة.",
-            PageUi.Surface(body,"#197E9A"));
+            PageUi.Surface(body,"#72203A"));
 
         IReadOnlyList<UserManagerCatalogRow> loaded=[];
         bool hasLoaded=false;
@@ -478,7 +478,7 @@ public sealed class UserManagerView : UserControl
             {
                 bool selected=key==destination;
                 button.Background=selected?UmUi.Cyan:UmUi.Navy;
-                button.Foreground=Brushes.White;
+                button.Foreground=UmUi.Cream;
             }
             Content=workspace;
         }
@@ -490,7 +490,7 @@ public sealed class UserManagerView : UserControl
             button.FontSize=12;
             button.Foreground=Brushes.White;
             button.Background=UmUi.Navy;
-            button.BorderBrush=UmUi.Solid("#254865");
+            button.BorderBrush=UmUi.Gold;
             button.Margin=new Thickness(4,5,4,3);
             button.Click+=(_,_)=>OpenPage(destination);
             menu.Children.Add(button);
