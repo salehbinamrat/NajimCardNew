@@ -23,8 +23,6 @@ public sealed class UserManagerReportsView : UserControl
     {
         var header=UmUi.Header("التقارير",
             "إحصاءات حقيقية من حسابات User Manager والجلسات والمدفوعات المعتمدة.");
-        var returnButton=UmUi.Action("العودة إلى إدارة User Manager");
-        returnButton.Click+=(_,_)=>back();
         var from=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
         var until=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
         var period=UmUi.Combo(new[]{"كل الفترات","اليوم","آخر 7 أيام",
@@ -34,8 +32,7 @@ public sealed class UserManagerReportsView : UserControl
         var export=UmUi.Action("تصدير التقرير CSV");
         export.IsEnabled=false;
         var filters=UmUi.Panel(UmUi.Stack(
-            UmUi.Row(returnButton,
-                UmUi.Label("الفترة",12,true),period,
+            UmUi.Row(UmUi.Label("الفترة",12,true),period,
                 UmUi.Label("من",12,true),from,
                 UmUi.Label("إلى",12,true),until),
             UmUi.Row(UmUi.Label("الباقة",12,true),package,read,export)));
