@@ -299,16 +299,17 @@ public sealed partial class VoucherStore : IDisposable
         BeginSendOnConnection(db, voucher);
     }
 
-    private static void BeginSendOnConnection(SqliteConnection db, Voucher voucher)
+    private static string BeginSendOnConnection(SqliteConnection db, Voucher voucher)
     {
         Validate(voucher);
         using var tx = db.BeginTransaction();
+        string previousState;
 
         using (var read = db.CreateCommand())
         {
             read.Transaction = tx;
             read.CommandText = """
-                SELECT password_protected FROM vouchers
+                SELECT password_protected,delivery_status FROM vouchers
                 WHERE service=$service AND username=$name AND batch_id=$batch
                   AND customer=$customer AND profile=$profile
                 """;
@@ -317,8 +318,12 @@ public sealed partial class VoucherStore : IDisposable
             read.Parameters.AddWithValue("$batch", voucher.BatchId);
             read.Parameters.AddWithValue("$customer", voucher.Customer);
             read.Parameters.AddWithValue("$profile", voucher.Profile);
-            var coded = read.ExecuteScalar() as string;
-            if (coded is null || !string.Equals(Unprotect(coded), voucher.Password,
+            using var reader=read.ExecuteReader();
+            if(!reader.Read() || reader.IsDBNull(0))
+                throw new InvalidOperationException("بيانات الكرت ليست محفوظة في هذه الدفعة.");
+            var coded=reader.GetString(0);
+            previousState=reader.GetString(1);
+            if(!string.Equals(Unprotect(coded),voucher.Password,
                     StringComparison.Ordinal))
                 throw new InvalidOperationException("بيانات الكرت تغيرت أو ليست محفوظة في هذه الدفعة.");
         }
@@ -341,6 +346,7 @@ public sealed partial class VoucherStore : IDisposable
             throw new InvalidOperationException(
                 "الكرت مُرسل أو قيد الإرسال أو نتيجته غير مؤكدة؛ لا يمكن إعادة إرساله.");
         tx.Commit();
+        return previousState;
     }
 
     /// <summary>Record the authoritative result; never convert UNKNOWN into retryable FAILED.</summary>
@@ -451,7 +457,14 @@ public sealed partial class VoucherStore : IDisposable
 
         internal SendSession(VoucherStore store) => _db = store.Open();
 
-        public void BeginSend(Voucher voucher) => BeginSendOnConnection(_db, voucher);
+        public void BeginSend(Voucher voucher)
+        {
+            // A manual retry may legitimately move FAILED -> SENDING.
+            // Drop the fast summary so that a formerly failed row is not
+            // counted twice when its next receipt becomes SENT.
+            var previous=BeginSendOnConnection(_db,voucher);
+            if(previous=="FAILED")_progress=null;
+        }
 
         public void FinishSend(Voucher voucher, string state, string error = "")
         {
