@@ -92,7 +92,7 @@ public sealed class UserManagerPlansScreen : UserControl
         UmDataSnapshot<UmPlanRow>? snapshot=null;
         UmPlanRow? editing=null;
         string kind="Profile";
-        bool busy=false,loadedOnce=false;
+        bool busy=false,loadedOnce=false,suppressSelectionChanged=false;
         int page=0;
         Display[] filtered=[];
         CancellationTokenSource? pending=null;
@@ -106,7 +106,9 @@ public sealed class UserManagerPlansScreen : UserControl
             limitOptions.IsEnabled=link.IsEnabled=isProfile&&
                 snapshot?.Generation==RouterOsGeneration.V7&&!busy;
             profilesTab.Background=isProfile?UmUi.Cyan:UmUi.Light;
+            profilesTab.Foreground=isProfile?System.Windows.Media.Brushes.White:UmUi.Navy;
             limitsTab.Background=isProfile?UmUi.Light:UmUi.Cyan;
+            limitsTab.Foreground=isProfile?UmUi.Navy:System.Windows.Media.Brushes.White;
         }
         void ResetForm()
         {
@@ -127,7 +129,22 @@ public sealed class UserManagerPlansScreen : UserControl
             int take=int.TryParse(size.SelectedItem?.ToString(),out var n)?n:20;
             int pages=Math.Max(1,(filtered.Length+take-1)/take);
             page=Math.Clamp(page,0,pages-1);
-            table.ItemsSource=filtered.Skip(page*take).Take(take).ToArray();
+            // Rebind only the visible page, keeping the edited record selected
+            // without firing SelectionChanged and discarding unsaved form values.
+            var pageRows=filtered.Skip(page*take).Take(take).ToArray();
+            suppressSelectionChanged=true;
+            try
+            {
+                table.ItemsSource=pageRows;
+                if(editing is not null)
+                {
+                    var keep=pageRows.FirstOrDefault(x=>x.Source.Id==editing.Id &&
+                        x.Source.Kind==editing.Kind);
+                    table.SelectedItem=keep;
+                    if(keep is null)editing=null;
+                }
+            }
+            finally {suppressSelectionChanged=false;}
             pager.Text=$"إجمالي {kind}: {filtered.Length} | صفحة {page+1} من {pages}";
             prev.IsEnabled=page>0;next.IsEnabled=page+1<pages;
             bool canWrite=snapshot?.Generation==RouterOsGeneration.V7&&!busy;
@@ -249,9 +266,11 @@ public sealed class UserManagerPlansScreen : UserControl
 
         table.SelectionChanged+=(_,_) =>
         {
+            if(suppressSelectionChanged)return;
             var row=Selected();
             if(row is null)
             {
+                editing=null;
                 edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=false;
                 return;
             }
