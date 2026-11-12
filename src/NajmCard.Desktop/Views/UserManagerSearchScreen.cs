@@ -20,8 +20,12 @@ public sealed class UserManagerSearchScreen : UserControl
             "بحث آمن ودقيق في سجلات RouterOS 6 و7 مع قراءة كل قسم عند الطلب.");
         var source=UmUi.Combo(new[]{"المستخدمون","الباقات","القيود","الجلسات"},145);
         var keyword=UmUi.SearchBox("اسم المستخدم أو الباقة أو عنوان IP");keyword.Width=250;
-        var status=UmUi.Combo(new[]{"جميع الحالات","نشطة","منتهية","معطل","مفعل",
-            "صالح","استخدم","باقة نشطة","غير معروف"},130);
+        // Build the available status options only from records actually
+        // returned by the selected User Manager catalog. Hardcoded status
+        // lists hide v6 'incomplete' and v7 'running' categories and offer
+        // meaningless user states while searching profile definitions.
+        var status=UmUi.Combo(new[]{"جميع الحالات"},130);
+        status.IsEnabled=false;
         var read=UmUi.Action("قراءة البيانات",true,100);
         var clear=UmUi.Action("مسح",false);
         var table=UmUi.Table(("النوع","Category",90),("الاسم","Name",148),
@@ -48,8 +52,28 @@ public sealed class UserManagerSearchScreen : UserControl
         Hit[] items=[];
         Hit[] visible=[];
         int page=0;
-        bool busy=false;
+        bool busy=false,resetStatus=false;
         CancellationTokenSource? pending=null;
+
+        void SyncStatuses()
+        {
+            var previous=status.SelectedItem?.ToString()??"جميع الحالات";
+            var options=items.Select(x=>x.Status)
+                .Where(x=>!string.IsNullOrWhiteSpace(x)&&x!="من الراوتر")
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(x=>x,StringComparer.Ordinal).ToArray();
+            resetStatus=true;
+            try
+            {
+                status.Items.Clear();
+                status.Items.Add("جميع الحالات");
+                foreach(var value in options)status.Items.Add(value);
+                status.SelectedItem=status.Items.Contains(previous)
+                    ?previous:"جميع الحالات";
+                status.IsEnabled=options.Length>0&&!busy;
+            }
+            finally{resetStatus=false;}
+        }
 
         void Draw()
         {
@@ -74,7 +98,8 @@ public sealed class UserManagerSearchScreen : UserControl
         {
             if(busy||!IsLoaded)return;
             busy=true;read.IsEnabled=source.IsEnabled=false;
-            items=[];Draw();
+            status.IsEnabled=false;
+            items=[];SyncStatuses();Draw();
             message.Text="يجري جلب القسم المحدد من User Manager...";
             using var request=new CancellationTokenSource();pending=request;
             try
@@ -117,22 +142,35 @@ public sealed class UserManagerSearchScreen : UserControl
                     default:throw new ArgumentException("حدد قسما صالحا للبحث.");
                 }
                 if(!IsLoaded||request.IsCancellationRequested)return;
-                items=rows.ToArray();page=0;Draw();
+                items=rows.ToArray();page=0;SyncStatuses();Draw();
                 message.Text=$"RouterOS {version} | تم جلب {items.Length} سجلا فعليا. "+
                     "الفلترة والصفحات محلية، ولا يتم تنفيذ استعلام لكل حرف.";
             }
             catch(OperationCanceledException) when(request.IsCancellationRequested){}
             catch(Exception ex)
             {
-                if(IsLoaded){items=[];Draw();message.Text="تعذرت قراءة النتائج: "+ex.Message;}
+                if(IsLoaded){items=[];SyncStatuses();Draw();
+                    message.Text="تعذرت قراءة النتائج: "+ex.Message;}
             }
-            finally{pending=null;busy=false;read.IsEnabled=source.IsEnabled=true;}
+            finally
+            {
+                pending=null;busy=false;read.IsEnabled=source.IsEnabled=true;
+                SyncStatuses();
+            }
         }
-        source.SelectionChanged+=(_,_)=>{items=[];page=0;Draw();};
+        source.SelectionChanged+=(_,_)=>
+        {
+            items=[];page=0;SyncStatuses();Draw();
+            message.Text="تغير مصدر البحث؛ اضغط قراءة البيانات لجلب سجلات هذا القسم.";
+        };
         read.Click+=async(_,_)=>await Load();
         clear.Click+=(_,_)=>{keyword.Clear();status.SelectedIndex=0;page=0;Draw();};
         UmUi.Debounce(keyword,this,()=>{page=0;Draw();});
-        status.SelectionChanged+=(_,_)=>{page=0;Draw();};
+        status.SelectionChanged+=(_,_)=>
+        {
+            if(resetStatus)return;
+            page=0;Draw();
+        };
         pageSize.SelectionChanged+=(_,_)=>{page=0;Draw();};
         previous.Click+=(_,_)=>{page--;Draw();};
         next.Click+=(_,_)=>{page++;Draw();};
