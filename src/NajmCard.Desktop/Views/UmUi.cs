@@ -14,7 +14,7 @@ internal static class UmUi
 {
     internal static readonly Brush Navy=Solid("#072447");
     internal static readonly Brush Blue=Solid("#0B4F82");
-    internal static readonly Brush Cyan=Solid("#009CA6");
+    internal static readonly Brush Cyan=Solid("#007E86");
     internal static readonly Brush Ink=Solid("#10253D");
     internal static readonly Brush Light=Solid("#F1F7FC");
     internal static readonly Brush Gray=Solid("#546A80");
