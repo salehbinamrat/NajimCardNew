@@ -140,15 +140,15 @@ internal static class UmUi
             RowBackground=Brushes.White,AlternatingRowBackground=Solid("#EDF4FB"),
             AlternationCount=2,RowHeight=35,ColumnHeaderHeight=36,
             EnableRowVirtualization=true,EnableColumnVirtualization=true,
-            VirtualizingPanel.IsVirtualizing=true,
-            VirtualizingPanel.VirtualizationMode=VirtualizationMode.Recycling,
-            ScrollViewer.CanContentScroll=true,
-            ScrollViewer.HorizontalScrollBarVisibility=ScrollBarVisibility.Auto,
-            ScrollViewer.VerticalScrollBarVisibility=ScrollBarVisibility.Auto,
             BorderBrush=Solid("#BCCDDD"),BorderThickness=new Thickness(1),
             Background=Brushes.White,Foreground=Ink,FontSize=12,
             FontFamily=new FontFamily("Arial")
         };
+        VirtualizingPanel.SetIsVirtualizing(grid,true);
+        VirtualizingPanel.SetVirtualizationMode(grid,VirtualizationMode.Recycling);
+        ScrollViewer.SetCanContentScroll(grid,true);
+        ScrollViewer.SetHorizontalScrollBarVisibility(grid,ScrollBarVisibility.Auto);
+        ScrollViewer.SetVerticalScrollBarVisibility(grid,ScrollBarVisibility.Auto);
         var headers=new Style(typeof(DataGridColumnHeader));
         headers.Setters.Add(new Setter(Control.BackgroundProperty,Navy));
         headers.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
