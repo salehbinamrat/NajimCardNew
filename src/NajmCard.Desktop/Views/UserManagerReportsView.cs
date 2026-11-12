@@ -23,8 +23,8 @@ public sealed class UserManagerReportsView : UserControl
     {
         var header=UmUi.Header("التقارير",
             "إحصاءات حقيقية من حسابات User Manager والجلسات والمدفوعات المعتمدة.");
-        var from=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
-        var until=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
+        var from=UmUi.DateInput("تاريخ بداية التقرير",135);
+        var until=UmUi.DateInput("تاريخ نهاية التقرير",135);
         var period=UmUi.Combo(new[]{"كل الفترات","اليوم","آخر 7 أيام",
             "آخر 30 يوما","مخصص"},135);
         var package=UmUi.Combo(new[]{"كل الباقات"},145);
