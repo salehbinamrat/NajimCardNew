@@ -34,14 +34,14 @@ ArchitecturesAllowed=x86compatible
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
+Name: "desktopicon"; Description: "إنشاء اختصار على سطح المكتب"; GroupDescription: "الاختصارات:"; Flags: unchecked
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Najm Card New"; Filename: "{app}\NajmCard.exe"
-Name: "{autodesktop}\Najm Card New"; Filename: "{app}\NajmCard.exe"; Tasks: desktopicon
+Name: "{group}\Najm Card New"; Filename: "{app}\NajmCard.exe"; WorkingDir: "{app}"
+Name: "{autodesktop}\Najm Card New"; Filename: "{app}\NajmCard.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\NajmCard.exe"; Description: "Launch Najm Card New"; Flags: nowait postinstall skipifsilent
