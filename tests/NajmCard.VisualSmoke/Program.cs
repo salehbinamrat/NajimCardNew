@@ -147,6 +147,30 @@ internal static class Program
                 "user-manager-home-1200x730.png"));
             CaptureUserManagerSections(root,userManager,width,height,
                 Path.GetDirectoryName(destination)!);
+
+            // Render the production settings view at the same fixed
+            // 1200x730 size, including the opt-in Portable shortcut action.
+            // The shortcut must NOT be created during this render.
+            var settings=new SettingsView(store);
+            ((ListBox)window.FindName("NavList")).SelectedIndex=10;
+            pageHost.Content=settings;
+            root.UpdateLayout();
+            var shortcutButton=VisualChildren<Button>(settings)
+                .Single(x=>Equals(x.Content,"إنشاء اختصار على سطح المكتب"));
+            var shortcutBounds=shortcutButton.TransformToAncestor(root)
+                .TransformBounds(new Rect(shortcutButton.RenderSize));
+            if(shortcutBounds.Height<28 || shortcutBounds.Left<0 ||
+               shortcutBounds.Right>root.ActualWidth+1 ||
+               shortcutBounds.Bottom>height)
+                throw new InvalidDataException(
+                    "Settings desktop shortcut button is clipped at 1200x730.");
+            if(!VisualChildren<Border>(settings).Any(panel=>
+                panel.Background is SolidColorBrush brush &&
+                brush.Color==Color.FromRgb(255,243,223)))
+                throw new InvalidDataException(
+                    "Settings view must use the shared cream card background.");
+            Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,
+                "settings-1200x730.png"));
             return 0;
         }
         catch(Exception ex)
