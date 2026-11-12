@@ -372,21 +372,6 @@ public sealed class UserManagerView : UserControl
         previous.Click+=(_,_)=>{if(page>0){page--;Display();}};
         next.Click+=(_,_)=>{page++;Display();};
         refresh.Click+=async (_,_)=>await Load();
-        Loaded+=async (_,_)=>
-        {
-            try
-            {
-                var generation=await gateway.ReadRouterOsGenerationAsync();
-                if(IsLoaded)detectedGeneration=generation;
-                if(IsLoaded)UpdateActionButtons();
-                if(IsLoaded && !hasLoaded)
-                    status.Text=$"تم اكتشاف RouterOS {(int)generation}. اختر البيانات ثم اضغط قراءة البيانات.";
-            }
-            catch(Exception ex)
-            {
-                if(IsLoaded)status.Text="تعذر التحقق من إصدار الراوتر: "+ex.Message;
-            }
-        };
         Unloaded+=(_,_)=>pending?.Cancel();
         Display();
 
@@ -408,6 +393,27 @@ public sealed class UserManagerView : UserControl
         }
         Back.Click+=(_,_)=>ReturnToHome();
 
+        // The six-card landing requires no RouterOS round-trip. Discover
+        // capabilities only on opening the advanced administration explorer.
+        async Task EnsureExplorerGenerationAsync()
+        {
+            if(detectedGeneration is not null)return;
+            try
+            {
+                var generation=await gateway.ReadRouterOsGenerationAsync();
+                if(!IsLoaded || !ReferenceEquals(Content,explorerShell))return;
+                detectedGeneration=generation;
+                UpdateActionButtons();
+                if(!hasLoaded)
+                    status.Text=$"تم اكتشاف RouterOS {(int)generation}. اختر البيانات ثم اضغط قراءة البيانات.";
+            }
+            catch(Exception ex)
+            {
+                if(IsLoaded && ReferenceEquals(Content,explorerShell))
+                    status.Text="تعذر التحقق من إصدار الراوتر: "+ex.Message;
+            }
+        }
+
         void OpenExplorer(UserManagerCatalogSection requested,bool focusSearch=false)
         {
             section.SelectedIndex=requested switch
@@ -419,6 +425,7 @@ public sealed class UserManagerView : UserControl
                 _=>1
             };
             Content=explorerShell;
+            _=EnsureExplorerGenerationAsync();
             if(focusSearch)
                 Dispatcher.BeginInvoke(new Action(()=>search.Focus()),
                     System.Windows.Threading.DispatcherPriority.Loaded);
