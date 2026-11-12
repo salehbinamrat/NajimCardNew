@@ -38,6 +38,16 @@ class VoucherIssuancePerformanceContracts(unittest.TestCase):
         self.assertIn("LoadProfilesAsync(force:true)",creator)
         self.assertIn("_profileReadGate.WaitAsync()",catalog)
 
+    def test_router_api_has_low_latency_full_sentence_writes_and_buffered_reads(self):
+        client=(CORE/"RouterOsClient.cs").read_text(encoding="utf-8")
+        protocol=(CORE/"RouterOsProtocol.cs").read_text(encoding="utf-8")
+        self.assertIn("tcp.NoDelay = true",client)
+        self.assertIn("new BufferedStream(stream, 64 * 1024)",client)
+        self.assertIn("frame.WriteByte(0)",protocol)
+        self.assertIn("stream.WriteAsync(frame.GetBuffer().AsMemory(",protocol)
+        self.assertIn("await stream.FlushAsync(token)",protocol)
+        self.assertEqual(protocol.count("await stream.WriteAsync("),1)
+
     def test_pdf_staging_buffer_is_reused_but_quality_and_text_unchanged(self):
         pdf=(DESKTOP/"Services/VoucherPdfExporter.cs").read_text(encoding="utf-8")
         self.assertIn("using var imageBuffer=new MemoryStream(1024*1024)",pdf)
