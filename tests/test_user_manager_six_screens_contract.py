@@ -71,6 +71,23 @@ class UserManagerSixScreensContract(unittest.TestCase):
         self.assertIn("overwrite",policy)
         self.assertNotIn('"/user-manager/database/load",',policy)
 
+    def test_scoped_controls_keep_legible_foreground_and_padding(self):
+        ui=(VIEWS/"UmUi.cs").read_text(encoding="utf-8")
+        self.assertIn("Border.PaddingProperty,new Binding(nameof(Button.Padding))",ui)
+        self.assertIn("TextBlock.ForegroundProperty,new Binding(nameof(Button.Foreground))",ui)
+        self.assertIn("TextBlock.ForegroundProperty,new Binding(nameof(ComboBox.Foreground))",ui)
+        self.assertIn("TextBlock.ForegroundProperty,new Binding(nameof(ComboBoxItem.Foreground))",ui)
+        self.assertIn("popupBorder.SetValue(TextElement.ForegroundProperty,Ink)",ui)
+        self.assertIn("ScrollViewer.CanContentScrollProperty,true",ui)
+        self.assertIn("options.Distinct(StringComparer.Ordinal)",ui)
+
+    def test_maintenance_does_not_duplicate_unavailable_actions(self):
+        ui=(VIEWS/"UserManagerMaintenanceView.cs").read_text(encoding="utf-8")
+        self.assertNotIn('UmUi.Action("تنزيل عبر Winbox")',ui)
+        self.assertNotIn('UmUi.Action("استعادة النسخة")',ui)
+        self.assertIn("لتحميل ملف .umb إلى الكمبيوتر استخدم قائمة Files",ui)
+        self.assertIn("زر الاستعادة محجوز",ui)
+
     def test_no_fake_reference_values(self):
         examples=["6,842","1,245,000","4,836","1.24","5000511","2026/11/11"]
         for name in ("UserManagerAccountsScreen.cs","UserManagerPlansScreen.cs",
