@@ -69,14 +69,50 @@ public static class RouterOsProtocol
     public static async Task<IReadOnlyList<string>> ReadSentenceAsync(Stream stream, CancellationToken token)
     {
         var words = new List<string>();
+        // A typical RouterOS reply contains many tiny length prefixes. Reuse
+        // one scratch buffer per sentence rather than allocating 1-4 byte
+        // arrays for every word and every prefix continuation.
+        var prefix = new byte[5];
         while (true)
         {
-            uint length = await ReadLengthAsync(stream, token);
+            uint length = await ReadLengthBufferedAsync(stream, prefix, token);
             if (length == 0) return words;
             if (length > 8 * 1024 * 1024) throw new InvalidDataException("Oversized RouterOS API response");
             var bytes = await ReadExactAsync(stream, (int)length, token);
             words.Add(StrictUtf8.GetString(bytes));
             if (words.Count > 5000) throw new InvalidDataException("Excessive RouterOS API words");
+        }
+    }
+
+    private static async Task<uint> ReadLengthBufferedAsync(
+        Stream stream, byte[] prefix, CancellationToken token)
+    {
+        await ReadExactIntoAsync(stream, prefix.AsMemory(0,1), token);
+        byte first=prefix[0];
+        if ((first & 0x80)==0) return first;
+        int extra=(first & 0xC0)==0x80 ? 1 :
+            (first & 0xE0)==0xC0 ? 2 :
+            (first & 0xF0)==0xE0 ? 3 :
+            first==0xF0 ? 4 :
+            throw new InvalidDataException("Unsupported RouterOS word length prefix");
+        await ReadExactIntoAsync(stream,prefix.AsMemory(1,extra),token);
+        return extra switch
+        {
+            1 => (uint)((first & 0x3F)<<8 | prefix[1]),
+            2 => (uint)((first & 0x1F)<<16 | prefix[1]<<8 | prefix[2]),
+            3 => (uint)((first & 0x0F)<<24 | prefix[1]<<16 | prefix[2]<<8 | prefix[3]),
+            _ => BinaryPrimitives.ReadUInt32BigEndian(prefix.AsSpan(1,4))
+        };
+    }
+
+    private static async Task ReadExactIntoAsync(
+        Stream stream, Memory<byte> buffer, CancellationToken token)
+    {
+        while (!buffer.IsEmpty)
+        {
+            int count=await stream.ReadAsync(buffer,token);
+            if (count==0) throw new EndOfStreamException("RouterOS disconnected unexpectedly");
+            buffer=buffer[count..];
         }
     }
 
