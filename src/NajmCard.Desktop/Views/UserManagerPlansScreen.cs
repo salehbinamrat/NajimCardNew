@@ -295,7 +295,7 @@ public sealed class UserManagerPlansScreen : UserControl
         clear.Click+=(_,_)=>ResetForm();
         link.Click+=async(_,_)=>await Link();
         refresh.Click+=async(_,_)=>await Load();
-        search.TextChanged+=(_,_)=>{page=0;Draw();};
+        UmUi.Debounce(search,this,()=>{page=0;Draw();});
         size.SelectionChanged+=(_,_)=>{page=0;Draw();};
         prev.Click+=(_,_)=>{page--;Draw();};
         next.Click+=(_,_)=>{page++;Draw();};
