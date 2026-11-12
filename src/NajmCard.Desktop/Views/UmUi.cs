@@ -9,17 +9,26 @@ using System.Windows.Threading;
 namespace NajmCard.Desktop.Views;
 
 /// <summary>
-/// Scoped navy/cyan visual language for User Manager screens only.
-/// No global MainWindow styles or card printing templates are modified.
+/// User Manager shares the application's burgundy/gold/cream resources.
+/// The scoped controls do not change MainWindow, other pages or card artwork.
 /// </summary>
 internal static class UmUi
 {
-    internal static readonly Brush Navy=Solid("#072447");
-    internal static readonly Brush Blue=Solid("#0B4F82");
-    internal static readonly Brush Cyan=Solid("#007E86");
-    internal static readonly Brush Ink=Solid("#10253D");
-    internal static readonly Brush Light=Solid("#F1F7FC");
-    internal static readonly Brush Gray=Solid("#546A80");
+    // Semantic aliases retained for existing User Manager call sites.
+    // Brushes originate from the SAME app resource dictionary as all pages.
+    internal static readonly Brush Navy=FromTheme("SidebarBrush","#270C19");
+    internal static readonly Brush Blue=FromTheme("BurgundyBrush","#621B37");
+    internal static readonly Brush Cyan=FromTheme("BurgundyBrush","#621B37");
+    internal static readonly Brush Ink=FromTheme("CreamTextBrush","#4B1B32");
+    internal static readonly Brush Light=FromTheme("CreamPanelBrush","#FFF3DF");
+    internal static readonly Brush Gray=FromTheme("LineBrush","#76513E");
+    internal static readonly Brush Gold=FromTheme("GoldBrush","#DCB86E");
+    internal static readonly Brush GoldBright=FromTheme("GoldBrightBrush","#FFE3A2");
+    internal static readonly Brush Cream=FromTheme("TextBrush","#FFF5E8");
+    internal static readonly Brush InputSurface=Solid("#FFFAF0");
+
+    internal static Brush FromTheme(string key,string fallback) =>
+        Application.Current?.TryFindResource(key) as Brush ?? Solid(fallback);
 
     internal static SolidColorBrush Solid(string hex)
     {
@@ -45,8 +54,8 @@ internal static class UmUi
         {
             Child=child,Padding=new Thickness(11),
             Margin=margin??new Thickness(4),CornerRadius=new CornerRadius(12),
-            BorderBrush=Solid("#BFCFDA"),BorderThickness=new Thickness(1),
-            Background=background??Solid("#FCFEFF")
+            BorderBrush=FromTheme("LineBrush","#76513E"),BorderThickness=new Thickness(1),
+            Background=background??Light
         };
 
     internal static StackPanel Stack(params UIElement[] controls)
@@ -65,8 +74,8 @@ internal static class UmUi
 
     internal static Button Action(string caption,bool main=false,int minWidth=86)
     {
-        var background=main?Cyan:Solid("#E8F0F8");
-        var foreground=main?Brushes.White:Navy;
+        var background=main?Cyan:FromTheme("CreamPanelBrush","#FFF3DF");
+        var foreground=main?Cream:Ink;
         var button=new Button
         {
             Content=caption,
@@ -74,7 +83,7 @@ internal static class UmUi
             FontWeight=FontWeights.Bold,FontSize=12,
             MinWidth=minWidth,MinHeight=35,MaxHeight=42,
             Foreground=foreground,Background=background,
-            BorderBrush=Solid(main?"#0C8F9A":"#BBCDDD"),
+            BorderBrush=main?Gold:Gray,
             BorderThickness=new Thickness(1),
             Margin=new Thickness(3),Padding=new Thickness(10,5,10,5),
             Cursor=System.Windows.Input.Cursors.Hand
@@ -131,9 +140,19 @@ internal static class UmUi
         => new()
         {
             Width=205,Height=36,FontSize=13,FontFamily=new FontFamily("Arial"),
-            Background=Brushes.White,Foreground=Ink,
-            BorderBrush=Solid("#AFC2D2"),BorderThickness=new Thickness(1),
+            Background=InputSurface,Foreground=Ink,
+            BorderBrush=Gray,BorderThickness=new Thickness(1),
             Padding=new Thickness(7,5,7,5),Margin=new Thickness(4),
+            ToolTip=hint
+        };
+
+    internal static DatePicker DateInput(string hint,int width=125)
+        => new()
+        {
+            Width=width,Height=35,Margin=new Thickness(4),
+            FontSize=12,FontFamily=new FontFamily("Arial"),
+            Foreground=Ink,Background=Light,
+            BorderBrush=Gray,BorderThickness=new Thickness(1),
             ToolTip=hint
         };
 
@@ -143,7 +162,7 @@ internal static class UmUi
         // reuse the app's dark ComboBox template for these white controls.
         var cb=new ComboBox
         {
-            Width=width,MinHeight=34,Background=Brushes.White,
+            Width=width,MinHeight=34,Background=InputSurface,
             Foreground=Ink,Margin=new Thickness(4),FontSize=12,
             FontFamily=new FontFamily("Arial"),IsEditable=false,
             MaxDropDownHeight=280,HorizontalContentAlignment=HorizontalAlignment.Stretch
@@ -176,8 +195,8 @@ internal static class UmUi
         });
         var toggleTemplate=new ControlTemplate(typeof(ToggleButton));
         var toggleBorder=new FrameworkElementFactory(typeof(Border));
-        toggleBorder.SetValue(Border.BackgroundProperty,Brushes.White);
-        toggleBorder.SetValue(Border.BorderBrushProperty,Solid("#8CA9BD"));
+        toggleBorder.SetValue(Border.BackgroundProperty,InputSurface);
+        toggleBorder.SetValue(Border.BorderBrushProperty,Gray);
         toggleBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
         toggleBorder.SetValue(Border.CornerRadiusProperty,new CornerRadius(7));
         var arrow=new FrameworkElementFactory(typeof(System.Windows.Shapes.Path));
@@ -229,9 +248,9 @@ internal static class UmUi
             RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
         });
         var popupBorder=new FrameworkElementFactory(typeof(Border));
-        popupBorder.SetValue(Border.BackgroundProperty,Brushes.White);
+        popupBorder.SetValue(Border.BackgroundProperty,InputSurface);
         popupBorder.SetValue(TextElement.ForegroundProperty,Ink);
-        popupBorder.SetValue(Border.BorderBrushProperty,Solid("#8CA9BD"));
+        popupBorder.SetValue(Border.BorderBrushProperty,Gray);
         popupBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
         popupBorder.SetBinding(FrameworkElement.MinWidthProperty,new Binding("ActualWidth")
         {
@@ -259,7 +278,7 @@ internal static class UmUi
         template.Triggers.Add(disabled);
         style.Setters.Add(new Setter(Control.TemplateProperty,template));
         style.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
-        style.Setters.Add(new Setter(Control.BackgroundProperty,Brushes.White));
+        style.Setters.Add(new Setter(Control.BackgroundProperty,InputSurface));
         style.Seal();
         cachedComboStyle=style;
         return style;
@@ -270,7 +289,7 @@ internal static class UmUi
         if(cachedItemStyle is not null)return cachedItemStyle;
         var style=new Style(typeof(ComboBoxItem));
         style.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
-        style.Setters.Add(new Setter(Control.BackgroundProperty,Brushes.White));
+        style.Setters.Add(new Setter(Control.BackgroundProperty,InputSurface));
         style.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(7,5,7,5)));
         var template=new ControlTemplate(typeof(ComboBoxItem));
         var border=new FrameworkElementFactory(typeof(Border));
@@ -304,7 +323,7 @@ internal static class UmUi
         {
             var highlighted=new Trigger{Property=triggerProperty,Value=true};
             highlighted.Setters.Add(new Setter(Control.BackgroundProperty,
-                Solid("#CCEAF0")));
+                GoldBright));
             highlighted.Setters.Add(new Setter(Control.ForegroundProperty,Navy));
             template.Triggers.Add(highlighted);
         }
@@ -323,12 +342,12 @@ internal static class UmUi
             SelectionUnit=DataGridSelectionUnit.FullRow,
             HeadersVisibility=DataGridHeadersVisibility.Column,
             GridLinesVisibility=DataGridGridLinesVisibility.Horizontal,
-            HorizontalGridLinesBrush=Solid("#DBE4EC"),
-            RowBackground=Brushes.White,AlternatingRowBackground=Solid("#EDF4FB"),
+            HorizontalGridLinesBrush=FromTheme("LineBrush","#76513E"),
+            RowBackground=Light,AlternatingRowBackground=Solid("#F4E3D7"),
             AlternationCount=2,RowHeight=35,ColumnHeaderHeight=36,
             EnableRowVirtualization=true,EnableColumnVirtualization=true,
-            BorderBrush=Solid("#BCCDDD"),BorderThickness=new Thickness(1),
-            Background=Brushes.White,Foreground=Ink,FontSize=12,
+            BorderBrush=Gray,BorderThickness=new Thickness(1),
+            Background=InputSurface,Foreground=Ink,FontSize=12,
             FontFamily=new FontFamily("Arial")
         };
         VirtualizingPanel.SetIsVirtualizing(grid,true);
@@ -369,11 +388,11 @@ internal static class UmUi
     internal static Border Header(string title,string subtitle)
     {
         var inner=Stack(Label(title,23,true,Brushes.White),
-            Label(subtitle,12,false,Solid("#CCE4F6")));
+            Label(subtitle,12,false,GoldBright));
         inner.Margin=new Thickness(8,3,8,3);
         return new Border
         {
-            Child=inner,Background=Navy,BorderBrush=Solid("#1F80A0"),
+            Child=inner,Background=Navy,BorderBrush=Gold,
             BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),
             Padding=new Thickness(9),Margin=new Thickness(3,3,3,7)
         };
@@ -392,7 +411,7 @@ internal static class UmUi
         inner.Children.Add(symbol);
         inner.Children.Add(Stack(Label(label,12,true,Ink),
             Label(value,22,true,Navy)));
-        return Panel(inner,new Thickness(3,3,3,5),Solid("#F9FCFF"));
+        return Panel(inner,new Thickness(3,3,3,5),Light);
     }
 
     internal static Grid Metrics(params (string Label,string Value)[] values)
@@ -413,7 +432,7 @@ internal static class UmUi
     {
         var item=new Border
         {
-            Background=background??Solid("#E2F2F6"),
+            Background=background??Solid("#F4E3D7"),
             Padding=new Thickness(7,4,7,4),
             CornerRadius=new CornerRadius(7),
             Margin=new Thickness(2)

@@ -21,7 +21,7 @@ public sealed class UserManagerMaintenanceView : UserControl
         var header=UmUi.Header("النسخ والصيانة",
             "نسخ قاعدة User Manager على الراوتر ومراجعة النسخ الفعلية وصيانة آمنة.");
         var warning=UmUi.Panel(UmUi.Stack(
-            UmUi.Label("تنبيه هام",16,true,UmUi.Solid("#9B2437")),
+            UmUi.Label("تنبيه هام",16,true,UmUi.Blue),
             UmUi.Label(
                 "يجب إنشاء نسخة احتياطية قبل صيانة قاعدة User Manager. "+
                 "لن تُنفذ إعادة بناء أو استعادة أو حذف للقاعدة من هذه الشاشة "+
@@ -29,7 +29,7 @@ public sealed class UserManagerMaintenanceView : UserControl
             UmUi.Label(
                 "ملفات .umb على المايكروتيك منفصلة عن نسخ قاعدة SQLite المحلية "+
                 "ولا يمكن استخدام أحدهما بدلا من الآخر.",12,false,UmUi.Gray)
-        ),new Thickness(3),UmUi.Solid("#FFF1F3"));
+        ),new Thickness(3),UmUi.Light);
         var consent=new CheckBox
         {
             Content=new TextBlock

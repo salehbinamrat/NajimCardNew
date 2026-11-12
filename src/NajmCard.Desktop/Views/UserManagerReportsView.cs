@@ -16,15 +16,15 @@ namespace NajmCard.Desktop.Views;
 public sealed class UserManagerReportsView : UserControl
 {
     private static readonly Brush[] Palette=[
-        UmUi.Solid("#36A1E7"),UmUi.Solid("#10BDB6"),UmUi.Solid("#FFA631"),
-        UmUi.Solid("#6F58D6"),UmUi.Solid("#49BB7B"),UmUi.Solid("#E27496")];
+        UmUi.Gold,UmUi.Solid("#9C4C60"),UmUi.Solid("#BE9048"),
+        UmUi.Blue,UmUi.Solid("#F0D493"),UmUi.Solid("#A97E3B")];
 
     public UserManagerReportsView(RouterGateway gateway,Action back)
     {
         var header=UmUi.Header("التقارير",
             "إحصاءات حقيقية من حسابات User Manager والجلسات والمدفوعات المعتمدة.");
-        var from=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
-        var until=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
+        var from=UmUi.DateInput("تاريخ بداية التقرير",135);
+        var until=UmUi.DateInput("تاريخ نهاية التقرير",135);
         var period=UmUi.Combo(new[]{"كل الفترات","اليوم","آخر 7 أيام",
             "آخر 30 يوما","مخصص"},135);
         var package=UmUi.Combo(new[]{"كل الباقات"},145);
@@ -130,7 +130,7 @@ public sealed class UserManagerReportsView : UserControl
                 single.Children.Add(new Border
                 {
                     Height=Math.Max(2,height),Width=18,
-                    Background=UmUi.Solid("#0B8FB5"),
+                    Background=UmUi.Gold,
                     VerticalAlignment=VerticalAlignment.Bottom,
                     CornerRadius=new CornerRadius(3),
                     ToolTip=item.Date.ToString("yyyy-MM-dd")+" : "+
@@ -209,25 +209,28 @@ public sealed class UserManagerReportsView : UserControl
                 (complete<dated.Length?" (جزئي)":"");
             var paid=payments?.Rows.Where(x=>
                 (!lower.HasValue&&!upper.HasValue)||Within(x.Date,lower,upper)).ToArray();
-            var currencies=paid?.Select(x=>x.Currency)
-                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            decimal verifiedRevenue=0;
+            string revenueCurrency="";
+            bool validRevenue=paid is not null &&
+                UserManagerRevenueMath.TryTotalSingleCurrency(
+                    paid,out verifiedRevenue,out revenueCurrency);
             Metric(3).Text=paid is null?"غير متاح":
-                currencies!.Length==0?"0 (مدفوعات)":currencies.Length>1
-                    ?"عملات متعددة":paid.Sum(x=>x.Amount).ToString("N2",
-                    CultureInfo.InvariantCulture)+" "+currencies[0];
+                !validRevenue?"عملة غير معروفة أو عملات متعددة":
+                paid.Length==0?"0 (مدفوعات)":
+                verifiedRevenue.ToString("N2",CultureInfo.InvariantCulture)+
+                " "+revenueCurrency;
             DrawDistribution(users);
             DrawBars(traffic,dated.Where(x=>x.TotalBytes.HasValue&&x.StartedAt.HasValue)
                 .Select(x=>(x.StartedAt!.Value,(decimal)x.TotalBytes!.Value/1073741824m)),
                 "GiB");
             if(paid is null)
                 ResetChart(revenue,"لا تتوفر سجلات مدفوعات مؤكدة: "+paymentWarning);
-            else if(currencies is {Length:>1})
+            else if(!validRevenue)
                 ResetChart(revenue,
-                    "لا يمكن رسم إيرادات بعملات مختلفة في مخطط واحد دون تحويل معتمد.");
+                    "لا يمكن رسم الإيرادات بعملات مختلطة أو غير معروفة دون تحويل معتمد.");
             else
                 DrawBars(revenue,paid.Where(x=>x.Date.HasValue)
-                    .Select(x=>(x.Date!.Value,x.Amount)),
-                    currencies is {Length:1}?currencies[0]:"وحدة عملة");
+                    .Select(x=>(x.Date!.Value,x.Amount)),revenueCurrency);
             var undated=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
             message.Text=$"RouterOS {(int)accounts.Generation} | "+
                 $"الحسابات: {users.Length} | الجلسات المؤرخة: {dated.Length} | "+
