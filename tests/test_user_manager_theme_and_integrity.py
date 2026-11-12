@@ -52,6 +52,13 @@ class UserManagerPaletteAndIntegrityTests(unittest.TestCase):
         self.assertIn("UserManagerQuotaMath.ParseGiBToByteString(quota.Text)",plans)
         self.assertNotIn('ToString("0.###"',plans)
 
+    def test_date_inputs_keep_dark_text_on_light_cream_surfaces(self):
+        ui=(VIEWS/"UmUi.cs").read_text(encoding="utf-8")
+        self.assertIn("internal static DatePicker DateInput(",ui)
+        self.assertIn("Foreground=Ink,Background=Light",ui)
+        for name in ("UserManagerReportsView.cs","UserManagerSessionsScreen.cs"):
+            self.assertIn("UmUi.DateInput(",(VIEWS/name).read_text(encoding="utf-8"))
+
     def test_unknown_profile_prices_must_not_be_silently_overwritten(self):
         plans=(VIEWS/"UserManagerPlansScreen.cs").read_text(encoding="utf-8")
         self.assertIn('price.Text=row.Price=="غير متاح"?"":row.Price;',plans)
