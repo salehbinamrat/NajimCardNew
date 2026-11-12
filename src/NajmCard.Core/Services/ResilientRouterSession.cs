@@ -11,7 +11,7 @@ namespace NajmCard.Core.Services;
 /// No automatic connection is made after explicit logout.
 /// </summary>
 public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceiptClient,
-    IRouterQueryClient, IRouterNameQueryClient, IAsyncDisposable
+    IRouterQueryClient, IRouterNameQueryClient, IRouterTaggedAddClient, IAsyncDisposable
 {
     private sealed class Lane(IRouterCommandClient? current=null)
     {
@@ -137,6 +137,20 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
                 ?query.QueryByNameAsync(command,name,attributes,ct)
                 :throw new NotSupportedException(
                     "الاتصال لا يدعم استعلام اسم الحساب بشكل مقيّد."),true,cancellationToken);
+    }
+
+    public Task<IReadOnlyList<RouterTaggedAddOutcome>> AddWindowAsync(
+        IReadOnlyList<RouterTaggedAddCommand> commands,
+        CancellationToken cancellationToken=default)
+    {
+        // A pipeline is one mutation. Never replay it after a disconnected
+        // lane, even if no reply arrived: some/all adds may exist on RouterOS.
+        return ExecuteAsync(_fast,(current,ct)=>
+            current is IRouterTaggedAddClient tagged
+                ? tagged.AddWindowAsync(commands,ct)
+                : throw new NotSupportedException(
+                    "الراوتر لا يدعم نافذة الإرسال المجمعة في هذه الجلسة."),
+            false,cancellationToken);
     }
 
     public async ValueTask DisposeAsync()
