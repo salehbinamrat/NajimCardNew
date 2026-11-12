@@ -209,25 +209,28 @@ public sealed class UserManagerReportsView : UserControl
                 (complete<dated.Length?" (جزئي)":"");
             var paid=payments?.Rows.Where(x=>
                 (!lower.HasValue&&!upper.HasValue)||Within(x.Date,lower,upper)).ToArray();
-            var currencies=paid?.Select(x=>x.Currency)
-                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            decimal verifiedRevenue=0;
+            string revenueCurrency="";
+            bool validRevenue=paid is not null &&
+                UserManagerRevenueMath.TryTotalSingleCurrency(
+                    paid,out verifiedRevenue,out revenueCurrency);
             Metric(3).Text=paid is null?"غير متاح":
-                currencies!.Length==0?"0 (مدفوعات)":currencies.Length>1
-                    ?"عملات متعددة":paid.Sum(x=>x.Amount).ToString("N2",
-                    CultureInfo.InvariantCulture)+" "+currencies[0];
+                !validRevenue?"عملة غير معروفة أو عملات متعددة":
+                paid.Length==0?"0 (مدفوعات)":
+                verifiedRevenue.ToString("N2",CultureInfo.InvariantCulture)+
+                " "+revenueCurrency;
             DrawDistribution(users);
             DrawBars(traffic,dated.Where(x=>x.TotalBytes.HasValue&&x.StartedAt.HasValue)
                 .Select(x=>(x.StartedAt!.Value,(decimal)x.TotalBytes!.Value/1073741824m)),
                 "GiB");
             if(paid is null)
                 ResetChart(revenue,"لا تتوفر سجلات مدفوعات مؤكدة: "+paymentWarning);
-            else if(currencies is {Length:>1})
+            else if(!validRevenue)
                 ResetChart(revenue,
-                    "لا يمكن رسم إيرادات بعملات مختلفة في مخطط واحد دون تحويل معتمد.");
+                    "لا يمكن رسم الإيرادات بعملات مختلطة أو غير معروفة دون تحويل معتمد.");
             else
                 DrawBars(revenue,paid.Where(x=>x.Date.HasValue)
-                    .Select(x=>(x.Date!.Value,x.Amount)),
-                    currencies is {Length:1}?currencies[0]:"وحدة عملة");
+                    .Select(x=>(x.Date!.Value,x.Amount)),revenueCurrency);
             var undated=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
             message.Text=$"RouterOS {(int)accounts.Generation} | "+
                 $"الحسابات: {users.Length} | الجلسات المؤرخة: {dated.Length} | "+
