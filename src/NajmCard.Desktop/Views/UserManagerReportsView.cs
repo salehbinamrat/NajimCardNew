@@ -221,9 +221,13 @@ public sealed class UserManagerReportsView : UserControl
                 "GiB");
             if(paid is null)
                 ResetChart(revenue,"لا تتوفر سجلات مدفوعات مؤكدة: "+paymentWarning);
+            else if(currencies is {Length:>1})
+                ResetChart(revenue,
+                    "لا يمكن رسم إيرادات بعملات مختلفة في مخطط واحد دون تحويل معتمد.");
             else
                 DrawBars(revenue,paid.Where(x=>x.Date.HasValue)
-                    .Select(x=>(x.Date!.Value,x.Amount)),"وحدة عملة");
+                    .Select(x=>(x.Date!.Value,x.Amount)),
+                    currencies is {Length:1}?currencies[0]:"وحدة عملة");
             var undated=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
             message.Text=$"RouterOS {(int)accounts.Generation} | "+
                 $"الحسابات: {users.Length} | الجلسات المؤرخة: {dated.Length} | "+
