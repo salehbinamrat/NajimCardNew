@@ -52,6 +52,12 @@ jobs:
           name: NajmCard-dashboard-1200x730
           path: out/dashboard-1200x730.png
           if-no-files-found: error
+      - name: Upload settings and shortcut screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: NajmCard-settings-1200x730
+          path: out/settings-1200x730.png
+          if-no-files-found: error
       - name: Upload User Manager landing screenshot
         uses: actions/upload-artifact@v4
         with:
