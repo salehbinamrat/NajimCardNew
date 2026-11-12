@@ -52,13 +52,11 @@ public sealed class UserManagerMaintenanceView : UserControl
             ("تاريخ الإنشاء","CreatedAt",154),("الحجم","Size",100));
         list.MinHeight=170;list.MaxHeight=220;
         var refresh=UmUi.Action("تحديث النسخ من الراوتر",true,155);
-        var download=UmUi.Action("تنزيل عبر Winbox");
-        var restore=UmUi.Action("استعادة النسخة");
         var fileStatus=UmUi.Label(
             "اضغط تحديث لجلب ملفات .umb الحقيقية من RouterOS Files.",
             12,false,UmUi.Gray);
         var remote=UmUi.Stack(UmUi.Label("النسخ الاحتياطية والاستعادة",16,true),
-            UmUi.Row(refresh,download,restore),list,fileStatus,
+            UmUi.Row(refresh),list,fileStatus,
             UmUi.Label(
                 "لتحميل ملف .umb إلى الكمبيوتر استخدم قائمة Files في Winbox. "+
                 "لا يمكن تنزيل بيانات الملف عبر استعلام RouterOS API القياسي؛ "+
@@ -171,13 +169,6 @@ public sealed class UserManagerMaintenanceView : UserControl
             catch(Exception ex){status.Text="لم يثبت اكتمال النسخ: "+ex.Message;}
             finally{SetBusy(false);}
         };
-        download.Click+=(_,_)=>fileStatus.Text=
-            "لتحميل الملف المحدد افتح Files في Winbox ثم اسحبه إلى الكمبيوتر. "+
-            "الاستعلام الحالي يعرض اسم الملف وحجمه فقط ولا ينقل محتواه.";
-        restore.Click+=(_,_)=>fileStatus.Text=
-            "استعادة قاعدة User Manager معطلة لحماية حسابات المشتركين؛ "+
-            "لا يمكن تنفيذها دون فحص نسخة المصدر والتوافق وحالة العملاء.";
-        restore.IsEnabled=false;
 
         void RefreshLocal()
         {
