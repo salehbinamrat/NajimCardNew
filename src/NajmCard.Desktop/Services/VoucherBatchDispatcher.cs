@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using NajmCard.Core.Models;
 using NajmCard.Core.Services;
@@ -83,6 +84,15 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
             await gateway.VerifyUserManagerV6HotspotReadinessAsync(
                 first.Profile,customer,cancellationToken);
         }
+
+        // On a real resilient RouterOS connection, a verified UM6 readback
+        // uses an independent inventory lane. Start at most ONE following card
+        // while the previous card is waiting for its exact-ID verification.
+        // The normal path remains unchanged for single-lane/test clients.
+        if(service=="userman" && batch.Count>1 &&
+            gateway.SupportsOverlappedUserManagerV6Readback)
+            return await SendUserManagerWithOverlappedReadbackAsync(
+                batch,customer,cancellationToken,progress).ConfigureAwait(false);
 
         var failed = new List<string>();
         int succeeded = 0;
@@ -177,5 +187,122 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
             processed++;
         }
         return new BatchDeliveryResult(succeeded, failed, false);
+    }
+
+    /// <summary>
+    /// Hides the latency of a previous card's EXACT-ID RouterOS verification
+    /// behind the next card's add/activate commands. ResilientRouterSession
+    /// serializes ALL writes on one lane and reads receipts on an independent
+    /// connection. At most two cards can be in flight; on any uncertain outcome
+    /// no more leases are started, but the single already-started card is
+    /// awaited and its actual result durably recorded before returning.
+    ///
+    /// Every card commits its SENDING lease before the first network byte and
+    /// its individual receipt in a separate FULL SQLite transaction; a crash
+    /// or timeout cannot silently authorize resending an unknown card.
+    /// </summary>
+    private async Task<BatchDeliveryResult> SendUserManagerWithOverlappedReadbackAsync(
+        IReadOnlyList<Voucher> batch,string customer,CancellationToken cancellationToken,
+        IProgress<string>? progress)
+    {
+        var startedAt=Stopwatch.GetTimestamp();
+        var failed=new List<string>();
+        var pending=new Queue<(Voucher Voucher, int Number,
+            Task<(string State,string Error)> Result)>();
+        int next=0,processed=0,succeeded=0;
+        int stride=Math.Max(1,batch.Count/80);
+        bool uncertain=false;
+        Exception? writeFailure=null;
+
+        // Convert every router outcome into a value: even if a pending API
+        // call fails after an earlier one is uncertain, its SENDING lease has
+        // an authoritative local outcome rather than a forgotten task.
+        async Task<(string State,string Error)> IssueAsync(Voucher voucher)
+        {
+            try
+            {
+                var result=await gateway.CreateAndActivateUserManagerV6Async(
+                    voucher,customer,cancellationToken).ConfigureAwait(false);
+                return (result.Success?"SENT":
+                    result.UncertainOutcome?"UNKNOWN":"FAILED",result.Error??"");
+            }
+            catch(Exception ex)
+            {
+                return ("UNKNOWN","نتيجة إصدار User Manager غير مؤكدة: "+ex.Message);
+            }
+        }
+
+        // One local connection is owned exclusively by this coordinator.
+        // Only one thread executes its SQLite lease and receipt operations;
+        // the RouterOS tasks never touch the store or its open connection.
+        using var sendSession=store.OpenSendSession();
+        while((next<batch.Count && !uncertain && writeFailure is null &&
+                !cancellationToken.IsCancellationRequested)||pending.Count>0)
+        {
+            while(next<batch.Count && pending.Count<2 && !uncertain &&
+                  writeFailure is null && !cancellationToken.IsCancellationRequested)
+            {
+                // Consume any completed error before admitting another card.
+                if(pending.Count>0 && pending.Peek().Result.IsCompleted)
+                    break;
+                var voucher=batch[next];
+                var number=next+1;
+                try
+                {
+                    // Durable first: no RouterOS operation before this returns.
+                    sendSession.BeginSend(voucher);
+                }
+                catch(Exception ex)
+                {
+                    writeFailure=ex;
+                    break;
+                }
+                if(number==1 || number==batch.Count || number%stride==0)
+                    progress?.Report($"إصدار الكرت {number} من {batch.Count} عبر مساري RouterOS...");
+                pending.Enqueue((voucher,number,IssueAsync(voucher)));
+                next++;
+            }
+            if(pending.Count==0)break;
+
+            var current=pending.Dequeue();
+            var outcome=await current.Result.ConfigureAwait(false);
+            try
+            {
+                // FULL commit after the exact-ID router readback, never after
+                // a batch-level timer or a subsequent unrelated voucher.
+                sendSession.FinishSend(current.Voucher,outcome.State,outcome.Error);
+            }
+            catch(Exception ex)
+            {
+                writeFailure??=ex;
+                uncertain=true;
+            }
+            processed++;
+            if(outcome.State=="SENT")
+                succeeded++;
+            else if(outcome.State=="FAILED")
+                failed.Add(current.Voucher.Username);
+            else
+                uncertain=true;
+
+            if(processed==batch.Count || processed==1 ||
+                processed%stride==0 || outcome.State!="SENT")
+            {
+                var elapsed=Stopwatch.GetElapsedTime(startedAt);
+                var secondsPerCard=elapsed.TotalSeconds/processed;
+                progress?.Report($"اكتمل {processed} من {batch.Count} كرت | "+
+                    $"المتوسط {secondsPerCard:F2} ثانية/كرت | "+
+                    (outcome.State=="SENT"?"تم التأكيد":
+                     outcome.State=="FAILED"?"رفض مؤكد":"النتيجة غير مؤكدة"));
+            }
+        }
+
+        if(writeFailure is not null)
+            throw new InvalidOperationException(
+                "تعذر حفظ حالة كرت أثناء الإرسال. توقفت الدفعة؛ "+
+                "افحص الحسابات وسجلات SQLite قبل المحاولة مجددا.",writeFailure);
+        if(cancellationToken.IsCancellationRequested && !uncertain)
+            cancellationToken.ThrowIfCancellationRequested();
+        return new BatchDeliveryResult(succeeded,failed,uncertain);
     }
 }
