@@ -122,7 +122,15 @@
                         <ContentPresenter IsHitTestVisible="False" VerticalAlignment="Center" Margin="8,0,27,0"
                                           Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}">
+                            <ContentPresenter.Resources>
+                                <!-- The global implicit TextBlock style must not mask ComboBox.Foreground. -->
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
                         <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"
                                PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                                IsOpen="{TemplateBinding IsDropDownOpen}" Focusable="False">
@@ -160,7 +168,14 @@
                     <Border x:Name="ItemSurface" Background="{StaticResource SurfaceBrush}" Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center"
                                           TextElement.Foreground="{TemplateBinding Foreground}"
-                                          RecognizesAccessKey="True"/>
+                                          RecognizesAccessKey="True">
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ComboBoxItem}}"/>
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
                         <!-- Selected/hovered options must use a light surface AND
@@ -267,7 +282,7 @@
         <Setter Property="FontFamily" Value="Arial"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Background" Value="#E8BDCB"/>
-        <Setter Property="Foreground" Value="#FFF5E8"/>
+        <Setter Property="Foreground" Value="#4B1B32"/>
         <Setter Property="BorderBrush" Value="#C8A96A"/>
         <Setter Property="BorderThickness" Value="0,0,1,1"/>
         <Setter Property="Padding" Value="10,7"/>
