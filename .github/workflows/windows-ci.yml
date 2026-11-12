@@ -52,6 +52,12 @@ jobs:
           name: NajmCard-dashboard-1200x730
           path: out/dashboard-1200x730.png
           if-no-files-found: error
+      - name: Upload User Manager landing screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: NajmCard-usermanager-home-1200x730
+          path: out/user-manager-home-1200x730.png
+          if-no-files-found: error
   windows-release:
     name: Windows Release tests (${{ matrix.arch }})
     runs-on: windows-2022
