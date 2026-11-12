@@ -43,6 +43,71 @@ public sealed partial class RouterGateway
         return new UmDataSnapshot<UmApprovedPayment>(generation,confirmed);
     }
 
+    /// <summary>
+    /// Explicit non-overwriting RouterOS UM database snapshot.
+    /// Result is not "success" until an actual .umb file is seen.
+    /// A lost write acknowledgement is uncertain and is never retried.
+    /// </summary>
+    public async Task<UmPlanMutationResult> CreateUmRouterBackupAsync(
+        CancellationToken ct=default)
+    {
+        var generation=await ReadRouterOsGenerationAsync(ct);
+        var path=generation==RouterOsGeneration.V6
+            ?"/tool/user-manager/database/save":"/user-manager/database/save";
+        var name="UM_Najim_"+DateTime.UtcNow.ToString(
+            "yyyyMMdd_HHmmss",CultureInfo.InvariantCulture)+"_"+
+            Guid.NewGuid().ToString("N")[..6];
+        var before=await ReadUmRouterBackupsAsync(ct);
+        if(before.Any(x=>x.Name.EndsWith(name+".umb",StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException(
+                "اسم النسخة الاحتياطية موجود مسبقا؛ لم يبدأ النسخ.");
+        try
+        {
+            await client.CommandAsync(path,
+                new Dictionary<string,string>
+                {
+                    ["name"]=name,["overwrite"]="no"
+                },ct);
+        }
+        catch(RouterOsTrapException ex)
+        {
+            return new UmPlanMutationResult(false,false,
+                "رفض RouterOS إنشاء نسخة قاعدة User Manager: "+ex.Message);
+        }
+        catch(Exception ex) when(ex is IOException or OperationCanceledException or
+            ObjectDisposedException or InvalidDataException)
+        {
+            return new UmPlanMutationResult(false,true,
+                "ربما تم حفظ قاعدة User Manager باسم "+name+
+                ".umb لكن تأكيد الراوتر انقطع؛ لا تعاود الأمر قبل مراجعة Files.");
+        }
+        try
+        {
+            for(int attempt=0;attempt<3;attempt++)
+            {
+                if(attempt>0)await Task.Delay(attempt*250,ct);
+                var files=await ReadUmRouterBackupsAsync(ct);
+                var match=files.SingleOrDefault(x=>x.Name.EndsWith(
+                    name+".umb",StringComparison.OrdinalIgnoreCase));
+                if(match is not null && match.Size is not ("0" or "0B" or "غير متاح"))
+                    return new UmPlanMutationResult(true,false,
+                        "حُفظت قاعدة User Manager وتأكد الملف "+match.Name+
+                        " بحجم "+match.Size+" على الراوتر. "+
+                        "للحصول عليه خارج الراوتر استخدم Files/Winbox.");
+            }
+            return new UmPlanMutationResult(false,true,
+                "قبل الراوتر أمر النسخ، لكن لم يُثبت ظهور ملف "+name+
+                ".umb بحجم صالح. تحقق من Files قبل إعادة المحاولة.");
+        }
+        catch(Exception ex) when(ex is IOException or OperationCanceledException or
+            ObjectDisposedException or InvalidDataException)
+        {
+            return new UmPlanMutationResult(false,true,
+                "أُرسل أمر النسخ، لكن فشلت قراءة الملف من الراوتر؛ "+
+                "افحص Files قبل محاولة أخرى.");
+        }
+    }
+
     public async Task<IReadOnlyList<UmRouterBackup>> ReadUmRouterBackupsAsync(
         CancellationToken ct=default)
     {
