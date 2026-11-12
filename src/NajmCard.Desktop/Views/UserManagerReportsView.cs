@@ -196,8 +196,11 @@ public sealed class UserManagerReportsView : UserControl
             // Do not apply current-user profile as if it were the session's
             // original profile; this could silently misstate historical usage.
             var dated=sessions.Rows.Where(x=>Within(x.StartedAt,lower,upper)).ToArray();
-            var known=sessions.Rows.Count(x=>x.IsActive.HasValue);
-            var active=dated.Count(x=>x.IsActive==true);
+            var scope=UserManagerReportFilters.CountActiveSessions(dated);
+            // RADIUS sessions do not carry a reliable historical Profile
+            // association. Never present global session statistics as though
+            // they were filtered by the current user's selected package.
+            bool allPackages=selected=="كل الباقات";
             var amount=0L;int complete=0;
             foreach(var row in dated)
                 if(row.TotalBytes is long bytes)
@@ -205,28 +208,43 @@ public sealed class UserManagerReportsView : UserControl
                     amount=Add(amount,bytes);complete++;
                 }
             Metric(0).Text=users.Length.ToString("N0",CultureInfo.InvariantCulture);
-            Metric(1).Text=known>0
-                ?active.ToString("N0",CultureInfo.InvariantCulture):"غير متاح";
-            Metric(2).Text=complete==0?"غير متاح":UmUi.Bytes(amount)+
+            Metric(1).Text=!allPackages?"غير متاح حسب الباقة":
+                scope.Known==0?"غير متاح":
+                scope.Active.ToString("N0",CultureInfo.InvariantCulture)+
+                (scope.IsComplete?"":" (جزئي)");
+            Metric(2).Text=!allPackages?"غير متاح حسب الباقة":
+                complete==0?"غير متاح":UmUi.Bytes(amount)+
                 (complete<dated.Length?" (جزئي)":"");
-            var paid=payments?.Rows.Where(x=>
-                (!lower.HasValue&&!upper.HasValue)||Within(x.Date,lower,upper)).ToArray();
+            var paymentScope=payments is null?null:
+                UserManagerReportFilters.SelectApprovedPayments(
+                    payments.Rows,lower,upper,allPackages?null:selected);
+            var paid=paymentScope?.Rows.ToArray();
             decimal verifiedRevenue=0;
             string revenueCurrency="";
             bool validRevenue=paid is not null &&
+                paymentScope!.IsComplete &&
                 UserManagerRevenueMath.TryTotalSingleCurrency(
                     paid,out verifiedRevenue,out revenueCurrency);
             Metric(3).Text=paid is null?"غير متاح":
+                paymentScope is not null&&!paymentScope.IsComplete
+                    ?"غير متاح (بيانات الدفع ناقصة)":
                 !validRevenue?"عملة غير معروفة أو عملات متعددة":
                 paid.Length==0?"0 (مدفوعات)":
                 verifiedRevenue.ToString("N2",CultureInfo.InvariantCulture)+
                 " "+revenueCurrency;
             DrawDistribution(users);
-            DrawBars(traffic,dated.Where(x=>x.TotalBytes.HasValue&&x.StartedAt.HasValue)
-                .Select(x=>(x.StartedAt!.Value,(decimal)x.TotalBytes!.Value/1073741824m)),
-                "GiB");
+            if(allPackages)
+                DrawBars(traffic,dated.Where(x=>x.TotalBytes.HasValue&&x.StartedAt.HasValue)
+                    .Select(x=>(x.StartedAt!.Value,(decimal)x.TotalBytes!.Value/1073741824m)),
+                    "GiB");
+            else
+                ResetChart(traffic,
+                    "لا يمكن نسبة جلسات RADIUS التاريخية إلى الباقة الحالية بدقة.");
             if(paid is null)
                 ResetChart(revenue,"لا تتوفر سجلات مدفوعات مؤكدة: "+paymentWarning);
+            else if(paymentScope is not null&&!paymentScope.IsComplete)
+                ResetChart(revenue,
+                    "لا يمكن تأكيد إيرادات الفترة أو الباقة مع سجلات دفع بلا تاريخ أو باقة معروفة.");
             else if(!validRevenue)
                 ResetChart(revenue,
                     "لا يمكن رسم الإيرادات بعملات مختلطة أو غير معروفة دون تحويل معتمد.");
@@ -238,7 +256,12 @@ public sealed class UserManagerReportsView : UserControl
                 $"الحسابات: {users.Length} | الجلسات المؤرخة: {dated.Length} | "+
                 $"غير مؤرخة: {undated}. "+
                 "إيرادات البطاقات المباعة خارج User Manager ليست محسوبة. "+
-                (selected=="كل الباقات"?"":"فلتر الباقة لا يغير تاريخ الجلسات أو إيراداتها.");
+                (allPackages?"":"الجلسات التاريخية غير منسوبة للباقة؛ الإيرادات حسب الباقة المثبتة في الدفع. ")+
+                (paymentScope is not null&&!paymentScope.IsComplete
+                    ?"هناك مدفوعات معتمدة بلا باقة أو تاريخ صالح؛ لم يُعرض مجموع مضلل. ":"")+
+                (payments is not null&&!lower.HasValue&&!upper.HasValue&&
+                 payments.Rows.Any(x=>!x.Date.HasValue)
+                    ?"الرسم اليومي يستبعد مدفوعات بلا تاريخ.":"");
             export.IsEnabled=true;
         }
 
