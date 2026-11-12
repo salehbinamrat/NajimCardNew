@@ -431,6 +431,7 @@ public sealed partial class VoucherStore : IDisposable
             " | غير مؤكد "+progress.Uncertain);
         tx.Commit();
         return progress;
+    }
 
     /// <summary>
     /// Keep one WAL connection for a whole issuance batch, but use independent
