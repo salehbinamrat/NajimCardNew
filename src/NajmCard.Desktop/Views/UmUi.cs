@@ -145,6 +145,16 @@ internal static class UmUi
             ToolTip=hint
         };
 
+    internal static DatePicker DateInput(string hint,int width=125)
+        => new()
+        {
+            Width=width,Height=35,Margin=new Thickness(4),
+            FontSize=12,FontFamily=new FontFamily("Arial"),
+            Foreground=Ink,Background=Light,
+            BorderBrush=Gray,BorderThickness=new Thickness(1),
+            ToolTip=hint
+        };
+
     internal static ComboBox Combo(IEnumerable<string> options,int width=125)
     {
         // This theme is intentionally scoped to UM's light surfaces. Do not
