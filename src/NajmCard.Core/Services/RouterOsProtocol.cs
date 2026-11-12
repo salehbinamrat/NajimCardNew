@@ -7,6 +7,9 @@ namespace NajmCard.Core.Services;
 public static class RouterOsProtocol
 {
     private const uint MaxWord = 0xFFFFFFFF;
+    // RouterOS catalog scans can contain tens of thousands of UTF-8 words.
+    // Reuse one strict decoder rather than allocating an encoding per field.
+    private static readonly UTF8Encoding StrictUtf8=new(false,true);
     public static byte[] EncodeLength(uint value)
     {
         if (value < 0x80) return [(byte)value];
@@ -72,7 +75,7 @@ public static class RouterOsProtocol
             if (length == 0) return words;
             if (length > 8 * 1024 * 1024) throw new InvalidDataException("Oversized RouterOS API response");
             var bytes = await ReadExactAsync(stream, (int)length, token);
-            words.Add(new UTF8Encoding(false, true).GetString(bytes));
+            words.Add(StrictUtf8.GetString(bytes));
             if (words.Count > 5000) throw new InvalidDataException("Excessive RouterOS API words");
         }
     }
