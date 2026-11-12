@@ -142,7 +142,7 @@ public sealed class UserManagerSessionsScreen : UserControl
         searchButton.Click+=(_,_)=>{page=0;Update();};
         reset.Click+=(_,_)=>{search.Clear();statusFilter.SelectedIndex=0;
             start.SelectedDate=end.SelectedDate=null;page=0;Update();};
-        search.TextChanged+=(_,_)=>{page=0;Update();};
+        UmUi.Debounce(search,this,()=>{page=0;Update();});
         statusFilter.SelectionChanged+=(_,_)=>{page=0;Update();};
         start.SelectedDateChanged+=(_,_)=>{page=0;Update();};
         end.SelectedDateChanged+=(_,_)=>{page=0;Update();};
