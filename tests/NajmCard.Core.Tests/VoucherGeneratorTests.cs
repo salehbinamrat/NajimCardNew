@@ -123,6 +123,7 @@ public sealed class VoucherGeneratorTests
             PasswordLength:12,PasswordCharacters:"abcdef",UsernameOnly:false);
         var cards=VoucherGenerator.Generate(options);
         Assert.Equal(count,cards.Count);
+        Assert.Single(cards.Select(x=>x.CreatedAt).Distinct());
         Assert.Equal(count,cards.Select(x=>x.Username)
             .Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.All(cards,card=>
