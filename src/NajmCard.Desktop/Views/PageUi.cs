@@ -32,8 +32,10 @@ internal static class PageUi
         };
         // Scope dark default labels to cream panels without affecting the
         // burgundy application header, login, sidebar or card print artwork.
-        var ordinaryText=new Style(typeof(TextBlock),
-            (Style)Application.Current.FindResource(typeof(TextBlock)));
+        var baseTextStyle=Application.Current?.TryFindResource(typeof(TextBlock)) as Style;
+        var ordinaryText=baseTextStyle is null
+            ?new Style(typeof(TextBlock))
+            :new Style(typeof(TextBlock),baseTextStyle);
         ordinaryText.Setters.Add(new Setter(TextBlock.ForegroundProperty,
             new SolidColorBrush(Color.FromRgb(75,27,50))));
         surface.Resources[typeof(TextBlock)]=ordinaryText;
