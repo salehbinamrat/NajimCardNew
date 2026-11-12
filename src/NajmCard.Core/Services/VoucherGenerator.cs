@@ -87,7 +87,10 @@ public static class VoucherGenerator
                 "مساحة أرقام الكروت المتبقية لا تكفي للدفعة؛ غيّر البادئة أو الطول أو مجموعة الأحرف.");
         var results=new List<Voucher>(options.Count);
         using var entropy=new SecureTokenSampler();
-        string batch=DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss")+"-"+
+        // A batch is created at one consistent time, without querying the
+        // system clock for every randomly generated voucher.
+        var batchCreatedAt=DateTimeOffset.UtcNow;
+        string batch=batchCreatedAt.ToString("yyyyMMddHHmmss")+"-"+
             Guid.NewGuid().ToString("N")[..8];
         long budget=Math.Max((long)options.Count*65,200);
         while(results.Count<options.Count && budget-- > 0)
@@ -97,7 +100,7 @@ public static class VoucherGenerator
             string password=options.UsernameOnly ? "" :
                 options.PasswordEqualsUsername ? username :
                 DifferentPassword(p.PasswordCharacters,p.PasswordLength,username,entropy);
-            results.Add(new Voucher(username,password,options.Profile,batch,DateTimeOffset.UtcNow));
+            results.Add(new Voucher(username,password,options.Profile,batch,batchCreatedAt));
         }
         if(results.Count!=options.Count)
             throw new InvalidOperationException(
