@@ -41,14 +41,13 @@ public sealed class UserManagerAccountsScreen : UserControl
         var expiredCard=(TextBlock)((StackPanel)((DockPanel)((Border)metrics.Children[3]).Child).Children[1]).Children[1];
 
         var add=UmUi.Action("＋ إضافة مستخدم",true,122);
-        var more=UmUi.Action("الإدارة المتقدمة",false,108);
         var export=UmUi.Action("تصدير CSV");
         var print=UmUi.Action("طباعة الصفحة");
         var delete=UmUi.Action("حذف محدد");
         var disable=UmUi.Action("تعطيل");
         var enable=UmUi.Action("تفعيل");
         var refresh=UmUi.Action("تحديث",true);
-        var actions=UmUi.Row(add,more,export,print,delete,disable,enable,refresh);
+        var actions=UmUi.Row(add,export,print,delete,disable,enable,refresh);
         var find=UmUi.SearchBox("بحث برقم الكرت أو الاسم");
         var statusFilter=UmUi.Combo(new[]{"كل الحالات","صالح","استخدم","باقة نشطة",
             "باقة جاهزة","مفعل","معطل","منتهي","بدون باقة","غير مصنف"},115);
@@ -221,7 +220,6 @@ public sealed class UserManagerAccountsScreen : UserControl
         }
 
         add.Click+=(_,_)=>openLegacy();
-        more.Click+=(_,_)=>openLegacy();
         refresh.Click+=async(_,_)=>await Load();
         enable.Click+=async(_,_)=>await Change(false);
         disable.Click+=async(_,_)=>await Change(true);
@@ -255,7 +253,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             }
         };
         table.SelectionChanged+=(_,_)=>Details();
-        find.TextChanged+=(_,_)=>{page=0;Draw();};
+        UmUi.Debounce(find,this,()=>{page=0;Draw();});
         statusFilter.SelectionChanged+=(_,_)=>{page=0;Draw();};
         profileFilter.SelectionChanged+=(_,_)=>{page=0;Draw();};
         pageSize.SelectionChanged+=(_,_)=>{page=0;Draw();};

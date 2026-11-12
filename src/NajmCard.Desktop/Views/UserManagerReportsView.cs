@@ -23,8 +23,6 @@ public sealed class UserManagerReportsView : UserControl
     {
         var header=UmUi.Header("التقارير",
             "إحصاءات حقيقية من حسابات User Manager والجلسات والمدفوعات المعتمدة.");
-        var returnButton=UmUi.Action("العودة إلى إدارة User Manager");
-        returnButton.Click+=(_,_)=>back();
         var from=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
         var until=new DatePicker {Width=135,Height=34,Margin=new Thickness(4)};
         var period=UmUi.Combo(new[]{"كل الفترات","اليوم","آخر 7 أيام",
@@ -34,8 +32,7 @@ public sealed class UserManagerReportsView : UserControl
         var export=UmUi.Action("تصدير التقرير CSV");
         export.IsEnabled=false;
         var filters=UmUi.Panel(UmUi.Stack(
-            UmUi.Row(returnButton,
-                UmUi.Label("الفترة",12,true),period,
+            UmUi.Row(UmUi.Label("الفترة",12,true),period,
                 UmUi.Label("من",12,true),from,
                 UmUi.Label("إلى",12,true),until),
             UmUi.Row(UmUi.Label("الباقة",12,true),package,read,export)));
@@ -224,9 +221,13 @@ public sealed class UserManagerReportsView : UserControl
                 "GiB");
             if(paid is null)
                 ResetChart(revenue,"لا تتوفر سجلات مدفوعات مؤكدة: "+paymentWarning);
+            else if(currencies is {Length:>1})
+                ResetChart(revenue,
+                    "لا يمكن رسم إيرادات بعملات مختلفة في مخطط واحد دون تحويل معتمد.");
             else
                 DrawBars(revenue,paid.Where(x=>x.Date.HasValue)
-                    .Select(x=>(x.Date!.Value,x.Amount)),"وحدة عملة");
+                    .Select(x=>(x.Date!.Value,x.Amount)),
+                    currencies is {Length:1}?currencies[0]:"وحدة عملة");
             var undated=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
             message.Text=$"RouterOS {(int)accounts.Generation} | "+
                 $"الحسابات: {users.Length} | الجلسات المؤرخة: {dated.Length} | "+

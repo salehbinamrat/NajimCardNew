@@ -131,7 +131,7 @@ public sealed class UserManagerSearchScreen : UserControl
         source.SelectionChanged+=(_,_)=>{items=[];page=0;Draw();};
         read.Click+=async(_,_)=>await Load();
         clear.Click+=(_,_)=>{keyword.Clear();status.SelectedIndex=0;page=0;Draw();};
-        keyword.TextChanged+=(_,_)=>{page=0;Draw();};
+        UmUi.Debounce(keyword,this,()=>{page=0;Draw();});
         status.SelectionChanged+=(_,_)=>{page=0;Draw();};
         pageSize.SelectionChanged+=(_,_)=>{page=0;Draw();};
         previous.Click+=(_,_)=>{page--;Draw();};

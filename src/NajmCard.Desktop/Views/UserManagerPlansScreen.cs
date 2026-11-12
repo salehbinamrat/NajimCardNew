@@ -33,7 +33,6 @@ public sealed class UserManagerPlansScreen : UserControl
         var profilesTab=UmUi.Action("Profiles (الباقات)",true,136);
         var limitsTab=UmUi.Action("Limitations (القيود)",false,138);
         var add=UmUi.Action("إضافة",true);
-        var edit=UmUi.Action("تعديل");
         var remove=UmUi.Action("حذف");
         var copy=UmUi.Action("نسخ إلى نموذج");
         var refresh=UmUi.Action("تحديث",true);
@@ -48,7 +47,7 @@ public sealed class UserManagerPlansScreen : UserControl
         var size=UmUi.Combo(new[]{"20","50","100"},77);
         var tableArea=UmUi.Stack(
             UmUi.Row(profilesTab,limitsTab),
-            UmUi.Row(search,refresh,add,edit,remove,copy),table,
+            UmUi.Row(search,refresh,add,remove,copy),table,
             UmUi.Row(prev,next,UmUi.Label("عرض",12),size,pager)
         );
 
@@ -92,7 +91,7 @@ public sealed class UserManagerPlansScreen : UserControl
         UmDataSnapshot<UmPlanRow>? snapshot=null;
         UmPlanRow? editing=null;
         string kind="Profile";
-        bool busy=false,loadedOnce=false;
+        bool busy=false,loadedOnce=false,suppressSelectionChanged=false;
         int page=0;
         Display[] filtered=[];
         CancellationTokenSource? pending=null;
@@ -106,7 +105,9 @@ public sealed class UserManagerPlansScreen : UserControl
             limitOptions.IsEnabled=link.IsEnabled=isProfile&&
                 snapshot?.Generation==RouterOsGeneration.V7&&!busy;
             profilesTab.Background=isProfile?UmUi.Cyan:UmUi.Light;
+            profilesTab.Foreground=isProfile?System.Windows.Media.Brushes.White:UmUi.Navy;
             limitsTab.Background=isProfile?UmUi.Light:UmUi.Cyan;
+            limitsTab.Foreground=isProfile?UmUi.Navy:System.Windows.Media.Brushes.White;
         }
         void ResetForm()
         {
@@ -127,12 +128,27 @@ public sealed class UserManagerPlansScreen : UserControl
             int take=int.TryParse(size.SelectedItem?.ToString(),out var n)?n:20;
             int pages=Math.Max(1,(filtered.Length+take-1)/take);
             page=Math.Clamp(page,0,pages-1);
-            table.ItemsSource=filtered.Skip(page*take).Take(take).ToArray();
+            // Rebind only the visible page, keeping the edited record selected
+            // without firing SelectionChanged and discarding unsaved form values.
+            var pageRows=filtered.Skip(page*take).Take(take).ToArray();
+            suppressSelectionChanged=true;
+            try
+            {
+                table.ItemsSource=pageRows;
+                if(editing is not null)
+                {
+                    var keep=pageRows.FirstOrDefault(x=>x.Source.Id==editing.Id &&
+                        x.Source.Kind==editing.Kind);
+                    table.SelectedItem=keep;
+                    if(keep is null)editing=null;
+                }
+            }
+            finally {suppressSelectionChanged=false;}
             pager.Text=$"إجمالي {kind}: {filtered.Length} | صفحة {page+1} من {pages}";
             prev.IsEnabled=page>0;next.IsEnabled=page+1<pages;
             bool canWrite=snapshot?.Generation==RouterOsGeneration.V7&&!busy;
             save.IsEnabled=add.IsEnabled=canWrite;
-            edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=canWrite&&Selected()!=null;
+            remove.IsEnabled=copy.IsEnabled=canWrite&&Selected()!=null;
             SetEditorKind();
         }
         async Task Load()
@@ -249,10 +265,12 @@ public sealed class UserManagerPlansScreen : UserControl
 
         table.SelectionChanged+=(_,_) =>
         {
+            if(suppressSelectionChanged)return;
             var row=Selected();
             if(row is null)
             {
-                edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=false;
+                editing=null;
+                remove.IsEnabled=copy.IsEnabled=false;
                 return;
             }
             editing=row;
@@ -265,20 +283,19 @@ public sealed class UserManagerPlansScreen : UserControl
             up.Text=row.DownloadRate=="غير متاح"?"":row.DownloadRate;
             down.Text=row.UploadRate=="غير متاح"?"":row.UploadRate;
             uptime.Text=row.UptimeLimit=="غير متاح"?"":row.UptimeLimit;
-            edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=
+            remove.IsEnabled=copy.IsEnabled=
                 snapshot?.Generation==RouterOsGeneration.V7&&!busy;
         };
         profilesTab.Click+=(_,_)=>{kind="Profile";page=0;ResetForm();Draw();};
         limitsTab.Click+=(_,_)=>{kind="Limitation";page=0;ResetForm();Draw();};
         add.Click+=(_,_)=>{ResetForm();status.Text="أدخل اسم السجل الجديد ثم اضغط حفظ.";};
         copy.Click+=(_,_)=>{editing=null;table.SelectedItem=null;name.Text+="-copy";Draw();};
-        edit.Click+=(_,_)=>{if(Selected() is null)return;status.Text="عدل الخانات ثم اضغط حفظ.";};
         save.Click+=async(_,_)=>await Mutate(editing is null?"add":"set");
         remove.Click+=async(_,_)=>await Mutate("remove");
         clear.Click+=(_,_)=>ResetForm();
         link.Click+=async(_,_)=>await Link();
         refresh.Click+=async(_,_)=>await Load();
-        search.TextChanged+=(_,_)=>{page=0;Draw();};
+        UmUi.Debounce(search,this,()=>{page=0;Draw();});
         size.SelectionChanged+=(_,_)=>{page=0;Draw();};
         prev.Click+=(_,_)=>{page--;Draw();};
         next.Click+=(_,_)=>{page++;Draw();};

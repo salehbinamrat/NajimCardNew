@@ -20,9 +20,6 @@ public sealed class UserManagerMaintenanceView : UserControl
     {
         var header=UmUi.Header("النسخ والصيانة",
             "نسخ قاعدة User Manager على الراوتر ومراجعة النسخ الفعلية وصيانة آمنة.");
-        var returnButton=UmUi.Action("العودة إلى إدارة User Manager");
-        returnButton.Click+=(_,_)=>back();
-        var tabs=UmUi.Row(returnButton,UmUi.Action("النسخ الاحتياطية",true));
         var warning=UmUi.Panel(UmUi.Stack(
             UmUi.Label("تنبيه هام",16,true,UmUi.Solid("#9B2437")),
             UmUi.Label(
@@ -44,12 +41,13 @@ public sealed class UserManagerMaintenanceView : UserControl
         };
         var diagnose=UmUi.Action("فحص قاعدة البيانات",true,132);
         var createRouter=UmUi.Action("إنشاء نسخة RouterOS .umb",true,165);
-        var optimize=UmUi.Action("صيانة القاعدة: غير متاح");
-        optimize.IsEnabled=false;
+        var maintenanceInfo=UmUi.Label(
+            "صيانة قاعدة User Manager بوضع التشخيص فقط؛ لا توجد عملية غير مختبرة.",
+            12,false,UmUi.Gray);
         var status=UmUi.Label("لم يتم فحص قاعدة User Manager بعد.",12,false,UmUi.Gray);
         var maintenance=UmUi.Stack(
             UmUi.Label("صيانة قاعدة البيانات",16,true),
-            warning,consent,diagnose,createRouter,optimize,status);
+            warning,consent,diagnose,createRouter,maintenanceInfo,status);
         var list=UmUi.Table(("اسم النسخة","Name",248),
             ("تاريخ الإنشاء","CreatedAt",154),("الحجم","Size",100));
         list.MinHeight=170;list.MaxHeight=220;
@@ -86,7 +84,7 @@ public sealed class UserManagerMaintenanceView : UserControl
             UmUi.Label("بيانات نجم كارد المحلية (SQLite + Windows DPAPI)",15,true),
             UmUi.Row(localBackup,localRefresh,localExport),
             localTable,localStatus));
-        Content=UmUi.Scroller(UmUi.Stack(header,tabs,grid,local));
+        Content=UmUi.Scroller(UmUi.Stack(header,grid,local));
 
         bool busy=false;
         CancellationTokenSource? pending=null;
