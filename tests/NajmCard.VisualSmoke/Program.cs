@@ -283,6 +283,7 @@ internal static class Program
                 x.Text.Equals(title,StringComparison.Ordinal)))
                 throw new InvalidDataException(
                     "Selected User Manager subpage has no heading: "+title);
+            VerifyUmControlContrast(manager,tag);
             var sidebar=VisualChildren<Button>(manager).FirstOrDefault(button=>
                 button.Content is string label &&
                 label.Contains("العودة إلى إدارة User Manager",
@@ -293,6 +294,68 @@ internal static class Program
                 "user-manager-"+tag+"-1200x730.png"));
             sidebar.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             root.UpdateLayout();
+        }
+    }
+
+    private static void VerifyUmControlContrast(UserManagerView manager,string section)
+    {
+        static double Luminance(Color color)
+        {
+            static double Channel(byte value)
+            {
+                var n=value/255.0;
+                return n<=0.04045?n/12.92:Math.Pow((n+0.055)/1.055,2.4);
+            }
+            return Channel(color.R)*0.2126+Channel(color.G)*0.7152+
+                Channel(color.B)*0.0722;
+        }
+        static double Contrast(Brush first,Brush second)
+        {
+            if(first is not SolidColorBrush background ||
+                second is not SolidColorBrush foreground)
+                throw new InvalidDataException("UM control colors must be solid and measurable.");
+            var a=Luminance(background.Color);
+            var b=Luminance(foreground.Color);
+            return (Math.Max(a,b)+0.05)/(Math.Min(a,b)+0.05);
+        }
+        int checkedButtons=0;
+        foreach(var button in VisualChildren<Button>(manager)
+            .Where(button=>button.Content is string))
+        {
+            button.ApplyTemplate();
+            if(button.Template.FindName("PART_ActionText",button) is not TextBlock text)
+                continue; // Existing legacy/global templates are tested separately.
+            checkedButtons++;
+            if(text.Text!=button.Content?.ToString())
+                throw new InvalidDataException("A User Manager button label disappeared: "+section);
+            if(Contrast(button.Background,text.Foreground)<4.5)
+                throw new InvalidDataException("Low-contrast User Manager button: "+button.Content);
+        }
+        if(checkedButtons<3)
+            throw new InvalidDataException("No real UM action buttons were contrast-tested: "+section);
+
+        int checkedCombos=0;
+        foreach(var combo in VisualChildren<ComboBox>(manager))
+        {
+            if(combo.ItemContainerStyle is null)continue;
+            combo.ApplyTemplate();
+            if(combo.Template.FindName("PART_SelectedText",combo) is not TextBlock selected)
+                throw new InvalidDataException("No selected-text part in UM ComboBox: "+section);
+            checkedCombos++;
+            if(combo.SelectedItem is string value &&
+                (selected.Text!=value || Contrast(combo.Background,selected.Foreground)<4.5))
+                throw new InvalidDataException("Invisible selected dropdown text: "+section);
+            var item=new ComboBoxItem {Content="اختبار القراءة",Style=combo.ItemContainerStyle};
+            item.ApplyTemplate();
+            if(item.Template.FindName("ItemText",item) is not TextBlock itemText ||
+                itemText.Text!="اختبار القراءة" ||
+                Contrast(item.Background,itemText.Foreground)<4.5)
+                throw new InvalidDataException("Invisible dropdown list item: "+section);
+        }
+        if(section is "users" or "packages" or "sessions" or "search" or "reports")
+        {
+            if(checkedCombos==0)
+                throw new InvalidDataException("No UM dropdown tested in "+section);
         }
     }
 
