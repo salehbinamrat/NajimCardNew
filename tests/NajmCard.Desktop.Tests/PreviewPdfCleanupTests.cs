@@ -8,6 +8,22 @@ namespace NajmCard.Desktop.Tests;
 public sealed class PreviewPdfCleanupTests
 {
     [Fact]
+    public void Preview_Folder_IsOwnedByIndependentNajimCardNewInstallation()
+    {
+        var method=typeof(PrintingView).GetMethod("PreviewPdfDirectory",
+            BindingFlags.Static|BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        var folder=Assert.IsType<string>(method.Invoke(null,null));
+        var expected=Path.Combine(Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),
+            "NajmCardNew","Preview");
+        Assert.Equal(expected,folder);
+        Assert.NotEqual(Path.Combine(Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),
+            "NajmCard","Preview"),folder);
+    }
+
+    [Fact]
     public void Preview_Cleanup_Is_Bounded_And_Does_Not_Delete_Real_Archives()
     {
         var root=Directory.CreateTempSubdirectory("najm-preview-cleanup-").FullName;
