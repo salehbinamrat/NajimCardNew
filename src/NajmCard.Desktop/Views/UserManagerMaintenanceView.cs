@@ -20,9 +20,6 @@ public sealed class UserManagerMaintenanceView : UserControl
     {
         var header=UmUi.Header("النسخ والصيانة",
             "نسخ قاعدة User Manager على الراوتر ومراجعة النسخ الفعلية وصيانة آمنة.");
-        var returnButton=UmUi.Action("العودة إلى إدارة User Manager");
-        returnButton.Click+=(_,_)=>back();
-        var tabs=UmUi.Row(returnButton,UmUi.Action("النسخ الاحتياطية",true));
         var warning=UmUi.Panel(UmUi.Stack(
             UmUi.Label("تنبيه هام",16,true,UmUi.Solid("#9B2437")),
             UmUi.Label(
@@ -86,7 +83,7 @@ public sealed class UserManagerMaintenanceView : UserControl
             UmUi.Label("بيانات نجم كارد المحلية (SQLite + Windows DPAPI)",15,true),
             UmUi.Row(localBackup,localRefresh,localExport),
             localTable,localStatus));
-        Content=UmUi.Scroller(UmUi.Stack(header,tabs,grid,local));
+        Content=UmUi.Scroller(UmUi.Stack(header,grid,local));
 
         bool busy=false;
         CancellationTokenSource? pending=null;
