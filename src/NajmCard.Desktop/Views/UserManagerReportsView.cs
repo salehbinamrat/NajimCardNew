@@ -16,8 +16,8 @@ namespace NajmCard.Desktop.Views;
 public sealed class UserManagerReportsView : UserControl
 {
     private static readonly Brush[] Palette=[
-        UmUi.Solid("#36A1E7"),UmUi.Solid("#10BDB6"),UmUi.Solid("#FFA631"),
-        UmUi.Solid("#6F58D6"),UmUi.Solid("#49BB7B"),UmUi.Solid("#E27496")];
+        UmUi.Gold,UmUi.Solid("#9C4C60"),UmUi.Solid("#BE9048"),
+        UmUi.Blue,UmUi.Solid("#F0D493"),UmUi.Solid("#A97E3B")];
 
     public UserManagerReportsView(RouterGateway gateway,Action back)
     {
@@ -130,7 +130,7 @@ public sealed class UserManagerReportsView : UserControl
                 single.Children.Add(new Border
                 {
                     Height=Math.Max(2,height),Width=18,
-                    Background=UmUi.Solid("#0B8FB5"),
+                    Background=UmUi.Gold,
                     VerticalAlignment=VerticalAlignment.Bottom,
                     CornerRadius=new CornerRadius(3),
                     ToolTip=item.Date.ToString("yyyy-MM-dd")+" : "+
