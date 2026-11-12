@@ -1,4 +1,5 @@
 using System.IO;
+using System.Diagnostics;
 using NajmCard.Core.Models;
 using NajmCard.Core.Services;
 
@@ -61,6 +62,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                     "الكرت مُرسل أو قيد التحقق أو غير محفوظ؛ راجع الراوتر أولاً.");
         }
 
+        var preflightTimer=Stopwatch.StartNew();
         // A complete cross-service read is mandatory; do not lease a card or send
         // any RouterOS writes if any service is unavailable/forbidden or names collide.
         progress?.Report("التحقق من الأرقام الموجودة على الراوتر...");
@@ -84,9 +86,13 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                 first.Profile,customer,cancellationToken);
         }
 
+        preflightTimer.Stop();
+        progress?.Report($"التحقق الأولي اكتمل خلال {preflightTimer.Elapsed.TotalSeconds:F1} ثانية.");
         var failed = new List<string>();
         int succeeded = 0;
         int processed = 0;
+        var batchTimer=Stopwatch.StartNew();
+        TimeSpan routerElapsed=TimeSpan.Zero,databaseElapsed=TimeSpan.Zero;
         // For thousands of vouchers, avoid flooding the WPF dispatcher with two
         // notifications per card. Still report the first, last, ~80 checkpoints,
         // and every non-success outcome, without hiding the actual results.
@@ -103,7 +109,11 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
             if (reportCard)
                 progress?.Report($"إرسال الكرت {number} من {batch.Count} إلى الراوتر...");
             // COMMIT to WAL+FULL synchronously BEFORE sending the first byte.
+            var databaseTimer=Stopwatch.StartNew();
             sendSession.BeginSend(voucher);
+            databaseTimer.Stop();
+            databaseElapsed += databaseTimer.Elapsed;
+            var routerTimer=Stopwatch.StartNew();
             string state;
             string error = "";
             if (service == "userman")
@@ -157,12 +167,25 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                 }
             }
 
+            routerTimer.Stop();
+            routerElapsed += routerTimer.Elapsed;
             // If the DB write fails, the SENDING lease is retained. Stop and
             // investigate; never assume a potentially created card is absent.
+            databaseTimer.Restart();
             sendSession.FinishSend(voucher, state, error);
+            databaseTimer.Stop();
+            databaseElapsed += databaseTimer.Elapsed;
             if (reportCard || state != "SENT")
+            {
+                // Stopwatch is monotonic; report only aggregate durations and
+                // actual successful/failed counts. Never log credentials.
+                double elapsed=Math.Max(batchTimer.Elapsed.TotalSeconds,0.001);
+                double rate=number/elapsed;
                 progress?.Report($"تسجيل نتيجة الكرت {number} من {batch.Count}: "+
-                    (state=="SENT"?"تم الإرسال":state=="FAILED"?"رفضه الراوتر":"النتيجة غير مؤكدة"));
+                    (state=="SENT"?"تم الإرسال":state=="FAILED"?"رفضه الراوتر":"النتيجة غير مؤكدة")+
+                    $" | {rate:F1} كرت/ث | زمن الراوتر {routerElapsed.TotalSeconds:F1}ث"+
+                    $" | زمن الحفظ {databaseElapsed.TotalSeconds:F1}ث");
+            }
             switch (state)
             {
                 case "SENT":
