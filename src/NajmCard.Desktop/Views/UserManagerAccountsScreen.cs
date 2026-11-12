@@ -49,9 +49,9 @@ public sealed class UserManagerAccountsScreen : UserControl
         var refresh=UmUi.Action("تحديث",true);
         var actions=UmUi.Row(add,export,print,delete,disable,enable,refresh);
         var find=UmUi.SearchBox("بحث برقم الكرت أو الاسم");
-        var statusFilter=UmUi.Combo(new[]{"كل الحالات","صالح","استخدم","باقة نشطة",
-            "باقة جاهزة","مفعل","معطل","منتهي","بدون باقة","غير مصنف"},115);
+        var statusFilter=UmUi.Combo(new[]{"كل الحالات"},115);
         var profileFilter=UmUi.Combo(new[]{"كل الباقات"},125);
+        statusFilter.IsEnabled=profileFilter.IsEnabled=false;
         var filters=UmUi.Row(UmUi.Label("بحث",12,true),find,
             UmUi.Label("الحالة",12,true),statusFilter,
             UmUi.Label("الباقة",12,true),profileFilter);
@@ -101,10 +101,40 @@ public sealed class UserManagerAccountsScreen : UserControl
         DisplayRow[] filtered=[];
         RouterOsGeneration? version=null;
         CancellationTokenSource? pending=null;
-        bool busy=false,everLoaded=false;
+        bool busy=false,everLoaded=false,resetFilters=false;
         int page=0;
 
         UmAccountRow? Selected()=> (table.SelectedItem as DisplayRow)?.Source;
+        void SyncFilters()
+        {
+            var oldStatus=statusFilter.SelectedItem?.ToString()??"كل الحالات";
+            var oldProfile=profileFilter.SelectedItem?.ToString()??"كل الباقات";
+            var states=all.Select(x=>x.Status)
+                .Where(x=>!string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(x=>x,StringComparer.Ordinal).ToArray();
+            var profiles=all.Select(x=>x.Profile)
+                .Where(x=>!string.IsNullOrWhiteSpace(x)&&x!="غير متاح")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x=>x,StringComparer.OrdinalIgnoreCase).ToArray();
+            resetFilters=true;
+            try
+            {
+                statusFilter.Items.Clear();
+                statusFilter.Items.Add("كل الحالات");
+                foreach(var name in states)statusFilter.Items.Add(name);
+                statusFilter.SelectedItem=statusFilter.Items.Contains(oldStatus)
+                    ?oldStatus:"كل الحالات";
+                profileFilter.Items.Clear();
+                profileFilter.Items.Add("كل الباقات");
+                foreach(var name in profiles)profileFilter.Items.Add(name);
+                profileFilter.SelectedItem=profileFilter.Items.Contains(oldProfile)
+                    ?oldProfile:"كل الباقات";
+                statusFilter.IsEnabled=all.Count>0&&!busy;
+                profileFilter.IsEnabled=all.Count>0&&!busy;
+            }
+            finally{resetFilters=false;}
+        }
         void Details()
         {
             var row=Selected();
@@ -152,6 +182,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             busy=true;
             refresh.IsEnabled=false;
             find.IsEnabled=false;
+            statusFilter.IsEnabled=profileFilter.IsEnabled=false;
             message.Text="يجري جلب المستخدمين والباقات من الراوتر عبر API...";
             using var request=new CancellationTokenSource();
             pending=request;
@@ -160,13 +191,7 @@ public sealed class UserManagerAccountsScreen : UserControl
                 var snap=await gateway.ReadUmAccountsAsync(request.Token);
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 all=snap.Rows;version=snap.Generation;
-                profileFilter.Items.Clear();profileFilter.Items.Add("كل الباقات");
-                foreach(var value in all.Select(x=>x.Profile)
-                    .Where(x=>x!="غير متاح")
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(x=>x,StringComparer.OrdinalIgnoreCase))
-                    profileFilter.Items.Add(value);
-                profileFilter.SelectedIndex=0;
+                SyncFilters();
                 totalCard.Text=all.Count.ToString("N0",CultureInfo.InvariantCulture);
                 usedCard.Text=all.Count(x=>x.Status is "استخدم" or "باقة نشطة")
                     .ToString("N0",CultureInfo.InvariantCulture);
@@ -182,7 +207,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             catch(Exception ex)
             {
                 if(!IsLoaded)return;
-                all=[];version=null;Draw();
+                all=[];version=null;SyncFilters();Draw();
                 totalCard.Text=usedCard.Text=disabledCard.Text=expiredCard.Text="—";
                 message.Text="فشلت قراءة الحسابات؛ لا تظهر أرقام افتراضية: "+ex.Message;
             }
@@ -190,7 +215,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             {
                 pending=null;busy=false;
                 refresh.IsEnabled=find.IsEnabled=true;
-                Draw();
+                SyncFilters();Draw();
             }
         }
 
@@ -208,15 +233,15 @@ public sealed class UserManagerAccountsScreen : UserControl
                         chosen.Disabled.Value),value);
                 message.Text=result.Message;
                 // Never reuse a stale snapshot after a mutation.
-                all=[];version=null;Draw();
+                all=[];version=null;SyncFilters();Draw();
                 message.Text+=" | حدّث القائمة قبل تنفيذ إجراء آخر.";
             }
             catch(Exception ex)
             {
-                all=[];version=null;Draw();
+                all=[];version=null;SyncFilters();Draw();
                 message.Text="لم يثبت تنفيذ الأمر: "+ex.Message+"؛ حدّث القائمة قبل التكرار.";
             }
-            finally{busy=false;refresh.IsEnabled=true;Details();}
+            finally{busy=false;refresh.IsEnabled=true;SyncFilters();Details();}
         }
 
         add.Click+=(_,_)=>openLegacy();
@@ -248,14 +273,14 @@ public sealed class UserManagerAccountsScreen : UserControl
             catch(Exception ex){message.Text="لم يثبت الحذف: "+ex.Message;}
             finally
             {
-                all=[];version=null;busy=false;refresh.IsEnabled=true;Draw();
+                all=[];version=null;busy=false;refresh.IsEnabled=true;SyncFilters();Draw();
                 message.Text+=" | يلزم تحديث الحسابات.";
             }
         };
         table.SelectionChanged+=(_,_)=>Details();
         UmUi.Debounce(find,this,()=>{page=0;Draw();});
-        statusFilter.SelectionChanged+=(_,_)=>{page=0;Draw();};
-        profileFilter.SelectionChanged+=(_,_)=>{page=0;Draw();};
+        statusFilter.SelectionChanged+=(_,_)=>{if(resetFilters)return;page=0;Draw();};
+        profileFilter.SelectionChanged+=(_,_)=>{if(resetFilters)return;page=0;Draw();};
         pageSize.SelectionChanged+=(_,_)=>{page=0;Draw();};
         previous.Click+=(_,_)=>{if(page>0){page--;Draw();}};
         next.Click+=(_,_)=>{page++;Draw();};
