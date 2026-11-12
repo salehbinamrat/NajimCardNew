@@ -106,9 +106,12 @@ public sealed class UserManagerSessionsScreen : UserControl
                 var data=await gateway.ReadUmSessionsAsync(request.Token);
                 if(!IsLoaded || request.IsCancellationRequested)return;
                 snapshot=data;page=0;
-                Value(0).Text=data.Rows.Any(x=>x.IsActive.HasValue)
-                    ?data.Rows.Count(x=>x.IsActive==true).ToString("N0",CultureInfo.InvariantCulture)
-                    :"غير متاح";
+                var active=UserManagerReportFilters.CountActiveSessions(data.Rows);
+                // If RADIUS returns mixed known and unknown activity flags,
+                // the visible count is partial and must never look exact.
+                Value(0).Text=active.Known==0?"غير متاح":
+                    active.Active.ToString("N0",CultureInfo.InvariantCulture)+
+                    (active.IsComplete?"":" (جزئي)");
                 Value(1).Text=data.Rows.Count.ToString("N0",CultureInfo.InvariantCulture);
                 long down=0,up=0;int knownDown=0,knownUp=0;
                 foreach(var row in data.Rows)
