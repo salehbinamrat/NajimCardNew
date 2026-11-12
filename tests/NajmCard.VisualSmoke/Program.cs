@@ -134,6 +134,17 @@ internal static class Program
             var profiles=new ProfilesView(new RouterGateway(new OfflineRouterClient(withProfiles:true)));
             pageHost.Content=profiles;
             VerifyProfilesPage(root,profiles);
+
+            // Render the actual first screen after clicking User Manager.
+            ((RowDefinition)window.FindName("WorkspaceHeaderRow")).Height=new GridLength(0);
+            pageHost.Margin=new Thickness(12,7,12,7);
+            ((ListBox)window.FindName("NavList")).SelectedIndex=4;
+            var userManager=new UserManagerView(offline,store);
+            pageHost.Content=userManager;
+            root.UpdateLayout();
+            VerifyUserManagerHome(root,userManager);
+            Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,
+                "user-manager-home-1200x730.png"));
             return 0;
         }
         catch(Exception ex)
@@ -202,6 +213,40 @@ internal static class Program
         if(scroll.VerticalOffset<=0 ||
            refresh.TransformToAncestor(root).TransformBounds(new Rect(refresh.RenderSize)).Top!=top)
             throw new InvalidDataException("Profile details are not scrollable below the fixed refresh button.");
+    }
+
+    private static void VerifyUserManagerHome(FrameworkElement root,UserManagerView manager)
+    {
+        if(manager.Content is not UserManagerHomeView home)
+            throw new InvalidDataException("User Manager must open six-card home, not tables.");
+        var cards=VisualChildren<Button>(home).Where(button=>button.Tag is string).ToArray();
+        var expected=new[]{"users","packages","sessions","search","reports","maintenance"};
+        if(!cards.Select(x=>x.Tag?.ToString()).SequenceEqual(expected))
+            throw new InvalidDataException("User Manager home card order does not match reference.");
+        foreach(var card in cards)
+        {
+            var bounds=card.TransformToAncestor(root).TransformBounds(new Rect(card.RenderSize));
+            if(bounds.Width<160 || bounds.Height<120 || bounds.Left<0 ||
+                bounds.Right>root.ActualWidth+1 || bounds.Top<0 ||
+                bounds.Bottom>root.ActualHeight+1)
+                throw new InvalidDataException(
+                    "User Manager card is clipped at 1200x730: "+card.Tag);
+        }
+        if(!VisualChildren<TextBlock>(home).Any(x=>x.Text=="إدارة User Manager"))
+            throw new InvalidDataException("User Manager landing banner is missing.");
+        // Confirm a real card opens the existing explorer, then returns home.
+        cards[0].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        root.UpdateLayout();
+        if(manager.Content is not DockPanel)
+            throw new InvalidDataException("Users card did not navigate to explorer.");
+        var back=VisualChildren<Button>(manager).FirstOrDefault(b=>
+            b.Content is string label && label.Contains("العودة إلى إدارة User Manager"));
+        if(back is null)
+            throw new InvalidDataException("Explorer has no back to User Manager home.");
+        back.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        root.UpdateLayout();
+        if(manager.Content is not UserManagerHomeView)
+            throw new InvalidDataException("Returning to six-card home failed.");
     }
 
     private static void VerifyNumberPreview(FrameworkElement root)
