@@ -99,7 +99,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
                 try
                 {
                     rows = await client.CommandAsync(actualPath,
-                        new Dictionary<string,string>{{".proplist"]=actualField}},ct);
+                        new Dictionary<string,string> { [".proplist"] = actualField },ct);
                 }
                 catch (RouterOsTrapException modern) when (MissingMenu(modern))
                 {
