@@ -23,18 +23,33 @@ public sealed partial class VoucherStore : IDisposable
             "NajmCardNew", "Data");
         Directory.CreateDirectory(DirectoryPath);
         _filename = Path.Combine(DirectoryPath, "najmcard.db");
-        using var db = Open();
+        using var db = Open(configureWal:true);
         EnsureSchema(db);
     }
 
-    private SqliteConnection Open()
+    private SqliteConnection Open(bool configureWal=false)
     {
         var connection = new SqliteConnection($"Data Source={_filename};Mode=ReadWriteCreate;Pooling=False");
-        connection.Open();
-        using var pragma = connection.CreateCommand();
-        pragma.CommandText = "PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;";
-        pragma.ExecuteNonQuery();
-        return connection;
+        try
+        {
+            connection.Open();
+            using var pragma = connection.CreateCommand();
+            // journal_mode is persisted by SQLite in the database itself.
+            // Re-issuing journal_mode=WAL on every read may acquire an avoidable
+            // database lock for every dashboard query and voucher receipt.
+            // Initialize it once per store instance, but preserve FULL sync
+            // and the busy timeout on EVERY connection for durable vouchers.
+            pragma.CommandText = configureWal
+                ? "PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;"
+                : "PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;";
+            pragma.ExecuteNonQuery();
+            return connection;
+        }
+        catch
+        {
+            connection.Dispose();
+            throw;
+        }
     }
 
     private static void EnsureSchema(SqliteConnection db)

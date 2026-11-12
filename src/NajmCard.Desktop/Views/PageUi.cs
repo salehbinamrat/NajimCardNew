@@ -22,13 +22,20 @@ internal static class PageUi
         {
             Child=content,CornerRadius=new CornerRadius(12),Padding=new Thickness(12),
             Margin=new Thickness(0,0,0,8),BorderThickness=new Thickness(1),
-            Background=new SolidColorBrush(Color.FromRgb(255,243,223)),
-            BorderBrush=new SolidColorBrush(Color.FromRgb(114,32,58))
+            // Resolve the same resources used by User Manager, dashboard,
+            // creator and the main WPF theme. Keep exact fallback colors for
+            // offscreen tests without a resource dictionary.
+            Background=Application.Current?.TryFindResource("CreamPanelBrush") as Brush
+                ?? new SolidColorBrush(Color.FromRgb(255,243,223)),
+            BorderBrush=Application.Current?.TryFindResource("MaroonLineBrush") as Brush
+                ?? new SolidColorBrush(Color.FromRgb(114,32,58))
         };
         // Scope dark default labels to cream panels without affecting the
         // burgundy application header, login, sidebar or card print artwork.
-        var ordinaryText=new Style(typeof(TextBlock),
-            (Style)Application.Current.FindResource(typeof(TextBlock)));
+        var baseTextStyle=Application.Current?.TryFindResource(typeof(TextBlock)) as Style;
+        var ordinaryText=baseTextStyle is null
+            ?new Style(typeof(TextBlock))
+            :new Style(typeof(TextBlock),baseTextStyle);
         ordinaryText.Setters.Add(new Setter(TextBlock.ForegroundProperty,
             new SolidColorBrush(Color.FromRgb(75,27,50))));
         surface.Resources[typeof(TextBlock)]=ordinaryText;
