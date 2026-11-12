@@ -221,10 +221,15 @@ public partial class PrintingView
         return dlg.ShowDialog()==true?dlg.FileName:null;
     }
 
+    // This independent application must never mix disposable preview PDFs
+    // with the original NajmCard installation's profile or cleanup files.
+    private static string PreviewPdfDirectory() =>
+        Path.Combine(Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),"NajmCardNew","Preview");
+
     private static string NewPreviewPdfPath()
     {
-        var directory=Path.Combine(Environment.GetFolderPath(
-            Environment.SpecialFolder.LocalApplicationData),"NajmCard","Preview");
+        var directory=PreviewPdfDirectory();
         Directory.CreateDirectory(directory);
         // Preview files are disposable, unlike saved PDF archives. Clean only
         // our unique Najm_ files to avoid gradually filling the system drive.
