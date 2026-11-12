@@ -43,13 +43,23 @@ public static class RouterOsProtocol
 
     public static async Task WriteSentenceAsync(Stream stream, IReadOnlyList<string> words, CancellationToken token)
     {
-        foreach (var word in words)
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(words);
+        token.ThrowIfCancellationRequested();
+        // RouterOS API is length-framed. Buffer the complete command, then
+        // perform ONE asynchronous network write instead of two per word.
+        // This avoids the small-write/ACK latency that compounds for every
+        // add + activate + exact-ID verification during voucher issuance.
+        using var frame=new MemoryStream(256);
+        foreach(var word in words)
         {
-            var bytes = Encoding.UTF8.GetBytes(word);
-            await stream.WriteAsync(EncodeLength((uint)bytes.Length), token);
-            await stream.WriteAsync(bytes, token);
+            if(word is null)throw new ArgumentException("Null RouterOS API word.");
+            var bytes=Encoding.UTF8.GetBytes(word);
+            frame.Write(EncodeLength((uint)bytes.Length));
+            frame.Write(bytes);
         }
-        await stream.WriteAsync(new byte[] { 0 }, token);
+        frame.WriteByte(0);
+        await stream.WriteAsync(frame.GetBuffer().AsMemory(0,checked((int)frame.Length)),token);
         await stream.FlushAsync(token);
     }
 
