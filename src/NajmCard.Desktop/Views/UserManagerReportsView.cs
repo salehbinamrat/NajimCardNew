@@ -15,9 +15,11 @@ namespace NajmCard.Desktop.Views;
 /// </summary>
 public sealed class UserManagerReportsView : UserControl
 {
+    // Keep charts aligned with the same burgundy/gold palette used by
+    // the rest of the app. Never introduce a second UM-only color scheme.
     private static readonly Brush[] Palette=[
-        UmUi.Gold,UmUi.Solid("#9C4C60"),UmUi.Solid("#BE9048"),
-        UmUi.Blue,UmUi.Solid("#F0D493"),UmUi.Solid("#A97E3B")];
+        UmUi.Gold,UmUi.Blue,UmUi.GoldBright,
+        UmUi.Navy,UmUi.Gray,UmUi.Ink];
 
     public UserManagerReportsView(RouterGateway gateway,Action back)
     {
