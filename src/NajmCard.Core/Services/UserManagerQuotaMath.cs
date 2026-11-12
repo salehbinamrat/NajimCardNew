@@ -24,10 +24,21 @@ public static class UserManagerQuotaMath
     {
         if(string.IsNullOrWhiteSpace(text))return "";
         if(!decimal.TryParse(text.Trim(),NumberStyles.AllowDecimalPoint,
-            CultureInfo.InvariantCulture,out var gib)||
-           gib<0 || gib>long.MaxValue/BytesPerGiB)
+            CultureInfo.InvariantCulture,out var gib) || gib<0)
             throw new ArgumentException("حجم الباقة بالـ GiB غير صالح.",nameof(text));
-        var bytes=decimal.Round(gib*BytesPerGiB,0,MidpointRounding.AwayFromZero);
+        // The ten-digit editor display can round a true max-long GiB value
+        // slightly ABOVE its mathematically exact quotient. Validate the
+        // nearest whole byte, not the unrounded decimal display.
+        if(gib>long.MaxValue/BytesPerGiB+1m)
+            throw new ArgumentException("حجم الباقة يتجاوز حدود RouterOS.",nameof(text));
+        decimal bytes;
+        try {bytes=decimal.Round(gib*BytesPerGiB,0,MidpointRounding.AwayFromZero);}
+        catch(OverflowException)
+        {
+            throw new ArgumentException("حجم الباقة يتجاوز حدود RouterOS.",nameof(text));
+        }
+        if(bytes>long.MaxValue)
+            throw new ArgumentException("حجم الباقة يتجاوز حدود RouterOS.",nameof(text));
         return checked((long)bytes).ToString(CultureInfo.InvariantCulture);
     }
 }
