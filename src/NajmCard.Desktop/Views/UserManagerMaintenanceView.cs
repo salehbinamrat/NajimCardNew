@@ -35,9 +35,12 @@ public sealed class UserManagerMaintenanceView : UserControl
         ),new Thickness(3),UmUi.Solid("#FFF1F3"));
         var consent=new CheckBox
         {
-            Content="أوافق على إنشاء نسخة جديدة من قاعدة User Manager دون الكتابة فوق نسخة موجودة",
-            Margin=new Thickness(6,8,6,8),FontSize=12,Foreground=UmUi.Ink,
-            TextWrapping=TextWrapping.Wrap
+            Content=new TextBlock
+            {
+                Text="أوافق على إنشاء نسخة جديدة من قاعدة User Manager دون الكتابة فوق نسخة موجودة",
+                TextWrapping=TextWrapping.Wrap,Foreground=UmUi.Ink,FontSize=12
+            },
+            Margin=new Thickness(6,8,6,8)
         };
         var diagnose=UmUi.Action("فحص قاعدة البيانات",true,132);
         var createRouter=UmUi.Action("إنشاء نسخة RouterOS .umb",true,165);
