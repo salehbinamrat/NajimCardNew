@@ -253,7 +253,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             }
         };
         table.SelectionChanged+=(_,_)=>Details();
-        find.TextChanged+=(_,_)=>{page=0;Draw();};
+        UmUi.Debounce(find,this,()=>{page=0;Draw();});
         statusFilter.SelectionChanged+=(_,_)=>{page=0;Draw();};
         profileFilter.SelectionChanged+=(_,_)=>{page=0;Draw();};
         pageSize.SelectionChanged+=(_,_)=>{page=0;Draw();};
