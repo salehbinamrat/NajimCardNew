@@ -17,6 +17,15 @@ public sealed record ExpiredTransferDeletionProgress(int Processed,int Total,
 
 public sealed partial class RouterGateway(IRouterCommandClient client)
 {
+    /// <summary>
+    /// Only the real authenticated resilient session has two isolated API
+    /// lanes: mutations on the fast lane and exact-ID User Manager readback
+    /// on the inventory lane. Never overlap writes on an arbitrary/mock/single
+    /// RouterOS client: it may not serialize frames or verify distinct IDs.
+    /// </summary>
+    public bool SupportsOverlappedUserManagerV6Readback =>
+        client is ResilientRouterSession;
+
     private static string Get(IReadOnlyDictionary<string, string> row, string key) =>
         row.TryGetValue(key, out string? value) ? value : "";
     private static long Long(IReadOnlyDictionary<string, string> row, string key) =>
