@@ -56,7 +56,10 @@ public sealed class UserManagerDisplaySnapshotsTests
         var user=Assert.Single(data.Rows);
         Assert.Equal("test-u",user.Name);
         Assert.Equal("Night",user.Profile);
-        Assert.Equal("مفعل",user.Status);
+        // RouterOS v7 distinguishes an enabled account from its currently
+        // running user-profile. The dashboard must expose this precise state.
+        Assert.Equal(false,user.Disabled);
+        Assert.Equal("باقة نشطة",user.Status);
         Assert.Equal("2026-11-30 22:00:00",user.EndTime);
         Assert.All(router.Calls.Where(x=>x.Properties is not null),call=>
             Assert.DoesNotContain("password",call.Properties![".proplist"],
