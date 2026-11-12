@@ -96,9 +96,9 @@ public sealed class UserManagerReportsView : UserControl
             _=>null
         };
         bool Within(DateTime? value,DateTime? lower,DateTime? upper)
-            =>value.HasValue &&
+            =>(!lower.HasValue&&!upper.HasValue) || (value.HasValue &&
                 (!lower.HasValue||value.Value.Date>=lower.Value.Date) &&
-                (!upper.HasValue||value.Value.Date<=upper.Value.Date);
+                (!upper.HasValue||value.Value.Date<=upper.Value.Date));
 
         static void ResetChart(StackPanel chart,string text)
         {
@@ -219,7 +219,7 @@ public sealed class UserManagerReportsView : UserControl
                     ?"عملات متعددة":paid.Sum(x=>x.Amount).ToString("N2",
                     CultureInfo.InvariantCulture)+" "+currencies[0];
             DrawDistribution(users);
-            DrawBars(traffic,dated.Where(x=>x.TotalBytes.HasValue)
+            DrawBars(traffic,dated.Where(x=>x.TotalBytes.HasValue&&x.StartedAt.HasValue)
                 .Select(x=>(x.StartedAt!.Value,(decimal)x.TotalBytes!.Value/1073741824m)),
                 "GiB");
             if(paid is null)
