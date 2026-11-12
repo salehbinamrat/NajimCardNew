@@ -134,6 +134,23 @@ Test-PortableLayout $portableDir
 $zip = Join-Path $outRoot "NajimCardNew-v$Version-$Arch-Portable.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
 Compress-Archive -Path (Join-Path $portableDir '*') -DestinationPath $zip -CompressionLevel Optimal
+# Inspect the actual DISTRIBUTED ZIP, not just the staging folder. A missing
+# root launcher or accidentally flattened DLLs must fail CI before Inno Setup.
+Add-Type -AssemblyName System.IO.Compression
+$archive = [System.IO.Compression.ZipFile]::OpenRead($zip)
+try {
+    $entries = @($archive.Entries | Where-Object { $_.Name -ne '' } |
+        ForEach-Object { $_.FullName.Replace('\\','/') })
+    if ($entries -notcontains 'NajmCard.exe' -or
+        $entries -notcontains 'App/NajmCard.exe') {
+        throw 'Portable ZIP must contain root launcher and App/NajmCard.exe'
+    }
+    $stray = @($entries | Where-Object { $_ -notmatch '^App/' -and $_ -ne 'NajmCard.exe' })
+    if ($stray.Count -gt 0) {
+        throw "Unexpected files beside public launcher: $($stray -join ', ')"
+    }
+}
+finally { $archive.Dispose() }
 
 $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
 if (!$iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
