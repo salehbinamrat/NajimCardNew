@@ -181,7 +181,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                 // actual successful/failed counts. Never log credentials.
                 double elapsed=Math.Max(batchTimer.Elapsed.TotalSeconds,0.001);
                 double rate=number/elapsed;
-                progress?.Report($"الكرت {number}/{batch.Count} | "+
+                progress?.Report($"تسجيل نتيجة الكرت {number} من {batch.Count} | "+
                     (state=="SENT"?"تم الإرسال":state=="FAILED"?"رفضه الراوتر":"النتيجة غير مؤكدة")+
                     $" | {rate:F1} كرت/ث | زمن الراوتر {routerElapsed.TotalSeconds:F1}ث"+
                     $" | زمن الحفظ {databaseElapsed.TotalSeconds:F1}ث");
