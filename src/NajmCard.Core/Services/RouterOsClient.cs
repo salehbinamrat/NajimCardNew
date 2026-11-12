@@ -27,7 +27,7 @@ public interface IRouterReceiptClient
         CancellationToken cancellationToken = default);
 }
 
-public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRouterCommandClient, IRouterQueryClient, IRouterNameQueryClient
+public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRouterCommandClient, IRouterQueryClient, IRouterNameQueryClient, IRouterTaggedAddClient
 {
     private readonly TcpClient _tcp;
     private readonly Stream _stream;
@@ -239,6 +239,107 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
         words.Add("?name="+name);
         return RouterOsReplyDecoder.Decode(
             await ExchangeAsync(words,cancellationToken)).Records;
+    }
+
+    /// <summary>
+    /// Send at most eight independent /add requests as one TCP frame. Tags
+    /// match each !trap/!done back to its voucher even if replies interleave
+    /// or arrive in reverse order. No retry after a partial/unknown reply.
+    /// Caller commits a durable SENDING lease for every command before entry.
+    /// </summary>
+    public async Task<IReadOnlyList<RouterTaggedAddOutcome>> AddWindowAsync(
+        IReadOnlyList<RouterTaggedAddCommand> commands,
+        CancellationToken cancellationToken=default)
+    {
+        ArgumentNullException.ThrowIfNull(commands);
+        if(commands.Count is < 2 or > 8)
+            throw new ArgumentOutOfRangeException(nameof(commands),
+                "RouterOS tagged add window must contain two to eight commands.");
+        foreach(var command in commands)
+        {
+            if(command.Path is not ("/ip/hotspot/user/add" or "/ppp/secret/add"))
+                throw new ArgumentException("Only independent Hotspot or PPPoE adds can be pipelined.");
+            RouterOsCommandPolicy.Validate(command.Path,command.Attributes);
+        }
+
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            if(_disposed)throw new ObjectDisposedException(nameof(RouterOsClient));
+            using var total=CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            total.CancelAfter(TimeSpan.FromSeconds(90));
+            using var idle=CancellationTokenSource.CreateLinkedTokenSource(total.Token);
+            idle.CancelAfter(TimeSpan.FromSeconds(20));
+
+            // A single network write avoids one satellite RTT per voucher.
+            using var frame=new MemoryStream(commands.Count*256);
+            for(int index=0;index<commands.Count;index++)
+            {
+                var request=commands[index];
+                var words=new List<string>(request.Attributes.Count+2){request.Path};
+                foreach(var (key,value) in request.Attributes)
+                    words.Add("="+key+"="+value);
+                words.Add(".tag="+index.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                await RouterOsProtocol.WriteSentenceAsync(frame,words,idle.Token);
+            }
+            await _stream.WriteAsync(frame.GetBuffer().AsMemory(
+                0,checked((int)frame.Length)),idle.Token);
+            await _stream.FlushAsync(idle.Token);
+
+            var done=new bool[commands.Count];
+            var traps=new string?[commands.Count];
+            var responses=new RouterTaggedAddOutcome[commands.Count];
+            int completed=0;
+            long receivedBytes=0;
+            while(completed<commands.Count)
+            {
+                var sentence=await RouterOsProtocol.ReadSentenceAsync(_stream,idle.Token);
+                idle.CancelAfter(TimeSpan.FromSeconds(20));
+                receivedBytes+=sentence.Sum(x=>Encoding.UTF8.GetByteCount(x));
+                if(receivedBytes>8L*1024*1024)
+                    throw new InvalidDataException("Tagged RouterOS reply exceeded safe size.");
+                if(sentence.Count==0)
+                    throw new InvalidDataException("Empty RouterOS tagged reply.");
+                if(sentence[0]=="!fatal")
+                    throw new InvalidDataException("RouterOS terminated the tagged add session.");
+                var tags=sentence.Where(x=>x.StartsWith(".tag=",StringComparison.Ordinal)).ToArray();
+                if(tags.Length!=1 ||
+                    !int.TryParse(tags[0].AsSpan(5),
+                        System.Globalization.NumberStyles.None,
+                        System.Globalization.CultureInfo.InvariantCulture,out int tag) ||
+                    tag<0||tag>=commands.Count||done[tag])
+                    throw new InvalidDataException("Missing, invalid, duplicate or finished RouterOS reply tag.");
+
+                if(sentence[0]=="!trap")
+                {
+                    if(traps[tag] is not null)
+                        throw new InvalidDataException("Duplicate RouterOS trap for a tagged add.");
+                    traps[tag]=sentence.FirstOrDefault(x=>
+                        x.StartsWith("=message=",StringComparison.Ordinal))?[9..]
+                        ?? "RouterOS rejected the tagged add";
+                    continue;
+                }
+                if(sentence[0]!="!done")
+                    throw new InvalidDataException("Unexpected RouterOS sentence in tagged add.");
+                done[tag]=true;completed++;
+                var returnId=sentence.FirstOrDefault(x=>
+                    x.StartsWith("=ret=",StringComparison.Ordinal))?[5..];
+                responses[tag]=new RouterTaggedAddOutcome(
+                    traps[tag] is not null,returnId,traps[tag]);
+            }
+            return responses;
+        }
+        catch(Exception ex) when(ex is OperationCanceledException or IOException
+            or SocketException or InvalidDataException or ObjectDisposedException)
+        {
+            // A lost tagged acknowledgment makes the WHOLE outstanding
+            // window uncertain. Destroy this transport: stale replies must
+            // never be mistaken for commands issued after reconnection.
+            _disposed=true;
+            _stream.Dispose();_tcp.Dispose();
+            throw;
+        }
+        finally{_lock.Release();}
     }
 
     public async ValueTask DisposeAsync()
