@@ -450,18 +450,12 @@ public sealed class UserManagerView : UserControl
             ("sessions","◷  الجلسات"),
             ("search","⌕  البحث المتقدم"),
             ("reports","▥  التقارير"),
-            ("maintenance","⚙  النسخ والصيانة"),
-            ("legacy","⋯  خيارات الإدارة")
+            ("maintenance","⚙  النسخ والصيانة")
         };
         var menuButtons=new Dictionary<string,Button>(StringComparer.Ordinal);
         void OpenPage(string destination)
         {
             if(destination=="home"){ReturnToHome();return;}
-            if(destination=="legacy")
-            {
-                OpenExplorer(UserManagerCatalogSection.Users);
-                return;
-            }
             current.Content=destination switch
             {
                 "users"=>new UserManagerAccountsScreen(gateway,
