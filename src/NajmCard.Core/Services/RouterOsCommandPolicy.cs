@@ -67,6 +67,24 @@ public static partial class RouterOsCommandPolicy
             return;
         }
 
+        // A one-way UM DB backup is allowed only with a unique, generated
+        // filename, and overwriting an existing router backup is prohibited.
+        // No database/load/restore commands are ever accepted here.
+        if(command is "/user-manager/database/save" or
+            "/tool/user-manager/database/save")
+        {
+            if(attrs.Count!=2 || !attrs.TryGetValue("name",out var name) ||
+                !Regex.IsMatch(name,
+                    @"^UM_Najim_[0-9]{8}_[0-9]{6}_[a-f0-9]{6}$",
+                    RegexOptions.CultureInvariant) ||
+                !attrs.TryGetValue("overwrite",out var overwrite)||
+                overwrite!="no")
+                throw new ArgumentException(
+                    "نسخ User Manager يسمح باسم مولد فريد وoverwrite=no فقط.",
+                    nameof(attributes));
+            return;
+        }
+
         var action = command[(command.LastIndexOf('/') + 1)..];
         if (action == "print")
         {
