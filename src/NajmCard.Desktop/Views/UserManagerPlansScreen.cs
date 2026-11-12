@@ -203,7 +203,12 @@ public sealed class UserManagerPlansScreen : UserControl
                 status.Text=result.Message+
                     (result.Uncertain?" | راجع الراوتر قبل تكرار أي أمر.":"");
                 snapshot=null;editing=null;Draw();
-                if(result.Success)await Load();
+                if(result.Success)
+                {
+                    busy=false;
+                    await Load();
+                    busy=true;
+                }
             }
             catch(Exception ex)
             {
@@ -228,7 +233,12 @@ public sealed class UserManagerPlansScreen : UserControl
                 var result=await gateway.LinkUmProfileLimitationAsync(profile.Name,limit);
                 status.Text=result.Message;
                 snapshot=null;Draw();
-                if(result.Success)await Load();
+                if(result.Success)
+                {
+                    busy=false;
+                    await Load();
+                    busy=true;
+                }
             }
             catch(Exception ex)
             {
@@ -240,7 +250,11 @@ public sealed class UserManagerPlansScreen : UserControl
         table.SelectionChanged+=(_,_) =>
         {
             var row=Selected();
-            if(row is null){Draw();return;}
+            if(row is null)
+            {
+                edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=false;
+                return;
+            }
             editing=row;
             name.Text=row.Name;
             price.Text=row.Price=="غير متاح"?"0":row.Price;
@@ -251,7 +265,8 @@ public sealed class UserManagerPlansScreen : UserControl
             up.Text=row.DownloadRate=="غير متاح"?"":row.DownloadRate;
             down.Text=row.UploadRate=="غير متاح"?"":row.UploadRate;
             uptime.Text=row.UptimeLimit=="غير متاح"?"":row.UptimeLimit;
-            Draw();
+            edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=
+                snapshot?.Generation==RouterOsGeneration.V7&&!busy;
         };
         profilesTab.Click+=(_,_)=>{kind="Profile";page=0;ResetForm();Draw();};
         limitsTab.Click+=(_,_)=>{kind="Limitation";page=0;ResetForm();Draw();};
