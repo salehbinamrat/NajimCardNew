@@ -7,6 +7,9 @@
 #include <string>
 #include <cwchar>
 
+// MessageBoxW lives in user32.lib, not the default kernel32 CRT links.
+#pragma comment(lib, "user32.lib")
+
 static bool IsFile(const std::wstring& file) {
     DWORD flags = GetFileAttributesW(file.c_str());
     return flags != INVALID_FILE_ATTRIBUTES && !(flags & FILE_ATTRIBUTE_DIRECTORY);
