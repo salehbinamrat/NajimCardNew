@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace NajmCard.Desktop.Views;
 
@@ -405,6 +406,30 @@ internal static class UmUi
         };
         item.Child=Label(content,12,true);
         return item;
+    }
+
+    /// <summary>
+    /// Rate-limit local in-memory filters (never router calls per keystroke).
+    /// Stop pending work when the screen is removed from the visual tree.
+    /// </summary>
+    internal static void Debounce(TextBox input,FrameworkElement owner,Action update,
+        int milliseconds=180)
+    {
+        var timer=new DispatcherTimer(DispatcherPriority.Background,input.Dispatcher)
+        {
+            Interval=TimeSpan.FromMilliseconds(milliseconds)
+        };
+        timer.Tick+=(_,_) =>
+        {
+            timer.Stop();
+            if(owner.IsLoaded)update();
+        };
+        input.TextChanged+=(_,_) =>
+        {
+            timer.Stop();
+            if(owner.IsLoaded)timer.Start();
+        };
+        owner.Unloaded+=(_,_)=>timer.Stop();
     }
 
     internal static ScrollViewer Scroller(UIElement child)
