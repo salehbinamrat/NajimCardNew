@@ -41,12 +41,13 @@ public sealed class UserManagerMaintenanceView : UserControl
         };
         var diagnose=UmUi.Action("فحص قاعدة البيانات",true,132);
         var createRouter=UmUi.Action("إنشاء نسخة RouterOS .umb",true,165);
-        var optimize=UmUi.Action("صيانة القاعدة: غير متاح");
-        optimize.IsEnabled=false;
+        var maintenanceInfo=UmUi.Label(
+            "صيانة قاعدة User Manager بوضع التشخيص فقط؛ لا توجد عملية غير مختبرة.",
+            12,false,UmUi.Gray);
         var status=UmUi.Label("لم يتم فحص قاعدة User Manager بعد.",12,false,UmUi.Gray);
         var maintenance=UmUi.Stack(
             UmUi.Label("صيانة قاعدة البيانات",16,true),
-            warning,consent,diagnose,createRouter,optimize,status);
+            warning,consent,diagnose,createRouter,maintenanceInfo,status);
         var list=UmUi.Table(("اسم النسخة","Name",248),
             ("تاريخ الإنشاء","CreatedAt",154),("الحجم","Size",100));
         list.MinHeight=170;list.MaxHeight=220;
