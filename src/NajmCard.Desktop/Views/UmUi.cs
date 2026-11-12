@@ -25,6 +25,7 @@ internal static class UmUi
     internal static readonly Brush Gold=FromTheme("GoldBrush","#DCB86E");
     internal static readonly Brush GoldBright=FromTheme("GoldBrightBrush","#FFE3A2");
     internal static readonly Brush Cream=FromTheme("TextBrush","#FFF5E8");
+    internal static readonly Brush InputSurface=Solid("#FFFAF0");
 
     internal static Brush FromTheme(string key,string fallback) =>
         Application.Current?.TryFindResource(key) as Brush ?? Solid(fallback);
@@ -139,7 +140,7 @@ internal static class UmUi
         => new()
         {
             Width=205,Height=36,FontSize=13,FontFamily=new FontFamily("Arial"),
-            Background=Brushes.White,Foreground=Ink,
+            Background=InputSurface,Foreground=Ink,
             BorderBrush=Gray,BorderThickness=new Thickness(1),
             Padding=new Thickness(7,5,7,5),Margin=new Thickness(4),
             ToolTip=hint
@@ -161,7 +162,7 @@ internal static class UmUi
         // reuse the app's dark ComboBox template for these white controls.
         var cb=new ComboBox
         {
-            Width=width,MinHeight=34,Background=Brushes.White,
+            Width=width,MinHeight=34,Background=InputSurface,
             Foreground=Ink,Margin=new Thickness(4),FontSize=12,
             FontFamily=new FontFamily("Arial"),IsEditable=false,
             MaxDropDownHeight=280,HorizontalContentAlignment=HorizontalAlignment.Stretch
@@ -194,7 +195,7 @@ internal static class UmUi
         });
         var toggleTemplate=new ControlTemplate(typeof(ToggleButton));
         var toggleBorder=new FrameworkElementFactory(typeof(Border));
-        toggleBorder.SetValue(Border.BackgroundProperty,Brushes.White);
+        toggleBorder.SetValue(Border.BackgroundProperty,InputSurface);
         toggleBorder.SetValue(Border.BorderBrushProperty,Gray);
         toggleBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
         toggleBorder.SetValue(Border.CornerRadiusProperty,new CornerRadius(7));
@@ -247,7 +248,7 @@ internal static class UmUi
             RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
         });
         var popupBorder=new FrameworkElementFactory(typeof(Border));
-        popupBorder.SetValue(Border.BackgroundProperty,Brushes.White);
+        popupBorder.SetValue(Border.BackgroundProperty,InputSurface);
         popupBorder.SetValue(TextElement.ForegroundProperty,Ink);
         popupBorder.SetValue(Border.BorderBrushProperty,Gray);
         popupBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
@@ -277,7 +278,7 @@ internal static class UmUi
         template.Triggers.Add(disabled);
         style.Setters.Add(new Setter(Control.TemplateProperty,template));
         style.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
-        style.Setters.Add(new Setter(Control.BackgroundProperty,Brushes.White));
+        style.Setters.Add(new Setter(Control.BackgroundProperty,InputSurface));
         style.Seal();
         cachedComboStyle=style;
         return style;
@@ -288,7 +289,7 @@ internal static class UmUi
         if(cachedItemStyle is not null)return cachedItemStyle;
         var style=new Style(typeof(ComboBoxItem));
         style.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
-        style.Setters.Add(new Setter(Control.BackgroundProperty,Brushes.White));
+        style.Setters.Add(new Setter(Control.BackgroundProperty,InputSurface));
         style.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(7,5,7,5)));
         var template=new ControlTemplate(typeof(ComboBoxItem));
         var border=new FrameworkElementFactory(typeof(Border));
@@ -346,7 +347,7 @@ internal static class UmUi
             AlternationCount=2,RowHeight=35,ColumnHeaderHeight=36,
             EnableRowVirtualization=true,EnableColumnVirtualization=true,
             BorderBrush=Gray,BorderThickness=new Thickness(1),
-            Background=Brushes.White,Foreground=Ink,FontSize=12,
+            Background=InputSurface,Foreground=Ink,FontSize=12,
             FontFamily=new FontFamily("Arial")
         };
         VirtualizingPanel.SetIsVirtualizing(grid,true);
