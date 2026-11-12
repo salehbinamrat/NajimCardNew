@@ -5,6 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <string>
+#include <cwchar>
 
 static bool IsFile(const std::wstring& file) {
     DWORD flags = GetFileAttributesW(file.c_str());
