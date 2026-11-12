@@ -19,6 +19,13 @@ class UserManagerReportReliabilityContracts(unittest.TestCase):
         self.assertIn('active.Known==0?"غير متاح"',code)
         self.assertIn('(active.IsComplete?"":" (جزئي)")',code)
 
+    def test_period_summary_does_not_label_undated_sessions_as_dated(self):
+        code=(VIEWS/"UserManagerReportsView.cs").read_text(encoding="utf-8")
+        self.assertIn("dateKnownInScope=dated.Count(x=>x.StartedAt.HasValue)",code)
+        self.assertIn("سجلات الفترة: {dated.Length}",code)
+        self.assertIn("المؤرخة منها: {dateKnownInScope}",code)
+        self.assertNotIn("الجلسات المؤرخة: {dated.Length}",code)
+
     def test_profile_filter_excludes_unattributable_historical_session_totals(self):
         code=(VIEWS/"UserManagerReportsView.cs").read_text(encoding="utf-8")
         self.assertIn('!allPackages?"غير متاح حسب الباقة"',code)
