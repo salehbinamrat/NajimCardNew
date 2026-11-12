@@ -94,6 +94,10 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
         // One open WAL connection per batch; every card still has TWO separate
         // durable FULL commits (lease before network, result after receipt).
         using var sendSession = store.OpenSendSession();
+        if((service is "hotspot" or "pppoe") &&
+            batch.Count>=2 && gateway.SupportsTaggedSimpleAdd)
+            return await SendTaggedWindowsAsync(batch,service,sendSession,
+                cancellationToken,progress);
         foreach (var voucher in batch)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -178,4 +182,84 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
         }
         return new BatchDeliveryResult(succeeded, failed, false);
     }
+    /// <summary>
+    /// Only independent Hotspot/PPPoE adds are pipelined; UM v6 still requires
+    /// individual add, activate and verified exact-ID readback.
+    ///
+    /// Every card in a window is atomically leased on durable SQLite WAL
+    /// BEFORE the first network byte. A lost/malformed tagged reply marks the
+    /// whole window UNKNOWN and stops, never replaying potentially issued IDs.
+    /// </summary>
+    private async Task<BatchDeliveryResult> SendTaggedWindowsAsync(
+        IReadOnlyList<Voucher> batch,string service,VoucherStore.SendSession session,
+        CancellationToken cancellationToken,IProgress<string>? progress)
+    {
+        int sent=0;
+        var failed=new List<string>();
+        for(int offset=0;offset<batch.Count;)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int remaining=batch.Count-offset;
+            int size=Math.Min(8,remaining);
+            // Never leave a singleton tail: two or more commands per tagged
+            // window are needed for actual latency amortization.
+            if(remaining-size==1)size--;
+            var window=batch.Skip(offset).Take(size).ToArray();
+            progress?.Report($"إرسال مجموعة من {size} كروت، حتى الكرت "+
+                $"{offset+size} من {batch.Count}...");
+            session.BeginSendWindow(window);
+            IReadOnlyList<RouterTaggedAddOutcome> replies;
+            try
+            {
+                replies=await gateway.AddSimpleWindowAsync(window,cancellationToken);
+                if(replies.Count!=window.Length)
+                    throw new InvalidDataException(
+                        "عدد ردود RouterOS لا يطابق عدد الكروت المرسلة.");
+            }
+            catch(Exception ex)
+            {
+                // We cannot know which tagged commands actually reached
+                // RouterOS. Protect every leased voucher and stop the batch.
+                foreach(var card in window)
+                    session.FinishSend(card,"UNKNOWN",
+                        "فقدت نتيجة مجموعة الإرسال؛ راجع الراوتر قبل التكرار: "+ex.Message);
+                progress?.Report("تعذر تأكيد نتيجة المجموعة؛ أوقف الإرسال للمراجعة.");
+                return new BatchDeliveryResult(sent,failed,true);
+            }
+
+            bool uncertain=false;
+            for(int index=0;index<window.Length;index++)
+            {
+                var card=window[index];
+                var receipt=replies[index];
+                string state,error="";
+                if(receipt.Rejected)
+                {
+                    state="FAILED";
+                    error=receipt.Error??"رفض الراوتر إنشاء الحساب.";
+                    failed.Add(card.Username);
+                }
+                else if(service=="pppoe" &&
+                    (receipt.ReturnId is not string id ||
+                     id.Length is < 2 or > 40 || id[0]!='*' ||
+                     id.Skip(1).Any(c=>!char.IsAsciiHexDigit(c))))
+                {
+                    // PPP issuance MUST have a newly returned internal ID.
+                    // A successful !done with no usable =ret= is not proof.
+                    state="UNKNOWN";
+                    uncertain=true;
+                    error="لم يُرجع RouterOS معرّف PPP واحدا صالحا؛ افحص الراوتر.";
+                }
+                else state="SENT";
+                session.FinishSend(card,state,error);
+                if(state=="SENT")sent++;
+            }
+            offset+=size;
+            progress?.Report($"نتيجة المجموعة: تم تأكيد {sent} من {batch.Count}"+
+                (uncertain?"؛ توجد نتيجة غير مؤكدة.":""));
+            if(uncertain)return new BatchDeliveryResult(sent,failed,true);
+        }
+        return new BatchDeliveryResult(sent,failed,false);
+    }
+
 }
