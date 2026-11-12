@@ -215,7 +215,7 @@ public partial class GeneratorView : UserControl
         refreshCatalog.Click+=async (_,_) =>
         {
             if(_sending || _preparing)return; // Even failed/disabled dropdowns must allow retry.
-            await LoadProfilesAsync();
+            await LoadProfilesAsync(force:true);
         };
         DockPanel.SetDock(refreshCatalog,Dock.Right);
         catalogRow.Children.Add(refreshCatalog);
