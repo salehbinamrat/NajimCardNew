@@ -81,6 +81,37 @@ public sealed class VoucherDeliveryProgressCacheTests
     }
 
     [Fact]
+    public void ManualRetryOfFailedCard_DoesNotDoubleCountTheSameVoucher()
+    {
+        var root=Temp();
+        try
+        {
+            using var store=new VoucherStore(root);
+            var cards=new[]{Card(1),Card(2)};
+            store.SaveBatch(cards);
+            using(var session=store.OpenSendSession())
+            {
+                session.BeginSend(cards[0]);
+                session.FinishSend(cards[0],"FAILED");
+                session.BeginSend(cards[1]);
+                session.FinishSend(cards[1],"SENT");
+                // Router definitively rejected the first attempt. Its
+                // operator-approved retry is legal, without a new card.
+                session.BeginSend(cards[0]);
+                session.FinishSend(cards[0],"SENT");
+            }
+            var rows=store.GetBatchVouchers("userman","batch-perf");
+            Assert.All(rows,row=>Assert.Equal("SENT",row.DeliveryStatus));
+            var audit=Assert.Single(store.ReadRecentActivities(8).Where(x=>
+                x.Action=="إرسال دفعة كروت"));
+            Assert.Equal("SUCCESS",audit.Status);
+            Assert.Contains("ناجح 2 من 2",audit.Detail);
+            Assert.Contains("فاشل 0",audit.Detail);
+        }
+        finally {Directory.Delete(root,true);}
+    }
+
+    [Fact]
     public void SendingLease_StaysUnknownAfterCrash_EvenWithCachedTotals()
     {
         var root=Temp();
