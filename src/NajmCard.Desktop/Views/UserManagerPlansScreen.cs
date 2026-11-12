@@ -186,16 +186,11 @@ public sealed class UserManagerPlansScreen : UserControl
 
         UmPlanDraft Draft()
         {
-            string transfer="";
-            if(kind=="Limitation"&&!string.IsNullOrWhiteSpace(quota.Text))
-            {
-                if(!decimal.TryParse(quota.Text,NumberStyles.AllowDecimalPoint,
-                    CultureInfo.InvariantCulture,out var gib) ||
-                    gib<0 || gib>long.MaxValue/1073741824m)
-                    throw new ArgumentException("حجم الباقة بالـ GiB غير صالح.");
-                transfer=decimal.Truncate(gib*1073741824m).ToString(
-                    CultureInfo.InvariantCulture);
-            }
+            // Preserve arbitrary RouterOS byte limits, including 1-byte and
+            // non-integer-GiB quotas, instead of rounding to three decimals.
+            string transfer=kind=="Limitation"
+                ?UserManagerQuotaMath.ParseGiBToByteString(quota.Text)
+                :"";
             return new UmPlanDraft(kind,name.Text.Trim(),price.Text.Trim(),
                 duration.Text.Trim(),kind=="Profile"?starts.SelectedItem?.ToString()??"":"",
                 transfer,"","",""+uptime.Text.Trim(),up.Text.Trim(),down.Text.Trim());
@@ -279,7 +274,7 @@ public sealed class UserManagerPlansScreen : UserControl
             duration.Text=row.Validity=="غير متاح"?"30d":row.Validity;
             starts.SelectedItem=row.StartsWhen;
             quota.Text=long.TryParse(row.TransferLimit,out var bytes)
-                ?(bytes/1073741824m).ToString("0.###",CultureInfo.InvariantCulture):"";
+                ?UserManagerQuotaMath.ToEditorGiB(bytes):"";
             up.Text=row.DownloadRate=="غير متاح"?"":row.DownloadRate;
             down.Text=row.UploadRate=="غير متاح"?"":row.UploadRate;
             uptime.Text=row.UptimeLimit=="غير متاح"?"":row.UptimeLimit;
