@@ -115,6 +115,30 @@ public sealed class VoucherGeneratorTests
     }
 
     [Fact]
+    public void Bulk_Cryptographic_Generation_Keeps_Both_Usernames_And_Independent_Passwords()
+    {
+        const int count=2000;
+        var options=new VoucherGenerationOptions(
+            count,"NC-",10,VoucherGenerator.Digits,false,"gold",
+            PasswordLength:12,PasswordCharacters:"abcdef",UsernameOnly:false);
+        var cards=VoucherGenerator.Generate(options);
+        Assert.Equal(count,cards.Count);
+        Assert.Single(cards.Select(x=>x.CreatedAt).Distinct());
+        Assert.Equal(count,cards.Select(x=>x.Username)
+            .Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.All(cards,card=>
+        {
+            Assert.StartsWith("NC-",card.Username);
+            Assert.Equal(13,card.Username.Length);
+            Assert.All(card.Username.AsSpan(3).ToArray(),
+                c=>Assert.Contains(c,VoucherGenerator.Digits));
+            Assert.Equal(12,card.Password.Length);
+            Assert.All(card.Password,c=>Assert.Contains(c,"abcdef"));
+            Assert.NotEqual(card.Username,card.Password);
+        });
+    }
+
+    [Fact]
     public void All_Three_Credential_Modes_Are_Independent()
     {
         VoucherGenerationOptions opts=new(5,"",8,VoucherGenerator.Digits,true,"gold");

@@ -63,10 +63,11 @@ public static class VoucherGenerator
         VoucherGenerationOptions options)
     {
         var p=Prepare(options);
-        var username=p.Prefix+NextToken(p.Characters,p.SuffixLength);
+        using var entropy=new SecureTokenSampler();
+        var username=p.Prefix+entropy.NextToken(p.Characters,p.SuffixLength);
         var password=options.UsernameOnly ? "" :
             options.PasswordEqualsUsername ? username :
-            DifferentPassword(p.PasswordCharacters,p.PasswordLength,username);
+            DifferentPassword(p.PasswordCharacters,p.PasswordLength,username,entropy);
         return (username,password);
     }
 
@@ -85,17 +86,21 @@ public static class VoucherGenerator
             throw new ArgumentException(
                 "مساحة أرقام الكروت المتبقية لا تكفي للدفعة؛ غيّر البادئة أو الطول أو مجموعة الأحرف.");
         var results=new List<Voucher>(options.Count);
-        string batch=DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss")+"-"+
+        using var entropy=new SecureTokenSampler();
+        // A batch is created at one consistent time, without querying the
+        // system clock for every randomly generated voucher.
+        var batchCreatedAt=DateTimeOffset.UtcNow;
+        string batch=batchCreatedAt.ToString("yyyyMMddHHmmss")+"-"+
             Guid.NewGuid().ToString("N")[..8];
         long budget=Math.Max((long)options.Count*65,200);
         while(results.Count<options.Count && budget-- > 0)
         {
-            string username=p.Prefix+NextToken(p.Characters,p.SuffixLength);
+            string username=p.Prefix+entropy.NextToken(p.Characters,p.SuffixLength);
             if(!used.Add(username))continue;
             string password=options.UsernameOnly ? "" :
                 options.PasswordEqualsUsername ? username :
-                DifferentPassword(p.PasswordCharacters,p.PasswordLength,username);
-            results.Add(new Voucher(username,password,options.Profile,batch,DateTimeOffset.UtcNow));
+                DifferentPassword(p.PasswordCharacters,p.PasswordLength,username,entropy);
+            results.Add(new Voucher(username,password,options.Profile,batch,batchCreatedAt));
         }
         if(results.Count!=options.Count)
             throw new InvalidOperationException(
@@ -127,11 +132,12 @@ public static class VoucherGenerator
         return chars;
     }
 
-    private static string DifferentPassword(string chars,int length,string username)
+    private static string DifferentPassword(
+        string chars,int length,string username,SecureTokenSampler entropy)
     {
         for(var attempt=0;attempt<16;attempt++)
         {
-            var password=NextToken(chars,length);
+            var password=entropy.NextToken(chars,length);
             if(!string.Equals(password,username,StringComparison.Ordinal))
                 return password;
         }
@@ -139,11 +145,38 @@ public static class VoucherGenerator
             "إعدادات كلمة المرور تكرر اسم المستخدم ولا تسمح بإنشاء كلمة مختلفة.");
     }
 
-    private static string NextToken(string chars,int length)
+    /// <summary>
+    /// Batch-local cryptographic random byte stream. A separate platform RNG
+    /// request per character is expensive for thousands of voucher numbers
+    /// and passwords. Fill a bounded block at once, then use rejection
+    /// sampling so every alphabet character stays exactly equiprobable.
+    /// There is no shared global random state, predictable seed or modulo bias.
+    /// </summary>
+    private sealed class SecureTokenSampler : IDisposable
     {
-        Span<char> result=length<=64?stackalloc char[length]:new char[length];
-        for(int i=0;i<length;++i)
-            result[i]=chars[RandomNumberGenerator.GetInt32(chars.Length)];
-        return new string(result);
+        private readonly byte[] _buffer=new byte[4096];
+        private int _position=4096;
+
+        public string NextToken(string alphabet,int length)
+        {
+            if(string.IsNullOrEmpty(alphabet) || alphabet.Length>256 || length<0)
+                throw new ArgumentOutOfRangeException(nameof(alphabet));
+            Span<char> result=length<=64?stackalloc char[length]:new char[length];
+            int acceptable=256-(256%alphabet.Length);
+            for(int i=0;i<length;)
+            {
+                if(_position==_buffer.Length)
+                {
+                    RandomNumberGenerator.Fill(_buffer);
+                    _position=0;
+                }
+                byte value=_buffer[_position++];
+                if(value>=acceptable)continue;
+                result[i++]=alphabet[value%alphabet.Length];
+            }
+            return new string(result);
+        }
+
+        public void Dispose()=>CryptographicOperations.ZeroMemory(_buffer);
     }
 }
