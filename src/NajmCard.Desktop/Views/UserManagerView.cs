@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using NajmCard.Core.Models;
 using NajmCard.Core.Services;
+using NajmCard.Desktop.Services;
 
 namespace NajmCard.Desktop.Views;
 
@@ -13,7 +14,7 @@ public sealed class UserManagerView : UserControl
 {
     private const int PageSize=40;
 
-    public UserManagerView(RouterGateway gateway)
+    public UserManagerView(RouterGateway gateway,VoucherStore? store=null)
     {
         var heading=PageUi.Title("إدارة User Manager");
         var mode=PageUi.Label("القسم");
@@ -99,7 +100,7 @@ public sealed class UserManagerView : UserControl
         body.Children.Add(creationBar);
         body.Children.Add(grid);
         body.Children.Add(footer);
-        Content=PageUi.Wrap("إدارة User Manager",
+        var explorerContent=PageUi.Wrap("إدارة User Manager",
             "قراءة مستقلة للمستخدمين والباقات والقيود والجلسات دون التأثير على الطباعة.",
             PageUi.Surface(body,"#197E9A"));
 
@@ -387,5 +388,55 @@ public sealed class UserManagerView : UserControl
         };
         Unloaded+=(_,_)=>pending?.Cancel();
         Display();
+
+        // The six-card home is the FIRST displayed view on every sidebar entry.
+        // Preserve the existing User Manager explorer and mutations untouched.
+        var Back=PageUi.Button("العودة إلى إدارة User Manager",false);
+        Back.HorizontalAlignment=HorizontalAlignment.Right;
+        Back.Margin=new Thickness(5,3,5,5);
+        var explorerShell=new DockPanel {LastChildFill=true};
+        DockPanel.SetDock(Back,Dock.Top);
+        explorerShell.Children.Add(Back);
+        explorerShell.Children.Add(explorerContent);
+
+        var home=new UserManagerHomeView();
+        void ReturnToHome()
+        {
+            Reset();
+            Content=home;
+        }
+        Back.Click+=(_,_)=>ReturnToHome();
+
+        void OpenExplorer(UserManagerCatalogSection requested,bool focusSearch=false)
+        {
+            section.SelectedIndex=requested switch
+            {
+                UserManagerCatalogSection.Users=>0,
+                UserManagerCatalogSection.Profiles=>1,
+                UserManagerCatalogSection.Limitations=>2,
+                UserManagerCatalogSection.Sessions=>3,
+                _=>1
+            };
+            Content=explorerShell;
+            if(focusSearch)
+                Dispatcher.BeginInvoke(new Action(()=>search.Focus()),
+                    System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        home.Navigate=destination=>
+        {
+            switch(destination)
+            {
+                case "users":OpenExplorer(UserManagerCatalogSection.Users);break;
+                case "packages":OpenExplorer(UserManagerCatalogSection.Profiles);break;
+                case "sessions":OpenExplorer(UserManagerCatalogSection.Sessions);break;
+                case "search":OpenExplorer(UserManagerCatalogSection.Users,true);break;
+                case "reports":Content=new UserManagerReportsView(gateway,ReturnToHome);break;
+                case "maintenance":
+                    Content=new UserManagerMaintenanceView(gateway,store,ReturnToHome);
+                    break;
+            }
+        };
+        Content=home;
     }
 }
