@@ -34,6 +34,52 @@ public sealed class RouterOsProtocolTests
         Assert.Equal(values, await RouterOsProtocol.ReadSentenceAsync(stream, default));
     }
 
+    // Every RouterOS command should be framed and sent as one transport
+    // operation. Many tiny writes force extra TCP packets/ACK waits.
+    private sealed class CountingStream : Stream
+    {
+        private readonly MemoryStream _inner=new();
+        public int Writes {get;private set;}
+        public byte[] Bytes => _inner.ToArray();
+        public override bool CanRead=>false;
+        public override bool CanSeek=>false;
+        public override bool CanWrite=>true;
+        public override long Length=>_inner.Length;
+        public override long Position {get=>_inner.Position;set=>throw new NotSupportedException();}
+        public override void Flush()=>_inner.Flush();
+        public override Task FlushAsync(CancellationToken ct)=>Task.CompletedTask;
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
+            CancellationToken ct=default)
+        {
+            Writes++;
+            return _inner.WriteAsync(buffer,ct);
+        }
+        public override void Write(byte[] buffer,int offset,int count)
+        {
+            Writes++;
+            _inner.Write(buffer,offset,count);
+        }
+        public override int Read(byte[] buffer,int offset,int count)=>
+            throw new NotSupportedException();
+        public override long Seek(long offset,SeekOrigin origin)=>
+            throw new NotSupportedException();
+        public override void SetLength(long value)=>
+            throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task LargeCommand_HasSingleNetworkWrite_AndRoundtripsExactly()
+    {
+        var words=new[] {"/tool/user-manager/user/add",
+            "=username=12345678","=password=Secret9876","=customer=admin",
+            "=comment=شبكة نجم كارد".PadRight(512,'x')};
+        using var transport=new CountingStream();
+        await RouterOsProtocol.WriteSentenceAsync(transport,words,default);
+        Assert.Equal(1,transport.Writes);
+        using var replay=new MemoryStream(transport.Bytes);
+        Assert.Equal(words,await RouterOsProtocol.ReadSentenceAsync(replay,default));
+    }
+
     [Fact]
     public async Task TruncatedSentenceThrowsInsteadOfHanging()
     {
