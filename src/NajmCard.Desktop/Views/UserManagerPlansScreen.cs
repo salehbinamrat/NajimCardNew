@@ -33,7 +33,6 @@ public sealed class UserManagerPlansScreen : UserControl
         var profilesTab=UmUi.Action("Profiles (الباقات)",true,136);
         var limitsTab=UmUi.Action("Limitations (القيود)",false,138);
         var add=UmUi.Action("إضافة",true);
-        var edit=UmUi.Action("تعديل");
         var remove=UmUi.Action("حذف");
         var copy=UmUi.Action("نسخ إلى نموذج");
         var refresh=UmUi.Action("تحديث",true);
@@ -48,7 +47,7 @@ public sealed class UserManagerPlansScreen : UserControl
         var size=UmUi.Combo(new[]{"20","50","100"},77);
         var tableArea=UmUi.Stack(
             UmUi.Row(profilesTab,limitsTab),
-            UmUi.Row(search,refresh,add,edit,remove,copy),table,
+            UmUi.Row(search,refresh,add,remove,copy),table,
             UmUi.Row(prev,next,UmUi.Label("عرض",12),size,pager)
         );
 
@@ -149,7 +148,7 @@ public sealed class UserManagerPlansScreen : UserControl
             prev.IsEnabled=page>0;next.IsEnabled=page+1<pages;
             bool canWrite=snapshot?.Generation==RouterOsGeneration.V7&&!busy;
             save.IsEnabled=add.IsEnabled=canWrite;
-            edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=canWrite&&Selected()!=null;
+            remove.IsEnabled=copy.IsEnabled=canWrite&&Selected()!=null;
             SetEditorKind();
         }
         async Task Load()
@@ -271,7 +270,7 @@ public sealed class UserManagerPlansScreen : UserControl
             if(row is null)
             {
                 editing=null;
-                edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=false;
+                remove.IsEnabled=copy.IsEnabled=false;
                 return;
             }
             editing=row;
@@ -284,14 +283,13 @@ public sealed class UserManagerPlansScreen : UserControl
             up.Text=row.DownloadRate=="غير متاح"?"":row.DownloadRate;
             down.Text=row.UploadRate=="غير متاح"?"":row.UploadRate;
             uptime.Text=row.UptimeLimit=="غير متاح"?"":row.UptimeLimit;
-            edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=
+            remove.IsEnabled=copy.IsEnabled=
                 snapshot?.Generation==RouterOsGeneration.V7&&!busy;
         };
         profilesTab.Click+=(_,_)=>{kind="Profile";page=0;ResetForm();Draw();};
         limitsTab.Click+=(_,_)=>{kind="Limitation";page=0;ResetForm();Draw();};
         add.Click+=(_,_)=>{ResetForm();status.Text="أدخل اسم السجل الجديد ثم اضغط حفظ.";};
         copy.Click+=(_,_)=>{editing=null;table.SelectedItem=null;name.Text+="-copy";Draw();};
-        edit.Click+=(_,_)=>{if(Selected() is null)return;status.Text="عدل الخانات ثم اضغط حفظ.";};
         save.Click+=async(_,_)=>await Mutate(editing is null?"add":"set");
         remove.Click+=async(_,_)=>await Mutate("remove");
         clear.Click+=(_,_)=>ResetForm();
