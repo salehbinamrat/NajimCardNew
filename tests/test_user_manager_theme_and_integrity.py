@@ -46,6 +46,28 @@ class UserManagerPaletteAndIntegrityTests(unittest.TestCase):
         self.assertNotIn("#0B8FB5",reports)
         self.assertNotIn("#254865",nav)
 
+    def test_um_input_surfaces_share_the_actual_cream_theme(self):
+        ui=(VIEWS/"UmUi.cs").read_text(encoding="utf-8")
+        self.assertIn('InputSurface=FromTheme("CreamPanelBrush"',ui)
+        self.assertNotIn('InputSurface=Solid("#FFFAF0")',ui)
+        self.assertIn('Background=InputSurface',ui)
+        self.assertIn('Foreground=Ink',ui)
+
+    def test_um_report_chart_accents_use_shared_palette_not_local_colors(self):
+        reports=(VIEWS/"UserManagerReportsView.cs").read_text(encoding="utf-8")
+        self.assertIn("UmUi.GoldBright",reports)
+        self.assertIn("UmUi.Navy",reports)
+        self.assertNotIn('UmUi.Solid("#9C4C60")',reports)
+        self.assertNotIn('UmUi.Solid("#BE9048")',reports)
+
+    def test_um_controls_are_scoped_and_disabled_controls_keep_legible_text(self):
+        ui=(VIEWS/"UmUi.cs").read_text(encoding="utf-8")
+        self.assertIn('Control.ForegroundProperty,Ink',ui)
+        self.assertIn('nameof(ComboBox.Foreground)',ui)
+        self.assertIn('nameof(ComboBoxItem.Foreground)',ui)
+        self.assertIn('nameof(Button.Foreground)',ui)
+        self.assertIn('UIElement.OpacityProperty,0.65',ui)
+
     def test_limitation_editor_never_rounds_existing_router_quota(self):
         plans=(VIEWS/"UserManagerPlansScreen.cs").read_text(encoding="utf-8")
         self.assertIn("UserManagerQuotaMath.ToEditorGiB(bytes)",plans)
