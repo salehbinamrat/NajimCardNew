@@ -187,6 +187,7 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
     {
         if (command is not ("/tool/user-manager/user/print" or
             "/user-manager/user/print" or "/user-manager/user-profile/print" or
+            "/user-manager/profile/print" or "/user-manager/limitation/print" or
             "/ppp/secret/print" or "/ppp/active/print" or "/ppp/profile/print" or
             "/ip/hotspot/print" or "/ip/hotspot/active/print" or
             "/ip/hotspot/user/profile/print"))

@@ -1,0 +1,290 @@
+using System.Globalization;
+using System.Windows;
+using System.Windows.Controls;
+using NajmCard.Core.Models;
+using NajmCard.Core.Services;
+
+namespace NajmCard.Desktop.Views;
+
+/// <summary>
+/// Profiles / Limitations as two true RouterOS-backed tabs, with the
+/// reference design's left editor and right inventory. v6 reads remain
+/// available; v7 edits require verified Core mutations and confirmation.
+/// </summary>
+public sealed class UserManagerPlansScreen : UserControl
+{
+    private sealed record Display(UmPlanRow Source)
+    {
+        public string Name=>Source.Name;
+        public string Status=>"من الراوتر";
+        public string Price=>Source.Price;
+        public string Duration=>Source.Validity;
+        public string Quota=>long.TryParse(Source.TransferLimit,out var b)
+            ?UmUi.Bytes(b):"—";
+        public string Speed=>Source.Kind=="Limitation"
+            ?"RX: "+Source.DownloadRate+" / TX: "+Source.UploadRate:"انظر القيود";
+        public string Limits=>Source.AssociatedLimits;
+    }
+
+    public UserManagerPlansScreen(RouterGateway gateway)
+    {
+        var header=UmUi.Header("إدارة الباقات",
+            "Profiles وLimitations والربط بينهما من RouterOS، دون افتراض حصص أو سرعات.");
+        var profilesTab=UmUi.Action("Profiles (الباقات)",true,136);
+        var limitsTab=UmUi.Action("Limitations (القيود)",false,138);
+        var add=UmUi.Action("إضافة",true);
+        var edit=UmUi.Action("تعديل");
+        var remove=UmUi.Action("حذف");
+        var copy=UmUi.Action("نسخ إلى نموذج");
+        var refresh=UmUi.Action("تحديث",true);
+        var search=UmUi.SearchBox("البحث في الباقات أو القيود");
+        var table=UmUi.Table(("الاسم","Name",145),("السرعة (RX/TX)","Speed",215),
+            ("السعة","Quota",110),("المدة","Duration",100),
+            ("السعر","Price",82),("القيود المرتبطة","Limits",190));
+        table.MinHeight=325;table.MaxHeight=425;
+        var pager=UmUi.Label("لا توجد بيانات محملة",12,true,UmUi.Blue);
+        var prev=UmUi.Action("السابق",false,63);
+        var next=UmUi.Action("التالي",false,63);
+        var size=UmUi.Combo(new[]{"20","50","100"},77);
+        var tableArea=UmUi.Stack(
+            UmUi.Row(profilesTab,limitsTab),
+            UmUi.Row(search,refresh,add,edit,remove,copy),table,
+            UmUi.Row(prev,next,UmUi.Label("عرض",12),size,pager)
+        );
+
+        var name=UmUi.SearchBox("اسم Profile أو Limitation");name.Width=185;
+        var price=UmUi.SearchBox("السعر، مثال 250");price.Width=185;
+        var duration=UmUi.SearchBox("مثال 30d");duration.Width=185;
+        var starts=UmUi.Combo(new[]{"first-auth","assigned"},185);
+        var quota=UmUi.SearchBox("سعة الباقة بالأرقام (GiB)");quota.Width=185;
+        var up=UmUi.SearchBox("RX رفع العميل مثلا 256k");up.Width=185;
+        var down=UmUi.SearchBox("TX تنزيل العميل مثلا 1024k");down.Width=185;
+        var uptime=UmUi.SearchBox("حد المدة، مثال 30d");uptime.Width=185;
+        var limitOptions=UmUi.Combo(new[]{"اختر قيدا"},185);
+        var link=UmUi.Action("ربط القيد بالباقة",false,145);
+        var save=UmUi.Action("حفظ",true,88);
+        var clear=UmUi.Action("تفريغ",false,87);
+        var alert=UmUi.Label("حدود البيانات تُدخل بالـ GiB وتحول إلى بايت؛ "+
+            "السرعات من وجهة نظر MikroTik: RX رفع العميل، TX تنزيل العميل.",
+            11,false,UmUi.Gray);
+        var editor=UmUi.Stack(UmUi.Label("إضافة / تعديل",17,true),new Separator(),
+            UmUi.Label("اسم الباقة أو القيد",12,true),name,
+            UmUi.Label("السعر",12),price,UmUi.Label("المدة",12),duration,
+            UmUi.Label("بدء الصلاحية",12),starts,
+            UmUi.Label("الحجم (GiB)",12),quota,
+            UmUi.Label("سرعة الرفع RX",12),up,
+            UmUi.Label("سرعة التحميل TX",12),down,
+            UmUi.Label("حد الوقت",12),uptime,
+            UmUi.Row(save,clear),new Separator(),
+            UmUi.Label("ربط قيد موجود",12,true),limitOptions,link,alert);
+        var editorScroll=UmUi.Scroller(editor);
+        editorScroll.MaxHeight=505;
+
+        var contentGrid=new Grid();
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition {Width=new GridLength(215)});
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition {Width=new GridLength(1,GridUnitType.Star)});
+        var left=UmUi.Panel(editorScroll);
+        Grid.SetColumn(left,0);contentGrid.Children.Add(left);
+        var right=UmUi.Panel(tableArea);Grid.SetColumn(right,1);contentGrid.Children.Add(right);
+        var status=UmUi.Label("لم تُقرأ الباقات بعد",12,false,UmUi.Gray);
+        Content=UmUi.Scroller(UmUi.Stack(header,contentGrid,UmUi.Panel(status)));
+
+        UmDataSnapshot<UmPlanRow>? snapshot=null;
+        UmPlanRow? editing=null;
+        string kind="Profile";
+        bool busy=false,loadedOnce=false;
+        int page=0;
+        Display[] filtered=[];
+        CancellationTokenSource? pending=null;
+
+        UmPlanRow? Selected()=> (table.SelectedItem as Display)?.Source;
+        void SetEditorKind()
+        {
+            bool isProfile=kind=="Profile";
+            price.IsEnabled=duration.IsEnabled=starts.IsEnabled=isProfile;
+            quota.IsEnabled=up.IsEnabled=down.IsEnabled=uptime.IsEnabled=!isProfile;
+            limitOptions.IsEnabled=link.IsEnabled=isProfile&&
+                snapshot?.Generation==RouterOsGeneration.V7&&!busy;
+            profilesTab.Background=isProfile?UmUi.Cyan:UmUi.Light;
+            limitsTab.Background=isProfile?UmUi.Light:UmUi.Cyan;
+        }
+        void ResetForm()
+        {
+            editing=null;table.SelectedItem=null;
+            name.Clear();price.Text="0";duration.Text="30d";
+            quota.Clear();up.Clear();down.Clear();uptime.Clear();
+            starts.SelectedIndex=0;
+            SetEditorKind();
+        }
+        void Draw()
+        {
+            var q=search.Text.Trim();
+            filtered=(snapshot?.Rows??[])
+                .Where(row=>row.Kind==kind &&
+                    (q.Length==0||row.Name.Contains(q,StringComparison.OrdinalIgnoreCase)||
+                        row.AssociatedLimits.Contains(q,StringComparison.OrdinalIgnoreCase)))
+                .Select(x=>new Display(x)).ToArray();
+            int take=int.TryParse(size.SelectedItem?.ToString(),out var n)?n:20;
+            int pages=Math.Max(1,(filtered.Length+take-1)/take);
+            page=Math.Clamp(page,0,pages-1);
+            table.ItemsSource=filtered.Skip(page*take).Take(take).ToArray();
+            pager.Text=$"إجمالي {kind}: {filtered.Length} | صفحة {page+1} من {pages}";
+            prev.IsEnabled=page>0;next.IsEnabled=page+1<pages;
+            bool canWrite=snapshot?.Generation==RouterOsGeneration.V7&&!busy;
+            save.IsEnabled=add.IsEnabled=canWrite;
+            edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=canWrite&&Selected()!=null;
+            SetEditorKind();
+        }
+        async Task Load()
+        {
+            if(busy||!IsLoaded)return;
+            busy=true;refresh.IsEnabled=false;
+            status.Text="يجري تحميل Profiles وLimitations وروابطهما من RouterOS...";
+            using var request=new CancellationTokenSource();pending=request;
+            try
+            {
+                var result=await gateway.ReadUmPlansAsync(request.Token);
+                if(!IsLoaded||request.IsCancellationRequested)return;
+                snapshot=result;editing=null;page=0;
+                limitOptions.Items.Clear();limitOptions.Items.Add("اختر قيدا");
+                foreach(var plan in result.Rows.Where(x=>x.Kind=="Limitation"))
+                    limitOptions.Items.Add(plan.Name);
+                limitOptions.SelectedIndex=0;
+                Draw();
+                status.Text=$"RouterOS {(int)result.Generation} | Profiles: "+
+                    result.Rows.Count(x=>x.Kind=="Profile")+
+                    " | Limitations: "+result.Rows.Count(x=>x.Kind=="Limitation")+
+                    (result.Generation==RouterOsGeneration.V6
+                        ?" | التعديل عبر هذه الواجهة مقيد حتى التحقق من مالك الباقات في v6."
+                        :" | إدارة v7 مع إعادة قراءة النتائج بعد كل أمر.");
+            }
+            catch(OperationCanceledException) when(request.IsCancellationRequested){}
+            catch(Exception ex)
+            {
+                if(!IsLoaded)return;
+                snapshot=null;Draw();
+                status.Text="فشلت قراءة الباقات أو روابطها: "+ex.Message;
+            }
+            finally{pending=null;busy=false;refresh.IsEnabled=true;Draw();}
+        }
+
+        UmPlanDraft Draft()
+        {
+            string transfer="";
+            if(kind=="Limitation"&&!string.IsNullOrWhiteSpace(quota.Text))
+            {
+                if(!decimal.TryParse(quota.Text,NumberStyles.AllowDecimalPoint,
+                    CultureInfo.InvariantCulture,out var gib) ||
+                    gib<0 || gib>long.MaxValue/1073741824m)
+                    throw new ArgumentException("حجم الباقة بالـ GiB غير صالح.");
+                transfer=decimal.Truncate(gib*1073741824m).ToString(
+                    CultureInfo.InvariantCulture);
+            }
+            return new UmPlanDraft(kind,name.Text.Trim(),price.Text.Trim(),
+                duration.Text.Trim(),kind=="Profile"?starts.SelectedItem?.ToString()??"":"",
+                transfer,"","",""+uptime.Text.Trim(),up.Text.Trim(),down.Text.Trim());
+        }
+        async Task Mutate(string action)
+        {
+            if(busy||snapshot?.Generation!=RouterOsGeneration.V7)return;
+            UmPlanDraft draft;
+            try{draft=Draft();}
+            catch(Exception ex){status.Text=ex.Message;return;}
+            if(action!="add"&&editing is null)
+            {status.Text="حدد باقة حقيقية من الجدول أولا.";return;}
+            if(!PageUi.Confirm(
+                (action=="add"?"إنشاء":action=="set"?"تعديل":"حذف")+
+                " «"+(action=="remove"?editing?.Name:draft.Name)+"» على RouterOS 7؟ "+
+                "لن يُعاد الأمر تلقائيا إذا انقطع الاتصال."))return;
+            busy=true;Draw();
+            try
+            {
+                var result=await gateway.ChangeUmPlanAsync(action,draft,editing);
+                status.Text=result.Message+
+                    (result.Uncertain?" | راجع الراوتر قبل تكرار أي أمر.":"");
+                snapshot=null;editing=null;Draw();
+                if(result.Success)
+                {
+                    busy=false;
+                    await Load();
+                    busy=true;
+                }
+            }
+            catch(Exception ex)
+            {
+                snapshot=null;editing=null;Draw();
+                status.Text="العملية غير مؤكدة أو مرفوضة: "+ex.Message;
+            }
+            finally{busy=false;Draw();}
+        }
+
+        async Task Link()
+        {
+            if(busy||snapshot?.Generation!=RouterOsGeneration.V7||
+               kind!="Profile"||Selected() is not UmPlanRow profile)return;
+            var limit=limitOptions.SelectedItem?.ToString()??"";
+            if(limit=="اختر قيدا")return;
+            if(!PageUi.Confirm(
+                "ربط القيد «"+limit+"» بالباقة «"+profile.Name+
+                "»؟ سيتم إرسال أمر إضافة رابط واحد فقط."))return;
+            busy=true;Draw();
+            try
+            {
+                var result=await gateway.LinkUmProfileLimitationAsync(profile.Name,limit);
+                status.Text=result.Message;
+                snapshot=null;Draw();
+                if(result.Success)
+                {
+                    busy=false;
+                    await Load();
+                    busy=true;
+                }
+            }
+            catch(Exception ex)
+            {
+                snapshot=null;Draw();status.Text="تعذر تأكيد الربط: "+ex.Message;
+            }
+            finally{busy=false;Draw();}
+        }
+
+        table.SelectionChanged+=(_,_) =>
+        {
+            var row=Selected();
+            if(row is null)
+            {
+                edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=false;
+                return;
+            }
+            editing=row;
+            name.Text=row.Name;
+            price.Text=row.Price=="غير متاح"?"0":row.Price;
+            duration.Text=row.Validity=="غير متاح"?"30d":row.Validity;
+            starts.SelectedItem=row.StartsWhen;
+            quota.Text=long.TryParse(row.TransferLimit,out var bytes)
+                ?(bytes/1073741824m).ToString("0.###",CultureInfo.InvariantCulture):"";
+            up.Text=row.DownloadRate=="غير متاح"?"":row.DownloadRate;
+            down.Text=row.UploadRate=="غير متاح"?"":row.UploadRate;
+            uptime.Text=row.UptimeLimit=="غير متاح"?"":row.UptimeLimit;
+            edit.IsEnabled=remove.IsEnabled=copy.IsEnabled=
+                snapshot?.Generation==RouterOsGeneration.V7&&!busy;
+        };
+        profilesTab.Click+=(_,_)=>{kind="Profile";page=0;ResetForm();Draw();};
+        limitsTab.Click+=(_,_)=>{kind="Limitation";page=0;ResetForm();Draw();};
+        add.Click+=(_,_)=>{ResetForm();status.Text="أدخل اسم السجل الجديد ثم اضغط حفظ.";};
+        copy.Click+=(_,_)=>{editing=null;table.SelectedItem=null;name.Text+="-copy";Draw();};
+        edit.Click+=(_,_)=>{if(Selected() is null)return;status.Text="عدل الخانات ثم اضغط حفظ.";};
+        save.Click+=async(_,_)=>await Mutate(editing is null?"add":"set");
+        remove.Click+=async(_,_)=>await Mutate("remove");
+        clear.Click+=(_,_)=>ResetForm();
+        link.Click+=async(_,_)=>await Link();
+        refresh.Click+=async(_,_)=>await Load();
+        search.TextChanged+=(_,_)=>{page=0;Draw();};
+        size.SelectionChanged+=(_,_)=>{page=0;Draw();};
+        prev.Click+=(_,_)=>{page--;Draw();};
+        next.Click+=(_,_)=>{page++;Draw();};
+        Loaded+=async(_,_)=>{if(!loadedOnce){loadedOnce=true;await Load();}};
+        Unloaded+=(_,_)=>pending?.Cancel();
+        ResetForm();
+        Draw();
+    }
+}

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using NajmCard.Core.Models;
 using NajmCard.Core.Services;
 using NajmCard.Desktop.Services;
@@ -423,20 +424,90 @@ public sealed class UserManagerView : UserControl
                     System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
-        home.Navigate=destination=>
+        // User Manager has an independent right-side section menu, just like
+        // the screenshots. The original full-featured explorer is retained as
+        // an explicit advanced administration destination, not deleted.
+        var workspace=new DockPanel
         {
-            switch(destination)
-            {
-                case "users":OpenExplorer(UserManagerCatalogSection.Users);break;
-                case "packages":OpenExplorer(UserManagerCatalogSection.Profiles);break;
-                case "sessions":OpenExplorer(UserManagerCatalogSection.Sessions);break;
-                case "search":OpenExplorer(UserManagerCatalogSection.Users,true);break;
-                case "reports":Content=new UserManagerReportsView(gateway,ReturnToHome);break;
-                case "maintenance":
-                    Content=new UserManagerMaintenanceView(gateway,store,ReturnToHome);
-                    break;
-            }
+            LastChildFill=true,FlowDirection=FlowDirection.RightToLeft,
+            Background=UmUi.Light
         };
+        var menu=new StackPanel
+        {
+            Width=145,Background=UmUi.Navy,
+            Margin=new Thickness(0,0,3,0)
+        };
+        var current=new ContentControl {Background=UmUi.Light};
+        DockPanel.SetDock(menu,Dock.Right);
+        workspace.Children.Add(menu);
+        workspace.Children.Add(current);
+
+        var links=new (string Key,string Caption)[]
+        {
+            ("home","⌂  الرئيسية"),
+            ("users","♟  إدارة المستخدمين"),
+            ("packages","▤  إدارة الباقات"),
+            ("sessions","◷  الجلسات"),
+            ("search","⌕  البحث المتقدم"),
+            ("reports","▥  التقارير"),
+            ("maintenance","⚙  النسخ والصيانة"),
+            ("legacy","⋯  خيارات الإدارة")
+        };
+        var menuButtons=new Dictionary<string,Button>(StringComparer.Ordinal);
+        void OpenPage(string destination)
+        {
+            if(destination=="home"){ReturnToHome();return;}
+            if(destination=="legacy")
+            {
+                OpenExplorer(UserManagerCatalogSection.Users);
+                return;
+            }
+            current.Content=destination switch
+            {
+                "users"=>new UserManagerAccountsScreen(gateway,
+                    ()=>OpenExplorer(UserManagerCatalogSection.Users)),
+                "packages"=>new UserManagerPlansScreen(gateway),
+                "sessions"=>new UserManagerSessionsScreen(gateway),
+                "search"=>new UserManagerSearchScreen(gateway),
+                "reports"=>new UserManagerReportsView(gateway,ReturnToHome),
+                "maintenance"=>new UserManagerMaintenanceView(gateway,store,ReturnToHome),
+                _=>throw new ArgumentException("قسم User Manager غير معروف.",nameof(destination))
+            };
+            foreach(var (key,button) in menuButtons)
+            {
+                bool selected=key==destination;
+                button.Background=selected?UmUi.Cyan:UmUi.Navy;
+                button.Foreground=Brushes.White;
+            }
+            Content=workspace;
+        }
+        foreach(var (key,caption) in links)
+        {
+            var destination=key;
+            var button=UmUi.Action(caption,false,134);
+            button.Width=136;button.Height=47;
+            button.FontSize=12;
+            button.Foreground=Brushes.White;
+            button.Background=UmUi.Navy;
+            button.BorderBrush=UmUi.Solid("#254865");
+            button.Margin=new Thickness(4,5,4,3);
+            button.Click+=(_,_)=>OpenPage(destination);
+            menu.Children.Add(button);
+            menuButtons.Add(key,button);
+        }
+
+        // A fixed back action is available on EVERY subpage and is used by
+        // the real WPF navigation smoke test.
+        var menuBack=UmUi.Action("العودة إلى إدارة User Manager",false,130);
+        menuBack.Width=136;menuBack.Height=49;
+        menuBack.FontSize=10;
+        menuBack.Background=UmUi.Solid("#125B77");
+        menuBack.Foreground=Brushes.White;
+        menuBack.ToolTip="العودة إلى البطاقات الست";
+        menuBack.Click+=(_,_)=>ReturnToHome();
+        menu.Children.Add(menuBack);
+
+        home.Navigate=OpenPage;
         Content=home;
     }
 }

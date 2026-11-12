@@ -57,13 +57,15 @@ class UserManagerHomeContract(unittest.TestCase):
     def test_report_and_maintenance_are_honest_and_safe(self):
         reports=(VIEWS/"UserManagerReportsView.cs").read_text(encoding="utf-8")
         maintenance=(VIEWS/"UserManagerMaintenanceView.cs").read_text(encoding="utf-8")
-        self.assertIn('ReadUserManagerCatalogAsync',reports)
+        self.assertIn('ReadUmAccountsAsync',reports)
+        self.assertIn('ReadUmSessionsAsync',reports)
         self.assertIn('SaveFileDialog',reports)
         self.assertIn('ReadUserManagerV6DatabaseStatusAsync',maintenance)
         self.assertIn('DiagnoseUserManagerV7RadiusAsync',maintenance)
         self.assertIn('store.Backup()',maintenance)
         self.assertIn('لا يمكن',maintenance)
-        self.assertNotIn('database/save',maintenance)
+        self.assertIn('CreateUmRouterBackupAsync',maintenance)
+        self.assertIn('ReadUmRouterBackupsAsync',maintenance)
         self.assertNotIn('database/load',maintenance)
 
     def test_visual_smoke_captures_actual_home_not_mockup(self):
