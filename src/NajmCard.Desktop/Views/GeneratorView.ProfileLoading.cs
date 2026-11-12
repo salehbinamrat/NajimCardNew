@@ -18,6 +18,8 @@ public partial class GeneratorView
     // which makes every child IsEnabled=false even for loaded profiles.
     private bool _loadedProfilesReady;
     private bool _loadedCustomersReady;
+    private string _lastCatalogService="";
+    private DateTimeOffset _lastCatalogLoadedAt;
 
     private void RequireRouteSelection()
     {
@@ -27,10 +29,17 @@ public partial class GeneratorView
             throw new ArgumentException("اختر حساب مدير User Manager.");
     }
 
-    private async Task LoadProfilesAsync()
+    private async Task LoadProfilesAsync(bool force=false)
     {
-        var requestVersion=++_profileRequestVersion;
         var service=SelectedService;
+        // Re-entering the same WPF creator within a few seconds must not
+        // re-query RouterOS. Explicit refresh always bypasses this short
+        // cache, while service/owner changes still load fresh definitions.
+        if(!force && _lastCatalogService==service && _loadedProfilesReady &&
+           _profile.SelectedIndex>=0 && _profile.Items.Count>0 &&
+           DateTimeOffset.UtcNow-_lastCatalogLoadedAt<TimeSpan.FromSeconds(12))
+            return;
+        var requestVersion=++_profileRequestVersion;
         _loadedProfilesReady=false;
         _loadedCustomersReady=false;
         var previousProfile=_profile.SelectedItem?.ToString();
@@ -111,6 +120,11 @@ public partial class GeneratorView
                 hasCustomers=customers.Length>0;
                 _loadedProfilesReady=hasProfiles;
                 _loadedCustomersReady=hasCustomers;
+                if(hasProfiles && (service!="userman" || hasCustomers))
+                {
+                    _lastCatalogService=service;
+                    _lastCatalogLoadedAt=DateTimeOffset.UtcNow;
+                }
                 _umProfiles=umProfiles;
                 _server.ItemsSource=servers;
                 _server.SelectedItem=servers.Contains(previousServer) ? previousServer : "all";
