@@ -73,7 +73,7 @@ public sealed class UserManagerAccountsScreen : UserControl
         var detailExpiry=UmUi.Label("الانتهاء: —",12);
         var detailStatus=UmUi.Label("الحالة: —",12);
         var detailSessions=UmUi.Label("الجلسات المثبتة: —",12);
-        detail.Children.Add(new Separator {Margin=new Thickness(0,8)});
+        detail.Children.Add(new Separator {Margin=new Thickness(0,8,0,8)});
         foreach(var line in new[]{detailProfile,detailQuota,detailUsed,detailExpiry,
             detailStatus,detailSessions})detail.Children.Add(line);
         detail.Children.Add(UmUi.Label(
@@ -244,8 +244,8 @@ public sealed class UserManagerAccountsScreen : UserControl
                     throw new InvalidOperationException(
                         "تغيرت بيانات الحساب منذ القراءة؛ أُوقف الحذف.");
                 var result=await gateway.ChangeUserManagerV6UserAsync(target,"remove");
-                message.Text=result.Message+
-                    (result.Uncertain?" | راجع الراوتر ولا تُعد العملية.":"");
+                message.Text=result.Diagnostic+
+                    (result.UncertainOutcome?" | راجع الراوتر ولا تُعد العملية.":"");
             }
             catch(Exception ex){message.Text="لم يثبت الحذف: "+ex.Message;}
             finally
