@@ -48,7 +48,8 @@ class PortableLayoutTests(unittest.TestCase):
         self.assertNotIn("#6557A4",code)
         self.assertIn("PageUi.Surface",code)
         self.assertIn("shortcut.Click",code)
-        self.assertNotIn("CreateOrUpdateShortcut();",code)
+        self.assertIn("shortcut.Click+=(_,_)",code)
+        self.assertEqual(code.count("DesktopShortcutService.CreateOrUpdateShortcut();"),1)
 
     def test_sqlite_wal_mode_initialized_once_and_full_durability_is_retained(self):
         code=(ROOT/"src/NajmCard.Desktop/Services/VoucherStore.cs").read_text(encoding="utf-8")
