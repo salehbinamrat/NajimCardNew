@@ -314,10 +314,11 @@ public sealed partial class VoucherStore : IDisposable
         BeginSendOnConnection(db, voucher);
     }
 
-    private static string BeginSendOnConnection(SqliteConnection db, Voucher voucher)
+    private static string BeginSendOnConnection(SqliteConnection db, Voucher voucher, SqliteTransaction? existingTx=null)
     {
         Validate(voucher);
-        using var tx = db.BeginTransaction();
+        using var ownedTx = existingTx is null ? db.BeginTransaction() : null;
+        var tx = existingTx ?? ownedTx!;
         string previousState;
 
         using (var read = db.CreateCommand())
@@ -360,7 +361,7 @@ public sealed partial class VoucherStore : IDisposable
         if (cmd.ExecuteNonQuery() != 1)
             throw new InvalidOperationException(
                 "الكرت مُرسل أو قيد الإرسال أو نتيجته غير مؤكدة؛ لا يمكن إعادة إرساله.");
-        tx.Commit();
+        ownedTx?.Commit();
         return previousState;
     }
 
@@ -457,8 +458,9 @@ public sealed partial class VoucherStore : IDisposable
     /// <summary>
     /// Keep one WAL connection for a whole issuance batch, but use independent
     /// synchronous=FULL transactions before and after EVERY RouterOS write.
-    /// Never group SENDING leases or acknowledgements into a late batch commit:
-    /// a crash must not make an already-issued voucher retryable.
+    /// A tagged window may atomically lease several vouchers BEFORE sending
+    /// any bytes; this is equally crash-safe. Never defer a lease until AFTER
+    /// its RouterOS write: a crash must not make an issued voucher retryable.
     /// </summary>
     public SendSession OpenSendSession() => new(this);
 
@@ -479,6 +481,25 @@ public sealed partial class VoucherStore : IDisposable
             // counted twice when its next receipt becomes SENT.
             var previous=BeginSendOnConnection(_db,voucher);
             if(previous=="FAILED")_progress=null;
+        }
+
+        /// <summary>
+        /// Acquire an all-or-none lease for a bounded tagged window BEFORE
+        /// even one RouterOS command is written. This saves up to seven FULL
+        /// SQLite fsyncs per window while retaining non-retryable crash state.
+        /// If any card has changed, the entire transaction rolls back.
+        /// </summary>
+        public void BeginSendWindow(IReadOnlyList<Voucher> vouchers)
+        {
+            ArgumentNullException.ThrowIfNull(vouchers);
+            if(vouchers.Count is < 2 or > 8)
+                throw new ArgumentOutOfRangeException(nameof(vouchers));
+            using var tx=_db.BeginTransaction();
+            foreach(var voucher in vouchers)
+                BeginSendOnConnection(_db,voucher,tx);
+            tx.Commit();
+            _progress=null; // several pending rows / prior FAILED retries
+            _dataVersion=-1;
         }
 
         public void FinishSend(Voucher voucher, string state, string error = "")
