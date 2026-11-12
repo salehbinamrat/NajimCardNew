@@ -96,6 +96,7 @@ internal static class UmUi
         // A generated TextBlock must bind the actual foreground: the application
         // has an implicit light TextBlock style that overrides inherited colors.
         var content=new FrameworkElementFactory(typeof(TextBlock));
+        content.Name="PART_ActionText";
         content.SetBinding(TextBlock.TextProperty,new Binding(nameof(Button.Content))
         {
             RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
