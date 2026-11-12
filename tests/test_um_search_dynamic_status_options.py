@@ -15,6 +15,22 @@ class UserManagerSearchStatusContract(unittest.TestCase):
         self.assertIn('status.Items.Add(value)',code)
         self.assertNotIn('new[]{"جميع الحالات","نشطة","منتهية","معطل"',code)
 
+    def test_user_accounts_filters_include_every_actual_status_and_profile(self):
+        code=(VIEWS/"UserManagerAccountsScreen.cs").read_text(encoding="utf-8")
+        self.assertIn('UmUi.Combo(new[]{"كل الحالات"}',code)
+        self.assertIn('all.Select(x=>x.Status)',code)
+        self.assertIn('all.Select(x=>x.Profile)',code)
+        self.assertIn('.Distinct(StringComparer.Ordinal)',code)
+        self.assertIn('void SyncFilters()',code)
+        self.assertIn('statusFilter.IsEnabled=all.Count>0&&!busy;',code)
+        self.assertIn('profileFilter.IsEnabled=all.Count>0&&!busy;',code)
+        self.assertNotIn('new[]{"كل الحالات","صالح","استخدم","باقة نشطة"',code)
+
+    def test_after_edit_and_failed_load_stale_account_filters_are_cleared(self):
+        code=(VIEWS/"UserManagerAccountsScreen.cs").read_text(encoding="utf-8")
+        self.assertIn('all=[];version=null;SyncFilters();Draw();',code)
+        self.assertIn('if(resetFilters)return;',code)
+
     def test_only_meaningful_catalogs_can_filter_by_status(self):
         code=(VIEWS/"UserManagerSearchScreen.cs").read_text(encoding="utf-8")
         self.assertIn('x!="من الراوتر"',code)
