@@ -145,6 +145,8 @@ internal static class Program
             VerifyUserManagerHome(root,userManager);
             Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,
                 "user-manager-home-1200x730.png"));
+            CaptureUserManagerSections(root,userManager,width,height,
+                Path.GetDirectoryName(destination)!);
             return 0;
         }
         catch(Exception ex)
@@ -247,6 +249,51 @@ internal static class Program
         root.UpdateLayout();
         if(manager.Content is not UserManagerHomeView)
             throw new InvalidDataException("Returning to six-card home failed.");
+    }
+
+    /// <summary>
+    /// Render the six REAL WPF subpages via their production home-card buttons.
+    /// The test router remains offline, so no demo records are used.
+    /// </summary>
+    private static void CaptureUserManagerSections(Grid root,UserManagerView manager,
+        int width,int height,string folder)
+    {
+        var pages=new (string Tag,string Title)[]
+        {
+            ("users","إدارة المستخدمين"),
+            ("packages","إدارة الباقات"),
+            ("sessions","الجلسات"),
+            ("search","البحث المتقدم"),
+            ("reports","التقارير"),
+            ("maintenance","النسخ والصيانة")
+        };
+        foreach(var (tag,title) in pages)
+        {
+            if(manager.Content is not UserManagerHomeView home)
+                throw new InvalidDataException(
+                    "The User Manager home is not restored before "+tag);
+            var card=VisualChildren<Button>(home).Single(x=>
+                string.Equals(x.Tag?.ToString(),tag,StringComparison.Ordinal));
+            card.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            root.UpdateLayout();
+            if(manager.Content is not DockPanel)
+                throw new InvalidDataException(
+                    "Clicking "+tag+" did not open a User Manager subpage.");
+            if(!VisualChildren<TextBlock>(manager).Any(x=>
+                x.Text.Equals(title,StringComparison.Ordinal)))
+                throw new InvalidDataException(
+                    "Selected User Manager subpage has no heading: "+title);
+            var sidebar=VisualChildren<Button>(manager).FirstOrDefault(button=>
+                button.Content is string label &&
+                label.Contains("العودة إلى إدارة User Manager",
+                    StringComparison.Ordinal));
+            if(sidebar is null)
+                throw new InvalidDataException("User Manager page has no back action.");
+            Capture(root,width,height,Path.Combine(folder,
+                "user-manager-"+tag+"-1200x730.png"));
+            sidebar.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            root.UpdateLayout();
+        }
     }
 
     private static void VerifyNumberPreview(FrameworkElement root)
