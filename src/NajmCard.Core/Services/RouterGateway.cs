@@ -79,47 +79,64 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             || ex.Message.Contains("bad command name", StringComparison.OrdinalIgnoreCase)
             || ex.Message.Contains("unknown command", StringComparison.OrdinalIgnoreCase);
 
-        foreach (var (path, field) in sources)
+        async Task<IReadOnlyList<string>> ReadSourceAsync(string path,string field)
         {
-            IReadOnlyList<IReadOnlyDictionary<string, string>> rows;
+            IReadOnlyList<IReadOnlyDictionary<string,string>> rows;
             var actualPath=path;
             var actualField=field;
             try
             {
-                rows = await client.CommandAsync(path,
-                    new Dictionary<string,string> { [".proplist"] = field }, ct);
+                rows=await client.CommandAsync(path,
+                    new Dictionary<string,string> { [".proplist"]=field },ct);
             }
-            catch (RouterOsTrapException ex) when (MissingMenu(ex))
+            catch(RouterOsTrapException ex) when(MissingMenu(ex))
             {
-                if (path != "/tool/user-manager/user/print") continue;
-                // A missing legacy UM menu is expected on RouterOS v7.
-                // Read the modern account namespace before issuing ANY card.
+                if(path!="/tool/user-manager/user/print")
+                    return Array.Empty<string>();
+                // RouterOS v7 has a different User Manager namespace. Never
+                // skip account names simply because the legacy menu is absent.
                 actualPath="/user-manager/user/print";
                 actualField="name";
                 try
                 {
-                    rows = await client.CommandAsync(actualPath,
-                        new Dictionary<string,string> { [".proplist"] = actualField },ct);
+                    rows=await client.CommandAsync(actualPath,
+                        new Dictionary<string,string> { [".proplist"]=actualField },ct);
                 }
-                catch (RouterOsTrapException modern) when (MissingMenu(modern))
+                catch(RouterOsTrapException modern) when(MissingMenu(modern))
                 {
-                    // Neither User Manager version is installed; Hotspot/PPP
-                    // can still be provisioned if their own scans succeeded.
-                    continue;
+                    return Array.Empty<string>();
                 }
             }
-            // Some RouterOS builds silently omit projected columns. Fall
-            // back to the complete SAME menu, not to the wrong generation.
-            if (rows.Any(row => !row.ContainsKey(actualField)))
-                rows = await client.CommandAsync(actualPath, cancellationToken: ct);
-            if (rows.Any(row => !row.ContainsKey(actualField)))
+            // Fail closed if the projection omits names even after full
+            // readback. Do not issue any card after a partial name scan.
+            if(rows.Any(row=>!row.ContainsKey(actualField)))
+                rows=await client.CommandAsync(actualPath,cancellationToken:ct);
+            if(rows.Any(row=>!row.ContainsKey(actualField)))
                 throw new InvalidDataException(
                     "لم يعد RouterOS أسماء المستخدمين المطلوبة؛ أُوقف الإصدار دون أي تعديل.");
+            return rows.Select(row=>row[actualField])
+                .Where(value=>!string.IsNullOrWhiteSpace(value)).ToArray();
+        }
 
-            foreach (var row in rows)
-                if (row.TryGetValue(actualField, out var value) &&
-                    !string.IsNullOrWhiteSpace(value))
-                    names.Add(value);
+        // ResilientRouterSession has TWO independently authenticated lanes:
+        // Hotspot and PPP are serialized on fast; UM account inventories run
+        // on inventory. Scan these read-only namespaces concurrently so a
+        // large UM database no longer blocks the complete local-name scan.
+        // A plain/fake client keeps the old sequential behavior. No RouterOS
+        // writes, SQLite leases or card creation can start until ALL succeed.
+        if(client is ResilientRouterSession)
+        {
+            var scans=sources.Select(source=>
+                ReadSourceAsync(source.Path,source.Field)).ToArray();
+            var complete=await Task.WhenAll(scans);
+            foreach(var catalog in complete)
+                foreach(var name in catalog)names.Add(name);
+        }
+        else
+        {
+            foreach(var (path,field) in sources)
+                foreach(var name in await ReadSourceAsync(path,field))
+                    names.Add(name);
         }
         return names;
     }
