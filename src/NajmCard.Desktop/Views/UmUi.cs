@@ -25,7 +25,7 @@ internal static class UmUi
     internal static readonly Brush Gold=FromTheme("GoldBrush","#DCB86E");
     internal static readonly Brush GoldBright=FromTheme("GoldBrightBrush","#FFE3A2");
     internal static readonly Brush Cream=FromTheme("TextBrush","#FFF5E8");
-    internal static readonly Brush InputSurface=Solid("#FFFAF0");
+    internal static readonly Brush InputSurface=FromTheme("CreamPanelBrush","#FFF3DF");
 
     internal static Brush FromTheme(string key,string fallback) =>
         Application.Current?.TryFindResource(key) as Brush ?? Solid(fallback);
