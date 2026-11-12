@@ -70,31 +70,54 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             ("/ppp/secret/print", "name"),
             ("/tool/user-manager/user/print", "username")
         };
+        // RouterOS 6 exposes /tool/user-manager/user with 'username';
+        // RouterOS 7 exposes /user-manager/user with 'name'. Skipping v6
+        // just because its menu is missing on v7 would let existing UM
+        // accounts collide with newly issued Hotspot/PPP vouchers.
+        static bool MissingMenu(RouterOsTrapException ex) =>
+            ex.Message.Contains("no such command", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("bad command name", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("unknown command", StringComparison.OrdinalIgnoreCase);
+
         foreach (var (path, field) in sources)
         {
             IReadOnlyList<IReadOnlyDictionary<string, string>> rows;
+            var actualPath=path;
+            var actualField=field;
             try
             {
                 rows = await client.CommandAsync(path,
                     new Dictionary<string,string> { [".proplist"] = field }, ct);
             }
-            catch (RouterOsTrapException ex) when (
-                ex.Message.Contains("no such command", StringComparison.OrdinalIgnoreCase)
-                || ex.Message.Contains("bad command name", StringComparison.OrdinalIgnoreCase)
-                || ex.Message.Contains("unknown command", StringComparison.OrdinalIgnoreCase))
+            catch (RouterOsTrapException ex) when (MissingMenu(ex))
             {
-                continue;
+                if (path != "/tool/user-manager/user/print") continue;
+                // A missing legacy UM menu is expected on RouterOS v7.
+                // Read the modern account namespace before issuing ANY card.
+                actualPath="/user-manager/user/print";
+                actualField="name";
+                try
+                {
+                    rows = await client.CommandAsync(actualPath,
+                        new Dictionary<string,string>{{".proplist"]=actualField}},ct);
+                }
+                catch (RouterOsTrapException modern) when (MissingMenu(modern))
+                {
+                    // Neither User Manager version is installed; Hotspot/PPP
+                    // can still be provisioned if their own scans succeeded.
+                    continue;
+                }
             }
-            // RouterOS 6 sometimes silently drops projected columns.
-            // Never mistake omitted usernames for an empty service.
-            if (rows.Any(row => !row.ContainsKey(field)))
-                rows = await client.CommandAsync(path, cancellationToken: ct);
-            if (rows.Any(row => !row.ContainsKey(field)))
+            // Some RouterOS builds silently omit projected columns. Fall
+            // back to the complete SAME menu, not to the wrong generation.
+            if (rows.Any(row => !row.ContainsKey(actualField)))
+                rows = await client.CommandAsync(actualPath, cancellationToken: ct);
+            if (rows.Any(row => !row.ContainsKey(actualField)))
                 throw new InvalidDataException(
                     "لم يعد RouterOS أسماء المستخدمين المطلوبة؛ أُوقف الإصدار دون أي تعديل.");
 
             foreach (var row in rows)
-                if (row.TryGetValue(field, out var value) &&
+                if (row.TryGetValue(actualField, out var value) &&
                     !string.IsNullOrWhiteSpace(value))
                     names.Add(value);
         }
