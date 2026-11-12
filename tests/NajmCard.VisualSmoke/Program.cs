@@ -242,7 +242,7 @@ internal static class Program
         if(manager.Content is not DockPanel)
             throw new InvalidDataException("Users card did not navigate to explorer.");
         var back=VisualChildren<Button>(manager).FirstOrDefault(b=>
-            b.Content is string label && label.Contains("العودة إلى إدارة User Manager"));
+            b.Content is string label && label.Contains("الرئيسية",StringComparison.Ordinal));
         if(back is null)
             throw new InvalidDataException("Explorer has no back to User Manager home.");
         back.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -286,7 +286,7 @@ internal static class Program
             VerifyUmControlContrast(manager,tag);
             var sidebar=VisualChildren<Button>(manager).FirstOrDefault(button=>
                 button.Content is string label &&
-                label.Contains("العودة إلى إدارة User Manager",
+                label.Contains("الرئيسية",
                     StringComparison.Ordinal));
             if(sidebar is null)
                 throw new InvalidDataException("User Manager page has no back action.");
