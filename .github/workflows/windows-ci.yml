@@ -58,6 +58,19 @@ jobs:
           name: NajmCard-usermanager-home-1200x730
           path: out/user-manager-home-1200x730.png
           if-no-files-found: error
+      - name: Verify six User Manager subpage screenshots
+        shell: pwsh
+        run: |
+          @('users','packages','sessions','search','reports','maintenance') | ForEach-Object {
+            $path = "out/user-manager-$($_)-1200x730.png"
+            if (!(Test-Path $path)) { throw "Missing actual WPF screenshot: $path" }
+          }
+      - name: Upload User Manager six subpages at 1200x730
+        uses: actions/upload-artifact@v4
+        with:
+          name: NajmCard-usermanager-six-subpages-1200x730
+          path: out/user-manager-*-1200x730.png
+          if-no-files-found: error
   windows-release:
     name: Windows Release tests (${{ matrix.arch }})
     runs-on: windows-2022
