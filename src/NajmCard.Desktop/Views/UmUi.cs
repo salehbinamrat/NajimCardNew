@@ -94,6 +94,12 @@ internal static class UmUi
         {
             RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
         });
+        // Honor the button's padding so long Arabic captions do not collide
+        // with the rounded frame or disappear behind adjacent controls.
+        border.SetBinding(Border.PaddingProperty,new Binding(nameof(Button.Padding))
+        {
+            RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
+        });
         // A generated TextBlock must bind the actual foreground: the application
         // has an implicit light TextBlock style that overrides inherited colors.
         var content=new FrameworkElementFactory(typeof(TextBlock));
@@ -109,6 +115,7 @@ internal static class UmUi
         content.SetValue(TextBlock.FontWeightProperty,FontWeights.Bold);
         content.SetValue(TextBlock.TextAlignmentProperty,TextAlignment.Center);
         content.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis);
+        content.SetValue(TextBlock.TextWrappingProperty,TextWrapping.Wrap);
         content.SetValue(FrameworkElement.HorizontalAlignmentProperty,HorizontalAlignment.Center);
         content.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
         border.AppendChild(content);template.VisualTree=border;
@@ -198,6 +205,8 @@ internal static class UmUi
             RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
         });
         selected.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis);
+        selected.SetValue(TextBlock.TextWrappingProperty,TextWrapping.NoWrap);
+        selected.SetValue(TextBlock.FontFamilyProperty,new FontFamily("Arial"));
         selected.SetValue(TextBlock.FontWeightProperty,FontWeights.SemiBold);
         selected.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
         selected.SetValue(FrameworkElement.MarginProperty,new Thickness(32,0,9,0));
@@ -220,6 +229,7 @@ internal static class UmUi
         });
         var popupBorder=new FrameworkElementFactory(typeof(Border));
         popupBorder.SetValue(Border.BackgroundProperty,Brushes.White);
+        popupBorder.SetValue(TextElement.ForegroundProperty,Ink);
         popupBorder.SetValue(Border.BorderBrushProperty,Solid("#8CA9BD"));
         popupBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
         popupBorder.SetBinding(FrameworkElement.MinWidthProperty,new Binding("ActualWidth")
@@ -231,6 +241,7 @@ internal static class UmUi
             RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
         });
         var scroll=new FrameworkElementFactory(typeof(ScrollViewer));
+        scroll.SetValue(ScrollViewer.CanContentScrollProperty,true);
         scroll.SetValue(ScrollViewer.VerticalScrollBarVisibilityProperty,
             ScrollBarVisibility.Auto);
         scroll.SetValue(ScrollViewer.HorizontalScrollBarVisibilityProperty,
@@ -282,6 +293,8 @@ internal static class UmUi
             RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
         });
         label.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis);
+        label.SetValue(TextBlock.FontFamilyProperty,new FontFamily("Arial"));
+        label.SetValue(TextBlock.TextWrappingProperty,TextWrapping.NoWrap);
         label.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
         border.AppendChild(label);
         template.VisualTree=border;
