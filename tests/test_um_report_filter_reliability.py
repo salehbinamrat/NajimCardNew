@@ -13,6 +13,12 @@ class UserManagerReportReliabilityContracts(unittest.TestCase):
         self.assertIn('scope.Known==0?"غير متاح"',code)
         self.assertNotIn("var known=sessions.Rows.Count(x=>x.IsActive.HasValue)",code)
 
+    def test_sessions_page_marks_partial_router_activity_counts(self):
+        code=(VIEWS/"UserManagerSessionsScreen.cs").read_text(encoding="utf-8")
+        self.assertIn("UserManagerReportFilters.CountActiveSessions(data.Rows)",code)
+        self.assertIn('active.Known==0?"غير متاح"',code)
+        self.assertIn('(active.IsComplete?"":" (جزئي)")',code)
+
     def test_profile_filter_excludes_unattributable_historical_session_totals(self):
         code=(VIEWS/"UserManagerReportsView.cs").read_text(encoding="utf-8")
         self.assertIn('!allPackages?"غير متاح حسب الباقة"',code)
