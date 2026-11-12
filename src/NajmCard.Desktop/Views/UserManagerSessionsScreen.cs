@@ -35,10 +35,8 @@ public sealed class UserManagerSessionsScreen : UserControl
 
         var search=UmUi.SearchBox("اسم المستخدم أو IP أو MAC");
         var statusFilter=UmUi.Combo(new[]{"كل الحالات","نشطة","منتهية","غير معروف"},120);
-        var start=new DatePicker {Width=125,Height=35,Margin=new Thickness(4),
-            FontSize=12,ToolTip="من تاريخ الاتصال"};
-        var end=new DatePicker {Width=125,Height=35,Margin=new Thickness(4),
-            FontSize=12,ToolTip="إلى تاريخ الاتصال"};
+        var start=UmUi.DateInput("من تاريخ الاتصال");
+        var end=UmUi.DateInput("إلى تاريخ الاتصال");
         var searchButton=UmUi.Action("بحث",true);
         var reset=UmUi.Action("مسح");
         var refresh=UmUi.Action("تحديث من الراوتر",true,128);
