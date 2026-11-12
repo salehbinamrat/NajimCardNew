@@ -490,16 +490,8 @@ public sealed class UserManagerView : UserControl
             menuButtons.Add(key,button);
         }
 
-        // A fixed back action is available on EVERY subpage and is used by
-        // the real WPF navigation smoke test.
-        var menuBack=UmUi.Action("العودة إلى إدارة User Manager",false,130);
-        menuBack.Width=136;menuBack.Height=49;
-        menuBack.FontSize=10;
-        menuBack.Background=UmUi.Solid("#125B77");
-        menuBack.Foreground=Brushes.White;
-        menuBack.ToolTip="العودة إلى البطاقات الست";
-        menuBack.Click+=(_,_)=>ReturnToHome();
-        menu.Children.Add(menuBack);
+        // The main "الرئيسية" item returns to the six-card hub.
+        // Do not duplicate the same navigation action with a second back button.
 
         home.Navigate=OpenPage;
         Content=home;
