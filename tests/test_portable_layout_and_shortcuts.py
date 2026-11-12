@@ -57,6 +57,8 @@ class PortableLayoutTests(unittest.TestCase):
         self.assertIn("Open(bool configureWal=false)",code)
         self.assertIn("PRAGMA synchronous=FULL",code)
         self.assertIn("PRAGMA journal_mode=WAL",code)
-        self.assertIn("if(configureWal)",code)
+        self.assertIn("pragma.CommandText = configureWal",code)
+        self.assertIn('? "PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;"',code)
+        self.assertIn(': "PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;"',code)
 if __name__=="__main__":
     unittest.main()
