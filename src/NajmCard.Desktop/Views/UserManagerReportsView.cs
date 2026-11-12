@@ -251,10 +251,11 @@ public sealed class UserManagerReportsView : UserControl
             else
                 DrawBars(revenue,paid.Where(x=>x.Date.HasValue)
                     .Select(x=>(x.Date!.Value,x.Amount)),revenueCurrency);
-            var undated=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
+            var dateKnownInScope=dated.Count(x=>x.StartedAt.HasValue);
+            var undatedInDatabase=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
             message.Text=$"RouterOS {(int)accounts.Generation} | "+
-                $"الحسابات: {users.Length} | الجلسات المؤرخة: {dated.Length} | "+
-                $"غير مؤرخة: {undated}. "+
+                $"الحسابات: {users.Length} | سجلات الفترة: {dated.Length} | "+
+                $"المؤرخة منها: {dateKnownInScope} | بلا تاريخ في القاعدة: {undatedInDatabase}. "+
                 "إيرادات البطاقات المباعة خارج User Manager ليست محسوبة. "+
                 (allPackages?"":"الجلسات التاريخية غير منسوبة للباقة؛ الإيرادات حسب الباقة المثبتة في الدفع. ")+
                 (paymentScope is not null&&!paymentScope.IsComplete
