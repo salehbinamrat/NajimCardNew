@@ -111,23 +111,54 @@ public partial class GeneratorView
             button.Background=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
             toolbar.Children.Add(button);
         }
+        // Explicit MenuItem controls need an explicit style; ContextMenu's
+        // ItemContainerStyle alone can be ignored for prebuilt MenuItem rows.
+        // Keep captions white in normal, hover and keyboard-highlight states.
+        var popupBurgundy=(Brush)new BrushConverter().ConvertFrom("#AF5472")!;
+        var hoveredBurgundy=(Brush)new BrushConverter().ConvertFrom("#C47490")!;
+        var popupBorder=(Brush)new BrushConverter().ConvertFrom("#7D2A4C")!;
         var themeMenu=new ContextMenu
         {
             PlacementTarget=templateImage,Placement=PlacementMode.Bottom,
-            Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,
-            Foreground=(Brush)new BrushConverter().ConvertFrom("#48192A")!,
-            BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!
+            Background=popupBurgundy,Foreground=Brushes.White,
+            BorderBrush=popupBorder,BorderThickness=new Thickness(1),
+            Padding=new Thickness(3)
         };
-        // The global dark MenuItem theme otherwise hides captions on the light
-        // template-choice popup. Scope this high-contrast style to this menu.
         var themeItemStyle=new Style(typeof(MenuItem));
-        themeItemStyle.Setters.Add(new Setter(Control.ForegroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#48192A")!));
-        themeItemStyle.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
+        themeItemStyle.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        themeItemStyle.Setters.Add(new Setter(Control.BackgroundProperty,popupBurgundy));
         themeItemStyle.Setters.Add(new Setter(Control.FontWeightProperty,FontWeights.SemiBold));
+        themeItemStyle.Setters.Add(new Setter(Control.FontFamilyProperty,new FontFamily("Arial")));
+        themeItemStyle.Setters.Add(new Setter(Control.FontSizeProperty,12d));
+        var itemTemplate=new ControlTemplate(typeof(MenuItem));
+        var itemSurface=new FrameworkElementFactory(typeof(Border));
+        itemSurface.Name="MenuItemSurface";
+        itemSurface.SetValue(Border.CornerRadiusProperty,new CornerRadius(5));
+        itemSurface.SetValue(Border.PaddingProperty,new Thickness(14,8,14,8));
+        itemSurface.SetValue(Border.BackgroundProperty,popupBurgundy);
+        var label=new FrameworkElementFactory(typeof(ContentPresenter));
+        label.SetValue(ContentPresenter.ContentSourceProperty,"Header");
+        label.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
+        label.SetValue(TextElement.ForegroundProperty,Brushes.White);
+        label.SetValue(TextElement.FontFamilyProperty,new FontFamily("Arial"));
+        itemSurface.AppendChild(label);
+        itemTemplate.VisualTree=itemSurface;
+        var hovered=new Trigger{Property=MenuItem.IsHighlightedProperty,Value=true};
+        hovered.Setters.Add(new Setter
+        {
+            TargetName="MenuItemSurface",Property=Border.BackgroundProperty,
+            Value=hoveredBurgundy
+        });
+        itemTemplate.Triggers.Add(hovered);
+        var disabled=new Trigger{Property=UIElement.IsEnabledProperty,Value=false};
+        disabled.Setters.Add(new Setter(UIElement.OpacityProperty,0.6));
+        itemTemplate.Triggers.Add(disabled);
+        themeItemStyle.Setters.Add(new Setter(Control.TemplateProperty,itemTemplate));
         themeMenu.ItemContainerStyle=themeItemStyle;
-        var restoreTheme=new MenuItem{Header="قالب نجم نت الافتراضي"};
+        var restoreTheme=new MenuItem
+        {
+            Header="قالب نجم نت الافتراضي",Style=themeItemStyle
+        };
         restoreTheme.Click+=(_,_)=>
         {
             try
@@ -140,7 +171,10 @@ public partial class GeneratorView
             }
             catch(ArgumentException ex){_designStatus.Text=ex.Message;}
         };
-        var importTheme=new MenuItem{Header="اختيار صورة القالب"};
+        var importTheme=new MenuItem
+        {
+            Header="اختيار صورة القالب",Style=themeItemStyle
+        };
         importTheme.Click+=(_,_)=>ChooseTemplateImage();
         themeMenu.Items.Add(restoreTheme);
         themeMenu.Items.Add(importTheme);

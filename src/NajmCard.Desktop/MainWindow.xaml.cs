@@ -386,6 +386,11 @@ public partial class MainWindow : Window
             :status.RemainingSeconds;
         if(status.Mode=="trial")
         {
+            // Hourglass icon: active local 20-day trial. Only the visual
+            // indicator changes; duration and entitlement rules are untouched.
+            SidebarLicenseIcon.Data=Geometry.Parse(
+                "M4,2 L20,2 M4,22 L20,22 M6,3 L6,7 L12,12 L6,17 L6,21 M18,3 L18,7 L12,12 L18,17 L18,21");
+            SidebarLicenseIcon.ToolTip="عداد التجربة المجانية";
             if(remaining<0)remaining=0;
             var span=TimeSpan.FromSeconds(remaining);
             SidebarLicense.Text="التجربة المجانية · المتبقي\n"+
@@ -395,6 +400,10 @@ public partial class MainWindow : Window
         }
         else if(status.Mode=="active")
         {
+            // Shield and check: a verified paid licence, not the trial icon.
+            SidebarLicenseIcon.Data=Geometry.Parse(
+                "M12,2 L20,6 L20,12 C20,18 16,21 12,23 C8,21 4,18 4,12 L4,6 Z M8,12 L11,15 L16,10");
+            SidebarLicenseIcon.ToolTip="الترخيص المدفوع المفعل";
             if(status.ExpiresAtUtc is null)
                 SidebarLicense.Text="الترخيص المدفوع · فعال (بدون تاريخ انتهاء محدد)";
             else
@@ -406,7 +415,13 @@ public partial class MainWindow : Window
                     span.Seconds.ToString("00");
             }
         }
-        else SidebarLicense.Text=status.Message;
+        else
+        {
+            SidebarLicenseIcon.Data=Geometry.Parse(
+                "M12,2 C6,2 2,6 2,12 C2,18 6,22 12,22 C18,22 22,18 22,12 C22,6 18,2 12,2 Z M12,7 L12,14 M12,17 L12,18");
+            SidebarLicenseIcon.ToolTip="حالة الترخيص تحتاج مراجعة";
+            SidebarLicense.Text=status.Message;
+        }
     }
 
     private async void MonitorLicense_Tick(object? sender,EventArgs e)
