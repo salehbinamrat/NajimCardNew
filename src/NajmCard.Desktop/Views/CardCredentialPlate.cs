@@ -43,12 +43,11 @@ internal static class CardCredentialPlate
 
     internal static void ApplyNumberBacking(Border plate,VoucherCardAppearance appearance,bool hasArtwork)
     {
-        var needsBacking=hasArtwork || appearance.NumberNeedsBacking();
-        var backing=PrintingView.ChooseArtworkTextBacking(appearance.UsernameColor);
-        var contrastingBrush=backing.R<128?Brushes.Black:Brushes.White;
+        // The customer's template is never obscured by a rectangular
+        // credential background, in either the interactive preview or PDF.
         var text=(TextBlock)((Viewbox)plate.Child).Child;
-        text.Background=needsBacking?contrastingBrush:Brushes.Transparent;
-        text.Padding=new Thickness(needsBacking?2:0,0,needsBacking?2:0,0);
+        text.Background=Brushes.Transparent;
+        text.Padding=new Thickness(0);
     }
 
     internal static void Resize(Border plate,double cardWidthMm,double cardHeightMm)
