@@ -69,7 +69,7 @@ public partial class GeneratorView
             Child=palette
         };
         button.Click+=(_,_)=>popup.IsOpen=!popup.IsOpen;
-        button.ToolTip="اختر لونا أو أدخل رمز اللون في تعديلات متقدمة.";
+        button.ToolTip="اختر لونا من المربعات.";
         void Paint()
         {
             try
