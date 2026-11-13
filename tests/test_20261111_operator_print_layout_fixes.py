@@ -92,7 +92,7 @@ class OperatorCorrections(unittest.TestCase):
         workspace=read(V/"VoucherWorkspaceView.cs")
         self.assertIn("Width=150,MinWidth=150,MaxWidth=150,Height=32",page)
         self.assertIn('TextElement.Foreground="{TemplateBinding Foreground}"',theme)
-        self.assertIn('Value="#EAC67F"',theme)
+        self.assertIn('Value="#E8D2B5"',theme)
         self.assertIn('ItemsControl.ItemContainerStyleProperty,optionStyle',workspace)
 
     def test_dashboard_rebalances_unique_actions(self):
