@@ -236,6 +236,57 @@ public sealed partial class RouterGateway
         };
     }
 
+    private static string UmSessionField(
+        IReadOnlyDictionary<string,string> row,params string[] aliases)
+    {
+        foreach(var alias in aliases)
+        {
+            var value=UmValue(row,alias);
+            if(value.Length>0)return value;
+        }
+        return "غير متاح";
+    }
+
+    private static UmSessionRow[] ParseUmSessionRows(
+        IReadOnlyList<IReadOnlyDictionary<string,string>> rows,
+        RouterOsGeneration version)
+    {
+        var v7=version==RouterOsGeneration.V7;
+        if(rows.Any(row=>!row.ContainsKey(".id") ||
+            string.IsNullOrWhiteSpace(UmValue(row,".id"))) ||
+            rows.Select(row=>UmValue(row,".id"))
+                .Distinct(StringComparer.Ordinal).Count()!=rows.Count)
+            throw new InvalidDataException(
+                "سجلات User Manager لا تحتوي معرفات فريدة مؤكدة؛ "+
+                "لا يمكن حساب العدد الحقيقي.");
+        var result=new List<UmSessionRow>(rows.Count);
+        foreach(var row in rows)
+        {
+            var user=UmSessionField(row,"username","user","user-name","name");
+            if(user=="غير متاح")
+                throw new InvalidDataException(
+                    "وجدت جلسة دون معرف مستخدم في قراءة User Manager؛ "+
+                    "لم يعتمد عدد جزئي أو صفري مضلل.");
+            var started=UmSessionField(row,v7?"started":"from-time",
+                "started","start-time");
+            var ended=UmSessionField(row,v7?"ended":"to-time",
+                "ended","till-time","end-time");
+            var active=UmBoolean(row,"active");
+            // Do not derive online state from a missing end timestamp.
+            var rawStatus=UmSessionField(row,"status","session-status");
+            result.Add(new UmSessionRow(
+                UmValue(row,".id"),user,started,ended,
+                UmSessionField(row,"uptime","session-time"),
+                UmBytes(row,"download"),UmBytes(row,"upload"),
+                UmSessionField(row,v7?"user-address":"user-ip",
+                    "user-address","ip-address","framed-ip-address","address"),
+                UmSessionField(row,v7?"calling-station-id":"calling-station-id",
+                    "mac-address","caller-id"),
+                active,ParseUmDate(started),rawStatus));
+        }
+        return result.ToArray();
+    }
+
     public async Task<UmDataSnapshot<UmSessionRow>> ReadUmSessionsAsync(
         CancellationToken ct=default)
     {
@@ -244,31 +295,61 @@ public sealed partial class RouterGateway
         var menu=v7?"/user-manager/session/print":"/tool/user-manager/session/print";
         var properties=v7
             ?".id,user,active,started,ended,uptime,download,upload,user-address,calling-station-id,status"
-            :".id,user,active,from-time,to-time,uptime,download,upload,ip-address,mac-address";
+            // RouterOS v6 has several equivalent session field spellings.
+            // Include the legacy UI's user-ip and calling-station-id rather
+            // than silently displaying 'not available' for populated rows.
+            :".id,user,username,user-name,name,active,from-time,to-time,till-time,started,ended,uptime,download,upload,user-ip,ip-address,user-address,framed-ip-address,calling-station-id,mac-address,caller-id,status";
         var rows=await client.CommandAsync(menu,
             new Dictionary<string,string>{{".proplist",properties}},ct);
-        if(rows.Any(row=>!row.ContainsKey(".id") || !row.ContainsKey("user") ||
-            string.IsNullOrWhiteSpace(UmValue(row,".id")) ||
-            string.IsNullOrWhiteSpace(UmValue(row,"user"))) ||
-            rows.Select(row=>UmValue(row,".id")).Distinct(StringComparer.Ordinal).Count()!=rows.Count)
-            throw new InvalidDataException(
-                "سجلات الجلسات تحتوي معرفات أو أسماء ناقصة أو مكررة؛ "+
-                "لا يمكن اعتماد عدد الجلسات حتى تعاد قراءة سجلات موثوقة.");
-        var output=new List<UmSessionRow>(rows.Count);
-        foreach(var row in rows)
+        try
         {
-            var started=UmKnown(row,v7?"started":"from-time");
-            var ended=UmKnown(row,v7?"ended":"to-time");
-            var active=UmBoolean(row,"active");
-            // Some v6 builds expose no active flag. Never infer 'active'
-            // merely from an empty end time because accounting can be stale.
-            output.Add(new UmSessionRow(
-                UmValue(row,".id"),UmValue(row,"user"),started,ended,
-                UmKnown(row,"uptime"),UmBytes(row,"download"),UmBytes(row,"upload"),
-                UmKnown(row,v7?"user-address":"ip-address"),
-                UmKnown(row,v7?"calling-station-id":"mac-address"),
-                active,ParseUmDate(started),UmKnown(row,"status")));
+            return new UmDataSnapshot<UmSessionRow>(version,
+                ParseUmSessionRows(rows,version));
         }
-        return new UmDataSnapshot<UmSessionRow>(version,output);
+        catch(InvalidDataException) when(!v7)
+        {
+            // Some v6 builds omit the username when the API's projection
+            // differs from the old web User Manager table. Retry read-only
+            // without a projection; never synthesize a missing session.
+            var full=await client.CommandAsync(menu,null,ct);
+            return new UmDataSnapshot<UmSessionRow>(version,
+                ParseUmSessionRows(full,version))
+            {
+                Diagnostic="أعيدت القراءة بجميع حقول جلسات RouterOS 6."
+            };
+        }
     }
+
+    /// <summary>
+    /// Return only sessions that belong to the verified account name or its
+    /// RouterOS internal ID. If none are found in the projected v6 list,
+    /// re-read unprojected v6 sessions because old UM web versions expose
+    /// different column names. All matches are exact, never prefix matches.
+    /// </summary>
+    public async Task<UmDataSnapshot<UmSessionRow>> ReadUmSessionsForAccountAsync(
+        string username,string? internalId=null,CancellationToken ct=default)
+    {
+        if(string.IsNullOrWhiteSpace(username))
+            throw new ArgumentException("اسم الحساب مطلوب.",nameof(username));
+        var current=await ReadUmSessionsAsync(ct);
+        bool Matches(UmSessionRow row)=>
+            string.Equals(row.Name,username,StringComparison.OrdinalIgnoreCase) ||
+            (!string.IsNullOrWhiteSpace(internalId) &&
+             string.Equals(row.Name,internalId,StringComparison.Ordinal));
+        UmSessionRow[] Selected(IEnumerable<UmSessionRow> list)=>
+            list.Where(Matches)
+                .Select(row=>row with{Name=username})
+                .ToArray();
+        var selected=Selected(current.Rows);
+        if(current.Generation!=RouterOsGeneration.V6 || selected.Length>0)
+            return current with{Rows=selected};
+        var raw=await client.CommandAsync("/tool/user-manager/session/print",null,ct);
+        var full=ParseUmSessionRows(raw,RouterOsGeneration.V6);
+        return new UmDataSnapshot<UmSessionRow>(RouterOsGeneration.V6,Selected(full))
+        {
+            Diagnostic="فحص إضافي لكامل حقول جلسات User Manager v6 "+
+                "عند عدم وجود تطابق في القراءة السريعة."
+        };
+    }
+
 }

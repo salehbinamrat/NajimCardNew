@@ -34,8 +34,11 @@ public sealed class UserManagerAccountsScreen : UserControl
         public string Started=>Source.StartedAt?.ToString(
             "yyyy-MM-dd HH:mm:ss",CultureInfo.InvariantCulture)??Source.Started;
         public string Duration=>Source.Uptime;
-        public string Status=>Source.Status;
+        public string Status=>Source.RawStatus=="غير متاح"?
+            Source.Status:Source.RawStatus;
+        public string Ended=>Source.Ended;
         public string Address=>Source.Address;
+        public string CallingStation=>Source.Mac;
         public string Download=>UmUi.Bytes(Source.DownloadBytes);
         public string Upload=>UmUi.Bytes(Source.UploadBytes);
         public string Total=>UmUi.Bytes(Source.TotalBytes);
@@ -135,7 +138,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             var window=new Window
             {
                 Title="معلومات الكرت — "+row.Name,
-                Width=865,Height=665,MinWidth=720,MinHeight=540,
+                Width=990,Height=685,MinWidth=760,MinHeight=550,
                 WindowStartupLocation=WindowStartupLocation.CenterOwner,
                 Owner=Window.GetWindow(this),
                 FlowDirection=FlowDirection.RightToLeft,
@@ -144,16 +147,22 @@ public sealed class UserManagerAccountsScreen : UserControl
             var sessionDetails=UmUi.Label(
                 "اضغط «عرض سجل الجلسات» لجلب سجلات هذا الكرت من RouterOS. "+
                 "لا تعني الجلسات التاريخية أن الكرت متصل حاليا.",12);
+            // Match the real RouterOS User Manager session table: both
+            // timestamps, IP, RADIUS status, uptime, RX/TX and calling ID.
             var sessionGrid=UmUi.Table(
-                ("بداية الاتصال","Started",156),
-                ("المدة","Duration",90),
-                ("الحالة","Status",86),
-                ("IP","Address",110),
-                ("التنزيل","Download",100),
-                ("الرفع","Upload",100),
-                ("الإجمالي","Total",100));
-            sessionGrid.MinHeight=235;
-            sessionGrid.MaxHeight=270;
+                ("الحالة / RADIUS","Status",175),
+                ("عنوان IP","Address",120),
+                ("بداية الاتصال","Started",168),
+                ("نهاية الاتصال","Ended",168),
+                ("المدة","Duration",108),
+                ("التنزيل","Download",115),
+                ("الرفع","Upload",115),
+                ("معرف الجهاز / MAC","CallingStation",160),
+                ("الإجمالي","Total",110));
+            sessionGrid.MinHeight=250;
+            sessionGrid.MaxHeight=295;
+            ScrollViewer.SetHorizontalScrollBarVisibility(
+                sessionGrid,ScrollBarVisibility.Auto);
             var viewSessions=UmUi.Action("عرض سجل الجلسات",true,145);
             var manage=UmUi.Action("خيارات الإدارة الأخرى",false,165);
             var close=UmUi.Action("إغلاق",false,70);
@@ -198,7 +207,8 @@ public sealed class UserManagerAccountsScreen : UserControl
                 sessionDetails.Text="يجري جلب سجلات User Manager والتحقق من المعرفات...";
                 try
                 {
-                    var sessions=await gateway.ReadUmSessionsAsync();
+                    var sessions=await gateway.ReadUmSessionsForAccountAsync(
+                        row.Name,row.Id);
                     if(!window.IsLoaded)return;
                     if(sessions.Generation!=version)
                     {
@@ -207,11 +217,9 @@ public sealed class UserManagerAccountsScreen : UserControl
                         sessionDetails.Text="تغير إصدار الراوتر؛ حدث صفحة المستخدمين قبل متابعة السجل.";
                         return;
                     }
-                    // Do not conflate a user with similarly prefixed voucher
-                    // numbers. Exact case-insensitive account match only.
+                    // RouterOS returns exact matches by username or the
+                    // verified user's internal ID; never prefix-matches.
                     history=sessions.Rows
-                        .Where(x=>string.Equals(x.Name,row.Name,
-                            StringComparison.OrdinalIgnoreCase))
                         .OrderByDescending(x=>x.StartedAt??DateTime.MinValue)
                         .ThenByDescending(x=>x.Id,StringComparer.Ordinal)
                         .ToArray();
@@ -219,8 +227,12 @@ public sealed class UserManagerAccountsScreen : UserControl
                     sessionPage=0;
                     RenderHistory();
                     if(history.Length==0)
-                        sessionDetails.Text="لا توجد جلسات مسجلة لهذا الكرت "+
-                            "في بيانات User Manager التي أعادها الراوتر.";
+                        sessionDetails.Text="لم تظهر جلسات مطابقة لرقم الكرت "+
+                            "بعد فحص القراءة السريعة وجميع حقول User Manager v6. "+
+                            "إذا كانت ظاهرة في واجهة الويب، تحقق من مصدر السجلات "+
+                            "وصلاحيات حساب API، ولا تعتمد الصفر كدليل على عدم استخدامها.";
+                    else if(sessions.Diagnostic.Length>0)
+                        sessionDetails.Text+=" | "+sessions.Diagnostic;
                 }
                 catch(Exception ex)
                 {
