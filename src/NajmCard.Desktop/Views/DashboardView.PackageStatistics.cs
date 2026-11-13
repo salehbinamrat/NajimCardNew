@@ -11,10 +11,25 @@ public partial class DashboardView
 {
     private sealed record PackageUsageDisplay(string Name,int Used);
 
-    private void AllPackages_Click(object sender,RoutedEventArgs e)
+    private async void AllPackages_Click(object sender,RoutedEventArgs e)
     {
+        // A first click must not silently do nothing while the expensive
+        // RouterOS v6 inventory has not yet been loaded.
+        if(_lastLifecycle is null || !_lastLifecycle.IsComplete)
+        {
+            if(_lifecycleReading)
+            {
+                LifecycleStatus.Text="جارٍ تحميل بيانات الباقات؛ انتظر اكتمال القراءة ثم أعد فتح القائمة.";
+                return;
+            }
+            await RefreshLifecycleAsync(force:true);
+            if(_lastLifecycle is null || !_lastLifecycle.IsComplete)
+            {
+                LifecycleStatus.Text="تعذر عرض الباقات: لم تكتمل قراءة بيانات User Manager v6.";
+                return;
+            }
+        }
         var inventory=_lastLifecycle;
-        if(inventory is null||!inventory.IsComplete)return;
         // Use only the confirmed, full v6 inventory for per-package counts.
         // Assigned users are not necessarily currently online, and Started
         // does not prove a recent purchase or accounting session.
