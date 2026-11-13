@@ -22,7 +22,7 @@ public partial class DashboardView
             .Where(x=>!string.IsNullOrWhiteSpace(x.Profile))
             .GroupBy(x=>x.Profile,StringComparer.OrdinalIgnoreCase)
             .Select(g=>new PackageUsageDisplay(g.Key,g.Count(x=>x.Started)))
-            .OrderByDescending(x=>x.Total)
+            .OrderByDescending(x=>x.Used)
             .ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var grid=UmUi.Table(
@@ -31,13 +31,6 @@ public partial class DashboardView
         grid.ItemsSource=groups;
         grid.MinHeight=300;
         grid.MaxHeight=430;
-        var summary=UmUi.Label(
-            $"عدد الباقات: {groups.Length:N0} | "+
-            $"الحسابات المصنفة ضمنها: {groups.Sum(x=>x.Total):N0} | "+
-            "المستخدمة تعني كروتا بدأت استخدامها حسب User Manager، "+
-            "والإجمالي حسابات الباقة. الجلسات الحالية مأخوذة من active-sessions "+
-            "عندما يوفر RouterOS هذا الحقل؛ وإلا تظهر (—) بدلا من الصفر.",12);
-        summary.TextWrapping=TextWrapping.Wrap;
         var close=UmUi.Action("إغلاق",true,105);
         var dialog=new Window
         {
