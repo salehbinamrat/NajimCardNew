@@ -27,14 +27,14 @@ class ConnectedTabsAndBatchStyle(unittest.TestCase):
         self.assertIn('SourceOf(row)',core)
         self.assertIn('HotspotConnectionOrigin.Unknown',core)
 
-    def test_batch_print_dropdown_has_white_text_on_light_burgundy(self):
+    def test_batch_print_dropdown_uses_cream_background_black_text_and_maroon_border(self):
         ui=source(V,"PrintingView.BurgundyDropdowns.cs")
         selectors=source(V,"PrintingView.PrintSelectors.cs")
         printing=source(V,"PrintingView.cs")
-        self.assertIn('ConvertFrom("#AF5472")',ui)
-        self.assertIn('ConvertFrom("#C47490")',ui)
-        self.assertIn('Control.ForegroundProperty,Brushes.White',ui)
-        self.assertIn('caption.SetValue(TextBlock.ForegroundProperty,Brushes.White)',ui)
+        self.assertIn('ConvertFrom("#FFF4DF")',ui)
+        self.assertIn('ConvertFrom("#F0E2CC")',ui)
+        self.assertIn('Control.ForegroundProperty,Brushes.Black',ui)
+        self.assertIn('caption.SetValue(TextBlock.ForegroundProperty,Brushes.Black)',ui)
         self.assertIn('selector.Style=style',ui)
         self.assertIn('selector.ItemContainerStyle=BurgundyDropdownItemStyle()',ui)
         self.assertGreaterEqual(selectors.count('Style=BurgundyDropdownItemStyle()'),3)

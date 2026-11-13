@@ -41,16 +41,16 @@ public sealed class VoucherWorkspaceView : UserControl
         var dropdown=new Style(typeof(ComboBox),(Style)Application.Current.FindResource("DarkComboBox"));
         dropdown.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,26d));
         dropdown.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#FFFAF0")!));
+            (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
         dropdown.Setters.Add(new Setter(Control.ForegroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#471A30")!));
+            (Brush)new BrushConverter().ConvertFrom("#000000")!));
         dropdown.Setters.Add(new Setter(Control.BorderBrushProperty,
             (Brush)new BrushConverter().ConvertFrom("#75203E")!));
         // The global dark ComboBox template creates white TextBlocks inside
         // SelectionBoxItem. Explicit local item text fixes contrast on cream
         // WITHOUT changing the dark sidebar or the application's theme.
-        var cream=(Brush)new BrushConverter().ConvertFrom("#FFFAF0")!;
-        var maroon=(Brush)new BrushConverter().ConvertFrom("#471A30")!;
+        var cream=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
+        var maroon=(Brush)new BrushConverter().ConvertFrom("#000000")!;
         // Cream input dropdowns need cream rows and maroon text in every
         // state; the shared burgundy popup style must not obscure the list.
         var optionStyle=new Style(typeof(ComboBoxItem));
@@ -73,11 +73,11 @@ public sealed class VoucherWorkspaceView : UserControl
         optionStyle.Setters.Add(new Setter(Control.TemplateProperty,optionControlTemplate));
         var hovered=new Trigger{Property=ComboBoxItem.IsHighlightedProperty,Value=true};
         hovered.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#F0D8CE")!));
+            (Brush)new BrushConverter().ConvertFrom("#F0E2CC")!));
         optionStyle.Triggers.Add(hovered);
         var selected=new Trigger{Property=ComboBoxItem.IsSelectedProperty,Value=true};
         selected.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#EAC67F")!));
+            (Brush)new BrushConverter().ConvertFrom("#E8D2B5")!));
         optionStyle.Triggers.Add(selected);
         dropdown.Setters.Add(new Setter(ItemsControl.ItemContainerStyleProperty,optionStyle));
         dropdown.Setters.Add(new Setter(ComboBox.MaxDropDownHeightProperty,240d));
@@ -100,9 +100,9 @@ public sealed class VoucherWorkspaceView : UserControl
         input.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,26d));
         input.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(5,2,5,2)));
         input.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#FFFAF0")!));
+            (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
         input.Setters.Add(new Setter(Control.ForegroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#471A30")!));
+            (Brush)new BrushConverter().ConvertFrom("#000000")!));
         input.Setters.Add(new Setter(Control.BorderBrushProperty,
             (Brush)new BrushConverter().ConvertFrom("#75203E")!));
         root.Resources[typeof(TextBox)]=input;

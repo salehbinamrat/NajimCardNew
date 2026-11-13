@@ -91,9 +91,9 @@
     </Style>
     <Style x:Key="DarkComboBox" TargetType="ComboBox">
         <Setter Property="FontFamily" Value="Arial"/>
-        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-        <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+        <Setter Property="Foreground" Value="#000000"/>
+        <Setter Property="Background" Value="{StaticResource CreamPanelBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="MinHeight" Value="42"/>
         <Setter Property="Padding" Value="7"/>
@@ -112,7 +112,7 @@
                                 <ControlTemplate TargetType="ToggleButton">
                                     <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                                             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
-                                        <Path Data="M 0,0 L 4,4 L 8,0" Stroke="{StaticResource GoldBrightBrush}"
+                                        <Path Data="M 0,0 L 4,4 L 8,0" Stroke="{StaticResource MaroonLineBrush}"
                                               StrokeThickness="1.5" HorizontalAlignment="Right" VerticalAlignment="Center"
                                               Margin="0,0,9,0"/>
                                     </Border>
@@ -134,7 +134,7 @@
                         <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"
                                PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                                IsOpen="{TemplateBinding IsDropDownOpen}" Focusable="False">
-                            <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource GoldBrush}"
+                            <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource MaroonLineBrush}"
                                     BorderThickness="1" MinWidth="{TemplateBinding ActualWidth}"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -145,10 +145,10 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="DropDownToggle" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
+                            <Setter TargetName="DropDownToggle" Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                            <Setter TargetName="DropDownToggle" Property="BorderBrush" Value="{StaticResource GoldBrightBrush}"/>
+                            <Setter TargetName="DropDownToggle" Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="DropDownToggle" Property="Opacity" Value="0.6"/>
@@ -160,12 +160,12 @@
     </Style>
     <Style TargetType="ComboBox" BasedOn="{StaticResource DarkComboBox}"/>
     <Style TargetType="ComboBoxItem">
-        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="Foreground" Value="#000000"/>
         <Setter Property="Padding" Value="8,5"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
-                    <Border x:Name="ItemSurface" Background="{StaticResource SurfaceBrush}" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="ItemSurface" Background="{StaticResource CreamPanelBrush}" Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center"
                                           TextElement.Foreground="{TemplateBinding Foreground}"
                                           RecognizesAccessKey="True">
@@ -178,15 +178,14 @@
                         </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <!-- Selected/hovered options must use a light surface AND
-                             dark text; unselected dark surface uses cream text. -->
+                        <!-- Dropdown rows stay cream with black text in every state. -->
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="ItemSurface" Property="Background" Value="#F5DDAA"/>
-                            <Setter Property="Foreground" Value="#471A30"/>
+                            <Setter TargetName="ItemSurface" Property="Background" Value="#F0E2CC"/>
+                            <Setter Property="Foreground" Value="#000000"/>
                         </Trigger>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="ItemSurface" Property="Background" Value="#EAC67F"/>
-                            <Setter Property="Foreground" Value="#471A30"/>
+                            <Setter TargetName="ItemSurface" Property="Background" Value="#E8D2B5"/>
+                            <Setter Property="Foreground" Value="#000000"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="ItemSurface" Property="Opacity" Value="0.6"/>

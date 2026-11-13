@@ -56,11 +56,11 @@ class UserManagerPagesRegression(unittest.TestCase):
         self.assertIn("inventory.Users",package_view)
         self.assertIn("g.Count(x=>x.Started)",package_view)
         self.assertIn("Used=g.Count(u=>u.Started)",src)
-        self.assertIn('Label($"عدد الكروت: {p.Used:N0}"',src)
-        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}',src)
+        self.assertIn('Label($"عدد الكروت المستخدمة: {p.Used:N0}"',src)
+        self.assertIn('ToolTip=$"الباقة: {p.Name} | عدد الكروت المستخدمة: {p.Used:N0}',src)
         self.assertIn('Content="عرض جميع الباقات"',markup)
         self.assertNotIn("<ScrollViewer",markup)
-        self.assertIn("أكثر الباقات استخداما | الباقة • الكروت • الجلسات",markup)
+        self.assertIn("أكثر الباقات استخداما | الباقة • عدد الكروت المستخدمة",markup)
         self.assertIn('x:Name="ProfileBars" Columns="2" Rows="2"',markup)
 
     def test_calendar_days_have_scoped_legible_foreground(self):

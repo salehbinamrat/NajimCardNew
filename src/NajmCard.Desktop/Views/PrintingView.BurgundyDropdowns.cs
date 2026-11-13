@@ -14,12 +14,12 @@ public partial class PrintingView
     private static Style BurgundyDropdownItemStyle()
     {
         if(cachedBurgundyItem is not null)return cachedBurgundyItem;
-        var normal=(Brush)new BrushConverter().ConvertFrom("#AF5472")!;
-        var highlighted=(Brush)new BrushConverter().ConvertFrom("#C47490")!;
-        var selected=(Brush)new BrushConverter().ConvertFrom("#873151")!;
+        var normal=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
+        var highlighted=(Brush)new BrushConverter().ConvertFrom("#F0E2CC")!;
+        var selected=(Brush)new BrushConverter().ConvertFrom("#E8D2B5")!;
         var style=new Style(typeof(ComboBoxItem));
         style.Setters.Add(new Setter(Control.BackgroundProperty,normal));
-        style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
         style.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(9,6,9,6)));
         var template=new ControlTemplate(typeof(ComboBoxItem));
         var border=new FrameworkElementFactory(typeof(Border));
@@ -37,7 +37,7 @@ public partial class PrintingView
         {
             RelativeSource=new RelativeSource(RelativeSourceMode.TemplatedParent)
         });
-        caption.SetValue(TextBlock.ForegroundProperty,Brushes.White);
+        caption.SetValue(TextBlock.ForegroundProperty,Brushes.Black);
         caption.SetValue(TextBlock.FontFamilyProperty,new FontFamily("Arial"));
         caption.SetValue(TextBlock.FontWeightProperty,FontWeights.SemiBold);
         caption.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis);
@@ -63,8 +63,8 @@ public partial class PrintingView
         var style=new Style(typeof(ComboBox),
             (Style)Application.Current.FindResource("DarkComboBox"));
         style.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#AF5472")!));
-        style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+            (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
+        style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
         style.Setters.Add(new Setter(Control.BorderBrushProperty,
             (Brush)new BrushConverter().ConvertFrom("#75203E")!));
         style.Setters.Add(new Setter(ComboBox.MaxDropDownHeightProperty,235d));

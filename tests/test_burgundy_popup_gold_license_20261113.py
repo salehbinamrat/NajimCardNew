@@ -12,12 +12,12 @@ NS={"w":"http://schemas.microsoft.com/winfx/2006/xaml/presentation",
     "x":"http://schemas.microsoft.com/winfx/2006/xaml"}
 
 class BurgundyPopupGoldLicenceTests(unittest.TestCase):
-    def test_template_popup_white_text_normal_and_hover(self):
+    def test_template_popup_cream_background_black_text_normal_and_hover(self):
         s=(VIEWS/"GeneratorView.DesignerPanel.cs").read_text(encoding="utf-8")
-        self.assertIn('ConvertFrom("#AF5472")',s)
-        self.assertIn('ConvertFrom("#C47490")',s)
-        self.assertIn('new Setter(Control.ForegroundProperty,Brushes.White)',s)
-        self.assertIn('label.SetValue(TextElement.ForegroundProperty,Brushes.White)',s)
+        self.assertIn('ConvertFrom("#FFF4DF")',s)
+        self.assertIn('ConvertFrom("#F0E2CC")',s)
+        self.assertIn('new Setter(Control.ForegroundProperty,Brushes.Black)',s)
+        self.assertIn('label.SetValue(TextElement.ForegroundProperty,Brushes.Black)',s)
         self.assertIn('Header="قالب نجم نت الافتراضي",Style=themeItemStyle',s)
         self.assertIn('Header="اختيار صورة القالب",Style=themeItemStyle',s)
         self.assertIn("MenuItem.IsHighlightedProperty",s)

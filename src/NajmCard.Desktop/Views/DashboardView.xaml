@@ -211,7 +211,7 @@
       </Border>
       <Border Grid.Column="2" Style="{StaticResource DashboardPanel}">
         <DockPanel>
-          <TextBlock DockPanel.Dock="Top" Text="أكثر الباقات استخداما | الباقة • الكروت • الجلسات"
+          <TextBlock DockPanel.Dock="Top" Text="أكثر الباقات استخداما | الباقة • عدد الكروت المستخدمة"
                      Style="{StaticResource HeaderLabel}" Margin="0,0,0,9"
                      ToolTip="ترتيب الباقات حسب عدد الكروت التي بدأت استخدامها؛ الجلسات الحالية تعرض عند توفر عداد active-sessions الموثوق، ولا تشمل السجل التاريخي."/>
           <Button x:Name="AllPackagesButton" DockPanel.Dock="Bottom"

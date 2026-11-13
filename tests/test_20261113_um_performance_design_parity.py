@@ -23,9 +23,9 @@ class UserManagerPerformanceAndAppearance(unittest.TestCase):
         classifier=src(C,"Services/UserManagerV6Usage.cs")
         self.assertIn("Interval=TimeSpan.FromSeconds(3)",view)
         self.assertIn("ReadCachedUserManagerV6InventoryAsync(force,cts.Token)",view)
-        self.assertIn("ActiveSessionsVerified",view)
+        self.assertNotIn("ActiveSessionsVerified",view)
         self.assertIn("row.ContainsKey(\"active-sessions\")",classifier)
-        self.assertIn('Label($"الجلسات: {p.Sessions}"',view)
+        self.assertIn('Label($"عدد الكروت المستخدمة: {p.Used:N0}"',view)
         self.assertNotIn("ReadUmSessionsAsync",view)
 
     def test_color_squares_are_always_visible_and_share_inline_palette(self):
