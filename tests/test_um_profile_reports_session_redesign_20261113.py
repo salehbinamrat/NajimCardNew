@@ -47,11 +47,14 @@ class UserManagerPagesRegression(unittest.TestCase):
     def test_dashboard_shows_every_current_package_and_explains_metric(self):
         src=read(VIEWS,"DashboardView.xaml.cs")
         markup=read(VIEWS,"DashboardView.xaml")
-        self.assertIn("var groups = profiles.ToList()",src)
-        self.assertNotIn("profiles.Take(4)",src)
+        self.assertIn("var groups = profiles.Take(4).ToList()",src)
+        self.assertIn("private void AllPackages_Click(",src)
+        self.assertIn("inventory.Users",src)
+        self.assertIn("g.Count(x=>x.Started)",src)
         self.assertIn("x.Started && string.Equals(x.Profile,groups[i].Name,",src)
-        self.assertIn("المستخدمة / إجمالي حسابات الباقة",src)
-        self.assertIn('VerticalScrollBarVisibility="Auto"',markup)
+        self.assertIn("أعلى 4 | المستخدمة / الإجمالي",src)
+        self.assertIn('Content="عرض جميع الباقات"',markup)
+        self.assertNotIn("<ScrollViewer",markup)
         self.assertIn("الباقات: المستخدمة / إجمالي الحسابات",markup)
 
     def test_calendar_days_have_scoped_legible_foreground(self):

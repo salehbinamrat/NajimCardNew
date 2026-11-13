@@ -549,12 +549,65 @@ public partial class DashboardView : UserControl
     private static string FormatBytes(string raw) => long.TryParse(raw, out long bytes)
         ? (bytes / (1024d * 1024d)).ToString("N1", CultureInfo.InvariantCulture) + " MB" : raw;
 
+    private sealed record PackageUsageDisplay(string Name,int Used,int Total);
+
+    private void AllPackages_Click(object sender,RoutedEventArgs e)
+    {
+        var inventory=_lastLifecycle;
+        if(inventory is null||!inventory.IsComplete)return;
+        // Use only the confirmed, full v6 inventory for per-package counts.
+        // Assigned users are not necessarily currently online, and Started
+        // does not prove a recent purchase or accounting session.
+        var groups=inventory.Users
+            .Where(x=>!string.IsNullOrWhiteSpace(x.Profile))
+            .GroupBy(x=>x.Profile,StringComparer.OrdinalIgnoreCase)
+            .Select(g=>new PackageUsageDisplay(g.Key,
+                g.Count(x=>x.Started),g.Count()))
+            .OrderByDescending(x=>x.Total)
+            .ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var grid=UmUi.Table(
+            ("اسم الباقة","Name",260),
+            ("الكروت المستخدمة","Used",160),
+            ("إجمالي الكروت المرتبطة","Total",180));
+        grid.ItemsSource=groups;
+        grid.MinHeight=300;
+        grid.MaxHeight=430;
+        var summary=UmUi.Label(
+            $"عدد الباقات: {groups.Length:N0} | "+
+            $"الحسابات المصنفة ضمنها: {groups.Sum(x=>x.Total):N0} | "+
+            "المستخدمة تعني بدء استخدام الكرت حسب User Manager، "+
+            "وليس عدد الجلسات أو إيرادات المبيعات.",12);
+        summary.TextWrapping=TextWrapping.Wrap;
+        var close=UmUi.Action("إغلاق",true,105);
+        var dialog=new Window
+        {
+            Title="نجم كارد | جميع الباقات وإحصائية الحسابات",
+            Width=770,Height=585,MinWidth=660,MinHeight=495,
+            WindowStartupLocation=WindowStartupLocation.CenterOwner,
+            Owner=Window.GetWindow(this),
+            Background=UmUi.Light,
+            FlowDirection=FlowDirection.RightToLeft,
+            Content=UmUi.Stack(
+                UmUi.Header("جميع باقات User Manager",
+                    "بيانات مباشرة من آخر قراءة مكتملة للحسابات على الراوتر."),
+                UmUi.Panel(UmUi.Stack(summary,grid)),
+                UmUi.Row(close))
+        };
+        close.Click+=(_,_)=>dialog.Close();
+        dialog.ShowDialog();
+    }
+
     private void RenderProfiles(IReadOnlyList<ProfileCount> profiles)
     {
         ProfileBars.Children.Clear();
         // Display every genuine package, not just four popular names.
         // Counts represent assigned UM users, never historical purchases.
-        var groups = profiles.ToList();
+        // Compact dashboard remains fixed-size and has no scrolling.
+        // The complete dataset is available in AllPackages_Click.
+        var groups = profiles.Take(4).ToList();
+        AllPackagesButton.IsEnabled=_lastLifecycle?.IsComplete==true&&
+            profiles.Count>0;
         if (groups.Count == 0)
         {
             ProfileBars.Children.Add(new TextBlock { Text = "لا توجد كروت على الراوتر", Foreground = new SolidColorBrush(Color.FromRgb(75,27,50)) });
@@ -569,7 +622,7 @@ public partial class DashboardView : UserControl
         };
         ProfileBars.Children.Add(new TextBlock
         {
-            Text="المستخدمة / إجمالي حسابات الباقة (ليس السعر أو الإيراد)",
+            Text="أعلى 4 | المستخدمة / الإجمالي (كل الباقات في الزر)",
             FontSize=10,Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,
             TextWrapping=TextWrapping.Wrap,
             Margin=new Thickness(1,0,1,6)
