@@ -13,12 +13,12 @@ XNS="{http://schemas.microsoft.com/winfx/2006/xaml}"
 class CompactScreenLayoutContract(unittest.TestCase):
     def test_main_window_defaults_to_requested_dimensions(self):
         x=ET.parse(UI/"MainWindow.xaml").getroot()
-        self.assertEqual(float(x.attrib["Width"]),1200)
+        self.assertEqual(float(x.attrib["Width"]),1260)
         self.assertEqual(float(x.attrib["Height"]),730)
         self.assertEqual(x.attrib["ResizeMode"],"CanMinimize")
         self.assertEqual(x.attrib["ShowInTaskbar"],"True")
-        self.assertEqual(float(x.attrib["MinWidth"]),1200)
-        self.assertEqual(float(x.attrib["MaxWidth"]),1200)
+        self.assertEqual(float(x.attrib["MinWidth"]),1260)
+        self.assertEqual(float(x.attrib["MaxWidth"]),1260)
         self.assertEqual(float(x.attrib["MinHeight"]),730)
         self.assertEqual(float(x.attrib["MaxHeight"]),730)
         self.assertIsNotNone(x.find(".//w:RowDefinition[@"+XNS+"Name='WorkspaceHeaderRow']",NS))

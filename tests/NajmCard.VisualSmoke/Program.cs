@@ -23,7 +23,7 @@ internal static class Program
         try
         {
             var destination=Path.GetFullPath(args.Length>0
-                ? args[0] : "out/creator-1200x730.png");
+                ? args[0] : "out/creator-1260x730.png");
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             var application=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};
             application.Resources.MergedDictionaries.Add(new ResourceDictionary
@@ -42,7 +42,7 @@ internal static class Program
             var window=new MainWindow();
             var width=(int)window.Width;
             var height=(int)window.Height;
-            if(width!=1200 || height!=730)
+            if(width!=1260 || height!=730)
                 throw new InvalidDataException("Unexpected default window size.");
             if(window.ResizeMode!=ResizeMode.CanMinimize ||
                !window.ShowInTaskbar ||
@@ -89,9 +89,9 @@ internal static class Program
                 .TransformBounds(new Rect(connect.RenderSize));
             if(connectBounds.Width<=0 || connectBounds.Height<=0 ||
                 connectBounds.Bottom>height || connectBounds.Top<0)
-                throw new InvalidDataException("The login connect button is clipped at 1200x730.");
+                throw new InvalidDataException("The login connect button is clipped at 1260x730.");
             Capture(root,width,height,Path.Combine(
-                Path.GetDirectoryName(destination)!,"login-1200x730.png"));
+                Path.GetDirectoryName(destination)!,"login-1260x730.png"));
             loginLayer.Visibility=Visibility.Collapsed;
             workspaceLayer.Visibility=Visibility.Visible;
             root.UpdateLayout();
@@ -128,7 +128,7 @@ internal static class Program
                !Equals(((SolidColorBrush)creatorHeader.Background).Color,
                    ((SolidColorBrush)dashboardHeader.Background).Color))
                 throw new InvalidDataException("The creator and dashboard header styles differ.");
-            Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,"dashboard-1200x730.png"));
+            Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,"dashboard-1260x730.png"));
 
             ((RowDefinition)window.FindName("WorkspaceHeaderRow")).Height=new GridLength(88);
             var profiles=new ProfilesView(new RouterGateway(new OfflineRouterClient(withProfiles:true)));
@@ -144,12 +144,12 @@ internal static class Program
             root.UpdateLayout();
             VerifyUserManagerHome(root,userManager);
             Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,
-                "user-manager-home-1200x730.png"));
+                "user-manager-home-1260x730.png"));
             CaptureUserManagerSections(root,userManager,width,height,
                 Path.GetDirectoryName(destination)!);
 
             // Render the production settings view at the same fixed
-            // 1200x730 size, including the opt-in Portable shortcut action.
+            // 1260x730 size, including the opt-in Portable shortcut action.
             // The shortcut must NOT be created during this render.
             var settings=new SettingsView(store);
             ((ListBox)window.FindName("NavList")).SelectedIndex=10;
@@ -163,14 +163,14 @@ internal static class Program
                shortcutBounds.Right>root.ActualWidth+1 ||
                shortcutBounds.Bottom>height)
                 throw new InvalidDataException(
-                    "Settings desktop shortcut button is clipped at 1200x730.");
+                    "Settings desktop shortcut button is clipped at 1260x730.");
             if(!VisualChildren<Border>(settings).Any(panel=>
                 panel.Background is SolidColorBrush brush &&
                 brush.Color==Color.FromRgb(255,243,223)))
                 throw new InvalidDataException(
                     "Settings view must use the shared cream card background.");
             Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,
-                "settings-1200x730.png"));
+                "settings-1260x730.png"));
             return 0;
         }
         catch(Exception ex)
@@ -256,7 +256,7 @@ internal static class Program
                 bounds.Right>root.ActualWidth+1 || bounds.Top<0 ||
                 bounds.Bottom>root.ActualHeight+1)
                 throw new InvalidDataException(
-                    "User Manager card is clipped at 1200x730: "+card.Tag);
+                    "User Manager card is clipped at 1260x730: "+card.Tag);
         }
         if(!VisualChildren<TextBlock>(home).Any(x=>x.Text=="إدارة User Manager"))
             throw new InvalidDataException("User Manager landing banner is missing.");
@@ -315,7 +315,7 @@ internal static class Program
             if(sidebar is null)
                 throw new InvalidDataException("User Manager page has no back action.");
             Capture(root,width,height,Path.Combine(folder,
-                "user-manager-"+tag+"-1200x730.png"));
+                "user-manager-"+tag+"-1260x730.png"));
             sidebar.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             root.UpdateLayout();
         }

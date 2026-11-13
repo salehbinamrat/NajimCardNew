@@ -50,7 +50,8 @@ public partial class PrintingView
         _batchSelector=batchSelector;
         batchSelector.Items.Add(new ComboBoxItem
         {
-            Content=selectedBatch is null?"الدفعة الأخيرة":"الدفعة الحالية",Tag=null
+            Content=selectedBatch is null?"الدفعة الأخيرة":"الدفعة الحالية",
+            Tag=null,Style=BurgundyDropdownItemStyle()
         });
         batchSelector.SelectedIndex=0;
         bool loadingBatches=false;
@@ -67,12 +68,13 @@ public partial class PrintingView
                 batchSelector.Items.Add(new ComboBoxItem
                 {
                     Content=selectedBatch is null?"الدفعة الأخيرة":"الدفعة الحالية",
-                    Tag=null
+                    Tag=null,Style=BurgundyDropdownItemStyle()
                 });
                 foreach(var info in history)
                     batchSelector.Items.Add(new ComboBoxItem
                     {
-                        Content=info.DisplayName,ToolTip=info.DisplayName,Tag=info
+                        Content=info.DisplayName,ToolTip=info.DisplayName,Tag=info,
+                        Style=BurgundyDropdownItemStyle()
                     });
                 var selected=batchSelector.Items.OfType<ComboBoxItem>().FirstOrDefault(x=>
                     x.Tag is PrintableBatchSummary item && previous is not null &&

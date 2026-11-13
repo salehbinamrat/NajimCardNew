@@ -197,6 +197,11 @@ public partial class PrintingView : UserControl
         var ordering=new UniformGrid{Columns=selectedBatch is null?4:3,
             Margin=new Thickness(2,1,2,3)};
         var (batchSelector,selectedPrinter)=CreatePrintSelectors(store,selectedBatch);
+        // The currently selected batch and the surrounding print dropdowns
+        // share one scoped burgundy/white theme; preview and print values stay
+        // bound to their original ComboBox instances.
+        foreach(var choice in new[]{paper,orientation,order,batchSelector,selectedPrinter})
+            ApplyBurgundyDropdown(choice);
         Field(ordering,"الدفعة",batchSelector);
         Field(ordering,"الطابعة",selectedPrinter);
         Field(ordering,"ترتيب الكروت",order);
