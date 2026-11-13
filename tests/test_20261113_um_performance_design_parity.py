@@ -25,7 +25,7 @@ class UserManagerPerformanceAndAppearance(unittest.TestCase):
         self.assertIn("ReadCachedUserManagerV6InventoryAsync(force,cts.Token)",view)
         self.assertIn("ActiveSessionsVerified",view)
         self.assertIn("row.ContainsKey(\"active-sessions\")",classifier)
-        self.assertIn('Text=$"الجلسات: {p.Sessions}"',view)
+        self.assertIn('Label($"الجلسات: {p.Sessions}"',view)
         self.assertNotIn("ReadUmSessionsAsync",view)
 
     def test_color_squares_are_always_visible_and_share_inline_palette(self):

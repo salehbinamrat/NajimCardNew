@@ -21,14 +21,14 @@ class UserManagerV6VisualParity(unittest.TestCase):
     def test_advanced_colors_use_exact_existing_card_palette(self):
         s=read(VIEW,"GeneratorView.DesignerPanel.cs")
         self.assertIn('TextBox ColorChoice(string label,string current)',s)
-        self.assertIn('var palette=PaletteButton("الألوان",entry)',s)
+        self.assertIn('foreach(var hex in CardPaletteColors)',s)
         self.assertIn('var numberColor=ColorChoice(',s)
         self.assertIn('var background=ColorChoice(',s)
         self.assertIn('var borderColor=ColorChoice(',s)
 
     def test_um_plan_editor_uses_four_across(self):
         s=read(VIEW,"UserManagerPlansScreen.cs")
-        self.assertIn('var editorFields=new UniformGrid{Columns=4}',s)
+        self.assertIn('Columns=4,Rows=2',s)
         self.assertIn('Field("سرعة التحميل TX",down)',s)
         self.assertIn('header,inventoryPanel,',s)
         self.assertNotIn('var editor=UmUi.Stack(UmUi.Label("إضافة / تعديل",17,true)',s)
@@ -48,10 +48,10 @@ class UserManagerV6VisualParity(unittest.TestCase):
         xml=read(VIEW,"DashboardView.xaml")
         render=read(VIEW,"DashboardView.xaml.cs")
         self.assertIn('x:Name="ProfileBars" Columns="2" Rows="2"',xml)
-        self.assertIn('Text="أكثر الباقات استخداما | عدد الكروت"',xml)
-        self.assertIn('Text=$"بدأ استخدامها: {p.Used:N0}"',render)
-        self.assertIn('Text=$"إجمالي الكروت: {p.Count:N0}"',render)
-        self.assertIn('.OrderByDescending(x=>x.Used)',render)
+        self.assertIn('Text="أكثر الباقات استخداما | الباقة • الكروت • الجلسات"',xml)
+        self.assertIn('Label($"عدد الكروت: {p.Used:N0}"',render)
+        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}"',render)
+        self.assertIn('.OrderByDescending(g=>g.Used)',render)
         self.assertNotIn('barTrack.SizeChanged',render)
 
 if __name__=="__main__":

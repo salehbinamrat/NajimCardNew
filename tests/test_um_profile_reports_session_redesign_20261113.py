@@ -49,18 +49,18 @@ class UserManagerPagesRegression(unittest.TestCase):
     def test_dashboard_shows_every_current_package_and_explains_metric(self):
         src=read(VIEWS,"DashboardView.xaml.cs")
         markup=read(VIEWS,"DashboardView.xaml")
-        self.assertIn(".OrderByDescending(x=>x.Used)",src)
+        self.assertIn(".OrderByDescending(g=>g.Used)",src)
         self.assertIn(".Take(4).ToArray()",src)
         package_view=read(VIEWS,"DashboardView.PackageStatistics.cs")
         self.assertIn("private void AllPackages_Click(",package_view)
         self.assertIn("inventory.Users",package_view)
         self.assertIn("g.Count(x=>x.Started)",package_view)
-        self.assertIn("x=>x.Started &&",src)
-        self.assertIn('Text=$"بدأ استخدامها: {p.Used:N0}"',src)
-        self.assertIn('Text=$"إجمالي الكروت: {p.Count:N0}"',src)
+        self.assertIn("Used=g.Count(u=>u.Started)",src)
+        self.assertIn('Label($"عدد الكروت: {p.Used:N0}"',src)
+        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}"',src)
         self.assertIn('Content="عرض جميع الباقات"',markup)
         self.assertNotIn("<ScrollViewer",markup)
-        self.assertIn("أكثر الباقات استخداما | عدد الكروت",markup)
+        self.assertIn("أكثر الباقات استخداما | الباقة • الكروت • الجلسات",markup)
         self.assertIn('x:Name="ProfileBars" Columns="2" Rows="2"',markup)
 
     def test_calendar_days_have_scoped_legible_foreground(self):

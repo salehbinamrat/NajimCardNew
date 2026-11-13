@@ -36,10 +36,10 @@ class CreatorCreamBurgundyTests(unittest.TestCase):
         self.assertIn("#FFFAF0",workspace)
         self.assertIn("PaletteButton(",designer)
         self.assertIn("popup.IsOpen=!popup.IsOpen",designer)
-        self.assertIn('ShapeOption("العرض (مم)"',designer)
-        self.assertIn('ShapeOption("الطول (مم)"',designer)
-        self.assertIn('ShapeOption("حجم QR"',designer)
-        self.assertIn('ShapeOption("سمك الحدود"',designer)
+        self.assertIn('ShapeCell("العرض (مم)"',designer)
+        self.assertIn('ShapeCell("الطول (مم)"',designer)
+        self.assertIn('ShapeCell("حجم QR"',designer)
+        self.assertIn('ShapeCell("سمك الحدود"',designer)
 
     def test_all_reference_elements_are_visible_and_positioned_for_pdf(self):
         controls=source("GeneratorView.DesignerPanel.cs")
