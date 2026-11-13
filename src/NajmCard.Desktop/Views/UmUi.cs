@@ -207,7 +207,7 @@ internal static class UmUi
         var cb=new ComboBox
         {
             Width=width,MinHeight=34,Background=InputSurface,
-            Foreground=Ink,Margin=new Thickness(4),FontSize=12,
+            Foreground=Brushes.Black,BorderBrush=FromTheme("MaroonLineBrush","#75203E"),Margin=new Thickness(4),FontSize=12,
             FontFamily=new FontFamily("Arial"),IsEditable=false,
             MaxDropDownHeight=280,HorizontalContentAlignment=HorizontalAlignment.Stretch
         };
@@ -240,13 +240,13 @@ internal static class UmUi
         var toggleTemplate=new ControlTemplate(typeof(ToggleButton));
         var toggleBorder=new FrameworkElementFactory(typeof(Border));
         toggleBorder.SetValue(Border.BackgroundProperty,InputSurface);
-        toggleBorder.SetValue(Border.BorderBrushProperty,Gray);
+        toggleBorder.SetValue(Border.BorderBrushProperty,FromTheme("MaroonLineBrush","#75203E"));
         toggleBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
         toggleBorder.SetValue(Border.CornerRadiusProperty,new CornerRadius(7));
         var arrow=new FrameworkElementFactory(typeof(System.Windows.Shapes.Path));
         arrow.SetValue(System.Windows.Shapes.Path.DataProperty,
             Geometry.Parse("M 0,0 L 4,4 L 8,0"));
-        arrow.SetValue(System.Windows.Shapes.Shape.StrokeProperty,Navy);
+        arrow.SetValue(System.Windows.Shapes.Shape.StrokeProperty,FromTheme("MaroonLineBrush","#75203E"));
         arrow.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty,1.8);
         arrow.SetValue(FrameworkElement.HorizontalAlignmentProperty,HorizontalAlignment.Left);
         arrow.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
@@ -294,7 +294,7 @@ internal static class UmUi
         var popupBorder=new FrameworkElementFactory(typeof(Border));
         popupBorder.SetValue(Border.BackgroundProperty,InputSurface);
         popupBorder.SetValue(TextElement.ForegroundProperty,Ink);
-        popupBorder.SetValue(Border.BorderBrushProperty,Gray);
+        popupBorder.SetValue(Border.BorderBrushProperty,FromTheme("MaroonLineBrush","#75203E"));
         popupBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
         popupBorder.SetBinding(FrameworkElement.MinWidthProperty,new Binding("ActualWidth")
         {
@@ -321,8 +321,9 @@ internal static class UmUi
         disabled.Setters.Add(new Setter(UIElement.OpacityProperty,0.65));
         template.Triggers.Add(disabled);
         style.Setters.Add(new Setter(Control.TemplateProperty,template));
-        style.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
+        style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
         style.Setters.Add(new Setter(Control.BackgroundProperty,InputSurface));
+        style.Setters.Add(new Setter(Control.BorderBrushProperty,FromTheme("MaroonLineBrush","#75203E")));
         style.Seal();
         cachedComboStyle=style;
         return style;
@@ -332,7 +333,7 @@ internal static class UmUi
     {
         if(cachedItemStyle is not null)return cachedItemStyle;
         var style=new Style(typeof(ComboBoxItem));
-        style.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
+        style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
         style.Setters.Add(new Setter(Control.BackgroundProperty,InputSurface));
         style.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(7,5,7,5)));
         var template=new ControlTemplate(typeof(ComboBoxItem));
@@ -367,8 +368,8 @@ internal static class UmUi
         {
             var highlighted=new Trigger{Property=triggerProperty,Value=true};
             highlighted.Setters.Add(new Setter(Control.BackgroundProperty,
-                GoldBright));
-            highlighted.Setters.Add(new Setter(Control.ForegroundProperty,Navy));
+                Solid("#F0E2CC")));
+            highlighted.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
             template.Triggers.Add(highlighted);
         }
         style.Setters.Add(new Setter(Control.TemplateProperty,template));
