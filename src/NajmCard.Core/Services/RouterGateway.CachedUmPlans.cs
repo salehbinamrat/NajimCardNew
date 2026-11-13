@@ -40,7 +40,7 @@ public sealed partial class RouterGateway
         await _umPlansReadGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if(!force && CurrentPlansCache() is { } hit)return hit;
+            if(!force && CurrentPlansCache() is { } refreshed)return refreshed;
             var snapshot=await ReadUmPlansAsync(ct).ConfigureAwait(false);
             lock(_umPlansCacheLock)
             {
