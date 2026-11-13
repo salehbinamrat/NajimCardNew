@@ -54,11 +54,15 @@ class TaskbarAndAuditRegressions(unittest.TestCase):
     def test_session_and_server_pages_do_not_overlap_refresh(self):
         sessions=source(VIEWS/"SessionsView.cs")
         servers=source(VIEWS/"ServersView.cs")
-        for text in [sessions,servers]:
-            self.assertIn("if(busy)return;",text)
-            self.assertIn("refresh.IsEnabled=false;",text)
-            self.assertIn("Loaded+=async (_,_)=>await Load();",text)
+        self.assertIn("if(busy)return;",sessions)
+        self.assertIn("refresh.IsEnabled=false;",sessions)
+        self.assertIn("Loaded+=async (_,_)=>await Load();",sessions)
+        self.assertIn("if(busy)return;",servers)
+        self.assertIn("busy=true;UpdateActions();",servers)
+        self.assertIn("refresh.IsEnabled=!busy;",servers)
+        self.assertIn("if(!loadedOnce){loadedOnce=true;await Load();}",servers)
         self.assertIn("grid.ItemsSource=null;",sessions)
+        self.assertIn("grid.ItemsSource=null;",servers)
 
     def test_dialog_close_and_shutdown_cleanup_are_explicit(self):
         history=source(VIEWS/"VoucherDeliveryHistoryWindow.cs")

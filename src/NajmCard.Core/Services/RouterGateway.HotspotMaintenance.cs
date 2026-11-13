@@ -85,8 +85,8 @@ public sealed partial class RouterGateway
         CancellationToken ct=default)
     {
         ArgumentNullException.ThrowIfNull(selected);
-        if(selected.Count is <1 or >256)
-            throw new ArgumentException("حدد من سيرفر واحد إلى 256 سيرفرا.",nameof(selected));
+        if(selected.Count is <1 or >10000)
+            throw new ArgumentException("عدد السيرفرات المحددة غير صالح.",nameof(selected));
         if(selected.Any(x=>x is null || x.Disabled is null))
             throw new InvalidOperationException(
                 "لا يمكن تغيير سيرفر حالته غير مؤكدة؛ حدث القائمة.");

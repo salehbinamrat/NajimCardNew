@@ -136,11 +136,8 @@ public sealed class ServersView : UserControl
                 status.Text="جميع السيرفرات المحددة بالفعل بالحالة المطلوبة.";
                 return;
             }
-            if(changing.Length>256)
-            {
-                status.Text="الحد الأقصى للعملية 256 سيرفرا. اختر مجموعة أصغر.";
-                return;
-            }
+            // Do not impose an arbitrary 100/256-server UI limit; RouterOS
+            // inventory and the gateway's bounded batch guard the selection.
             var names=string.Join("، ",changing.Take(5).Select(x=>x.Name));
             if(changing.Length>5)names+="، ...";
             var action=disabled?"تعطيل":"تفعيل";

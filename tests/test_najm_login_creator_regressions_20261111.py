@@ -61,9 +61,14 @@ class NajmLoginCreatorFixes(unittest.TestCase):
 
     def test_large_hotspot_server_catalog_not_rejected(self):
         actions = source("Views/DashboardView.RouterActions.cs")
-        self.assertNotIn("candidates.Length>100", actions)
-        self.assertIn("VirtualizingStackPanel.SetIsVirtualizing(selector,true)", actions)
-        self.assertIn("ChangeHotspotServerStateAsync(selected,disabled)", actions)
+        servers = source("Views/ServersView.cs")
+        gateway = (ROOT.parent/"NajmCard.Core/Services/RouterGateway.HotspotMaintenance.cs").read_text(encoding="utf-8")
+        self.assertEqual(actions.count('_navigate("servers");'),2)
+        self.assertIn("grid.EnableRowVirtualization=true;",servers)
+        self.assertIn("grid.SelectionMode=DataGridSelectionMode.Extended;",servers)
+        self.assertNotIn("changing.Length>256",servers)
+        self.assertIn("ChangeHotspotServersStateAsync(chosen,disabled)",servers)
+        self.assertIn("selected.Count is <1 or >10000",gateway)
 
 if __name__ == "__main__":
     unittest.main()
