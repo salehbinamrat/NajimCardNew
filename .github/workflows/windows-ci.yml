@@ -30,52 +30,52 @@ jobs:
         run: dotnet test tests/NajmCard.Core.Tests/NajmCard.Core.Tests.csproj --configuration Release --no-restore
       - name: Test real SQLite/DPAPI desktop persistence
         run: dotnet test tests/NajmCard.Desktop.Tests/NajmCard.Desktop.Tests.csproj --configuration Release --no-restore
-      # A real offscreen WPF render at the owner's 1200x730 desktop dimensions.
+      # A real offscreen WPF render at the owner's 1260x730 desktop dimensions.
       # Core must pass this visual-smoke capture before Release artifacts are trusted.
-      - name: Capture actual creator UI at 1200x730
-        run: dotnet run --project tests/NajmCard.VisualSmoke/NajmCard.VisualSmoke.csproj --configuration Release -- out/creator-1200x730.png
+      - name: Capture actual creator UI at 1260x730
+        run: dotnet run --project tests/NajmCard.VisualSmoke/NajmCard.VisualSmoke.csproj --configuration Release -- out/creator-1260x730.png
       - name: Upload creator screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: NajmCard-creator-1200x730
-          path: out/creator-1200x730.png
+          name: NajmCard-creator-1260x730
+          path: out/creator-1260x730.png
           if-no-files-found: error
       - name: Upload login screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: NajmCard-login-1200x730
-          path: out/login-1200x730.png
+          name: NajmCard-login-1260x730
+          path: out/login-1260x730.png
           if-no-files-found: error
       - name: Upload dashboard screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: NajmCard-dashboard-1200x730
-          path: out/dashboard-1200x730.png
+          name: NajmCard-dashboard-1260x730
+          path: out/dashboard-1260x730.png
           if-no-files-found: error
       - name: Upload settings and shortcut screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: NajmCard-settings-1200x730
-          path: out/settings-1200x730.png
+          name: NajmCard-settings-1260x730
+          path: out/settings-1260x730.png
           if-no-files-found: error
       - name: Upload User Manager landing screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: NajmCard-usermanager-home-1200x730
-          path: out/user-manager-home-1200x730.png
+          name: NajmCard-usermanager-home-1260x730
+          path: out/user-manager-home-1260x730.png
           if-no-files-found: error
       - name: Verify six User Manager subpage screenshots
         shell: pwsh
         run: |
           @('users','packages','sessions','search','reports','maintenance') | ForEach-Object {
-            $path = "out/user-manager-$($_)-1200x730.png"
+            $path = "out/user-manager-$($_)-1260x730.png"
             if (!(Test-Path $path)) { throw "Missing actual WPF screenshot: $path" }
           }
-      - name: Upload User Manager six subpages at 1200x730
+      - name: Upload User Manager six subpages at 1260x730
         uses: actions/upload-artifact@v4
         with:
-          name: NajmCard-usermanager-six-subpages-1200x730
-          path: out/user-manager-*-1200x730.png
+          name: NajmCard-usermanager-six-subpages-1260x730
+          path: out/user-manager-*-1260x730.png
           if-no-files-found: error
   windows-release:
     name: Windows Release tests (${{ matrix.arch }})

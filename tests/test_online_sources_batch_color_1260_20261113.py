@@ -45,6 +45,10 @@ class ConnectedSourcesBatchAndSize(unittest.TestCase):
         for name in ("Height","MinHeight","MaxHeight"):
             self.assertEqual("730",window.attrib[name])
         self.assertEqual("CanMinimize",window.attrib["ResizeMode"])
+        smoke=(ROOT/"tests/NajmCard.VisualSmoke/Program.cs").read_text(encoding="utf-8")
+        self.assertIn("if(width!=1260 || height!=730)",smoke)
+        pipeline=(ROOT/".github/workflows/windows-ci.yml").read_text(encoding="utf-8")
+        self.assertIn("Capture actual creator UI at 1260x730",pipeline)
         self.assertIn("DockPanel.SetDock(footer,Dock.Bottom)",
                       read("Views/VoucherWorkspaceView.cs"))
 
