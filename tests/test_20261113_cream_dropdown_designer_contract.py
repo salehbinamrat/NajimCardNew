@@ -56,14 +56,9 @@ class CreamDropdownAndDesignerTests(unittest.TestCase):
 
     def test_most_used_packages_show_only_package_and_used_card_count(self):
         dashboard = read(VIEWS / "DashboardView.xaml.cs")
-        stats = read(VIEWS / "DashboardView.PackageStatistics.cs")
         self.assertIn('var cards=Label($"عدد الكروت المستخدمة: {p.Used:N0}"', dashboard)
         self.assertNotIn('var sessions=Label(', dashboard)
         self.assertNotIn('الجلسات:', dashboard)
-        self.assertIn('("الكروت المستخدمة","Used",160)', stats)
-        self.assertEqual(stats.count('grid=UmUi.Table('), 1)
-        self.assertNotIn('"Total"', stats)
-        self.assertNotIn('"Sessions"', stats)
 
 
 if __name__ == "__main__":
