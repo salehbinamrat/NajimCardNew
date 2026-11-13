@@ -368,22 +368,24 @@ public partial class GeneratorView
                 Width=790,Height=570,MinWidth=650,MinHeight=440,
                 WindowStartupLocation=WindowStartupLocation.CenterOwner,
                 Owner=Window.GetWindow(this),FlowDirection=FlowDirection.RightToLeft,
-                Background=(Brush)new BrushConverter().ConvertFrom("#200E1E")!
+                Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!
             };
             var pane=new DockPanel{Margin=new Thickness(16)};
             var save=PageUi.Button("تطبيق التعديلات",true);
             save.MinWidth=0;save.Margin=new Thickness(2,8,2,1);
-            var fields=new UniformGrid{Columns=2};
+            var fields=new UniformGrid{Columns=2,Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!};
             TextBox Editable(string label,string value)
             {
                 var entry=new TextBox{
                     Text=value,FontFamily=new FontFamily("Arial"),
-                    Foreground=(Brush)new BrushConverter().ConvertFrom("#FFF4E6")!,
-                    Background=(Brush)new BrushConverter().ConvertFrom("#301529")!,
+                    Foreground=Brushes.Black,
+                    Background=(Brush)new BrushConverter().ConvertFrom("#FFFAF0")!,
+                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
+                    BorderThickness=new Thickness(1),
                     MinHeight=34,Margin=new Thickness(6,2,6,8)};
                 var section=PageUi.Column();
                 section.Children.Add(new TextBlock{
-                    Text=label,Foreground=(Brush)new BrushConverter().ConvertFrom("#F8E6C7")!,
+                    Text=label,Foreground=Brushes.Black,
                     FontFamily=new FontFamily("Arial"),FontWeight=FontWeights.Bold});
                 section.Children.Add(entry);
                 fields.Children.Add(section);
@@ -401,8 +403,12 @@ public partial class GeneratorView
                 arrow.Width=32;arrow.MinWidth=32;arrow.MinHeight=34;
                 arrow.Margin=new Thickness(2,2,0,8);
                 var burgundy=(Brush)new BrushConverter().ConvertFrom("#AF5472")!;
-                arrow.Background=burgundy;arrow.Foreground=Brushes.White;
-                entry.Background=burgundy;entry.Foreground=Brushes.White;
+                arrow.Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
+                arrow.Foreground=Brushes.Black;
+                arrow.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
+                entry.Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
+                entry.Foreground=Brushes.Black;
+                entry.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
                 entry.CaretBrush=Brushes.White;entry.Margin=new Thickness(2,2,2,8);
                 DockPanel.SetDock(arrow,Dock.Left);
                 holder.Children.Add(arrow);holder.Children.Add(entry);
@@ -417,14 +423,14 @@ public partial class GeneratorView
                 {
                     var option=new Button
                     {
-                        Content=new TextBlock{Text=value,Foreground=Brushes.White,
+                        Content=new TextBlock{Text=value,Foreground=Brushes.Black,
                             FontFamily=new FontFamily("Arial"),FontSize=12,
                             TextAlignment=TextAlignment.Center},
                         MinWidth=63,MinHeight=31,
                         Margin=new Thickness(2),Padding=new Thickness(6,3,6,3),
                         FontFamily=new FontFamily("Arial"),FontSize=12,
-                        Foreground=Brushes.White,Background=burgundy,
-                        BorderBrush=(Brush)new BrushConverter().ConvertFrom("#E5A1B4")!,
+                        Foreground=Brushes.Black,Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,
+                        BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
                         BorderThickness=new Thickness(1)
                     };
                     option.Click+=(_,_)=>{entry.Text=value;popupChoices.IsOpen=false;};
@@ -432,7 +438,8 @@ public partial class GeneratorView
                 }
                 popupChoices.Child=new Border
                 {
-                    Background=burgundy,BorderBrush=(Brush)new BrushConverter().ConvertFrom("#702442")!,
+                    Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,
+                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
                     BorderThickness=new Thickness(1),Padding=new Thickness(4),
                     CornerRadius=new CornerRadius(7),Child=list
                 };
@@ -442,43 +449,40 @@ public partial class GeneratorView
             }
             TextBox ColorChoice(string label,string current)
             {
-                // The operator must see actual color swatches without opening
-                // a second popup (previous palette was hidden by WPF themes).
+                // Keep the hex value internally for persistence, but show only
+                // the selected color and the palette squares to the operator.
                 var entry=Editable(label,current);
                 var section=(Panel)fields.Children[fields.Children.Count-1];
                 section.Children.Remove(entry);
+                entry.Visibility=Visibility.Collapsed;
+                section.Children.Add(entry);
                 var panel=PageUi.Column();
                 panel.Margin=new Thickness(0,1,0,3);
-                var row=new DockPanel{LastChildFill=true};
                 var currentSwatch=new Border
                 {
-                    Width=33,Height=32,Margin=new Thickness(4,2,3,3),
-                    CornerRadius=new CornerRadius(5),
-                    BorderBrush=Brushes.White,BorderThickness=new Thickness(2),
-                    ToolTip="لون القيمة الحالية"
+                    Width=30,Height=30,Margin=new Thickness(3,2,3,4),
+                    CornerRadius=new CornerRadius(4),
+                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
+                    BorderThickness=new Thickness(1),
+                    ToolTip="اللون المحدد حاليا"
                 };
-                DockPanel.SetDock(currentSwatch,Dock.Left);
-                row.Children.Add(currentSwatch);
-                entry.Margin=new Thickness(2,2,4,3);
-                entry.Background=(Brush)new BrushConverter().ConvertFrom("#AF5472")!;
-                entry.Foreground=Brushes.White;entry.CaretBrush=Brushes.White;
-                row.Children.Add(entry);
-                panel.Children.Add(row);
+                panel.Children.Add(currentSwatch);
                 var palette=new WrapPanel
                 {
                     FlowDirection=FlowDirection.LeftToRight,
                     Margin=new Thickness(3,0,3,3),
-                    ToolTip="اختر لونا من المربعات أو أدخل كود اللون في الحقل."
+                    ToolTip="اختر اللون من المربعات"
                 };
                 var squares=new Dictionary<string,Border>(StringComparer.OrdinalIgnoreCase);
                 foreach(var hex in CardPaletteColors)
                 {
                     var square=new Border
                     {
-                        Width=23,Height=23,Margin=new Thickness(1,1,1,1),
+                        Width=25,Height=25,Margin=new Thickness(2),
                         Background=(Brush)new BrushConverter().ConvertFrom(hex)!,
-                        BorderBrush=Brushes.White,BorderThickness=new Thickness(1),
-                        CornerRadius=new CornerRadius(3),ToolTip=hex
+                        BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
+                        BorderThickness=new Thickness(1),
+                        CornerRadius=new CornerRadius(3),ToolTip="لون"
                     };
                     var key=hex;
                     square.MouseLeftButtonUp+=(_,args)=>
@@ -493,11 +497,8 @@ public partial class GeneratorView
                 {
                     var value=entry.Text.Trim();
                     foreach(var item in squares)
-                    {
                         item.Value.BorderThickness=new Thickness(
                             string.Equals(item.Key,value,StringComparison.OrdinalIgnoreCase)?3:1);
-                        item.Value.BorderBrush=Brushes.White;
-                    }
                     try{currentSwatch.Background=(Brush)new BrushConverter().ConvertFromString(value)!;}
                     catch(FormatException){currentSwatch.Background=Brushes.Transparent;}
                 };
