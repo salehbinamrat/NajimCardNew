@@ -52,12 +52,12 @@ public partial class GeneratorView
             PlacementTarget=button,Placement=PlacementMode.Bottom,
             StaysOpen=false,AllowsTransparency=true
         };
-        var palette=new UniformGrid{Columns=6,Background=Brushes.White};
+        var palette=new UniformGrid{Columns=6,Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!};
         foreach(var hex in CardPaletteColors)
         {
             var sample=new Button{Width=25,Height=25,Margin=new Thickness(2),
                 Background=(Brush)new BrushConverter().ConvertFrom(hex)!,
-                BorderBrush=(Brush)new BrushConverter().ConvertFrom("#74203D")!,
+                BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
                 BorderThickness=new Thickness(1),ToolTip=hex};
             sample.Click+=(_,_)=>{target.Text=hex;popup.IsOpen=false;};
             palette.Children.Add(sample);
@@ -117,18 +117,18 @@ public partial class GeneratorView
         // Explicit MenuItem controls need an explicit style; ContextMenu's
         // ItemContainerStyle alone can be ignored for prebuilt MenuItem rows.
         // Keep captions white in normal, hover and keyboard-highlight states.
-        var popupBurgundy=(Brush)new BrushConverter().ConvertFrom("#AF5472")!;
-        var hoveredBurgundy=(Brush)new BrushConverter().ConvertFrom("#C47490")!;
-        var popupBorder=(Brush)new BrushConverter().ConvertFrom("#7D2A4C")!;
+        var popupBurgundy=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
+        var hoveredBurgundy=(Brush)new BrushConverter().ConvertFrom("#F0E2CC")!;
+        var popupBorder=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
         var themeMenu=new ContextMenu
         {
             PlacementTarget=templateImage,Placement=PlacementMode.Bottom,
-            Background=popupBurgundy,Foreground=Brushes.White,
+            Background=popupBurgundy,Foreground=Brushes.Black,
             BorderBrush=popupBorder,BorderThickness=new Thickness(1),
             Padding=new Thickness(3)
         };
         var themeItemStyle=new Style(typeof(MenuItem));
-        themeItemStyle.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        themeItemStyle.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
         themeItemStyle.Setters.Add(new Setter(Control.BackgroundProperty,popupBurgundy));
         themeItemStyle.Setters.Add(new Setter(Control.FontWeightProperty,FontWeights.SemiBold));
         themeItemStyle.Setters.Add(new Setter(Control.FontFamilyProperty,new FontFamily("Arial")));
@@ -142,7 +142,7 @@ public partial class GeneratorView
         var label=new FrameworkElementFactory(typeof(ContentPresenter));
         label.SetValue(ContentPresenter.ContentSourceProperty,"Header");
         label.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
-        label.SetValue(TextElement.ForegroundProperty,Brushes.White);
+        label.SetValue(TextElement.ForegroundProperty,Brushes.Black);
         label.SetValue(TextElement.FontFamilyProperty,new FontFamily("Arial"));
         itemSurface.AppendChild(label);
         itemTemplate.VisualTree=itemSurface;
