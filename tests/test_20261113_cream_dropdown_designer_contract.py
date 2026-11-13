@@ -21,6 +21,10 @@ class CreamDropdownAndDesignerTests(unittest.TestCase):
         self.assertIn('<Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource MaroonLineBrush}"', theme)
         self.assertIn('<Setter Property="Background" Value="{StaticResource CreamPanelBrush}"/>', theme)
         self.assertIn('<Setter Property="Foreground" Value="#000000"/>', theme)
+        um = read(VIEWS / "UmUi.cs")
+        self.assertIn('Foreground=Brushes.Black', um)
+        self.assertIn('BorderBrush=FromTheme("MaroonLineBrush","#75203E")', um)
+        self.assertIn('Control.ForegroundProperty,Brushes.Black', um)
 
     def test_print_batch_dropdowns_follow_same_palette(self):
         style = read(VIEWS / "PrintingView.BurgundyDropdowns.cs")
