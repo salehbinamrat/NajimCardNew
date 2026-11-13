@@ -285,7 +285,7 @@ public partial class DashboardView : UserControl
 
             var profiles=await Task.Run(()=>state.Users
                 .Where(u=>!string.IsNullOrWhiteSpace(u.Profile))
-                .GroupBy(u=>u.Profile)
+                .GroupBy(u=>u.Profile,StringComparer.OrdinalIgnoreCase)
                 .Select(g=>new ProfileCount(g.Key,g.Count()))
                 .OrderByDescending(g=>g.Count).ThenBy(g=>g.Name,StringComparer.OrdinalIgnoreCase)
                 .ToArray());
@@ -467,7 +467,7 @@ public partial class DashboardView : UserControl
                     ValidPercent.Text=Pct(updated.Valid,updated.Total);
 
                     var ranked=updated.Users.Where(x=>!string.IsNullOrWhiteSpace(x.Profile))
-                        .GroupBy(x=>x.Profile)
+                        .GroupBy(x=>x.Profile,StringComparer.OrdinalIgnoreCase)
                         .Select(g=>new ProfileCount(g.Key,g.Count()))
                         .OrderByDescending(x=>x.Count)
                         .ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
@@ -552,7 +552,13 @@ public partial class DashboardView : UserControl
     private void RenderProfiles(IReadOnlyList<ProfileCount> profiles)
     {
         ProfileBars.Children.Clear();
+        // Display every genuine package, not just four popular names.
+        // Counts represent assigned UM users, never historical purchases.
+        // Compact dashboard remains fixed-size and has no scrolling.
+        // The complete dataset is available in AllPackages_Click.
         var groups = profiles.Take(4).ToList();
+        AllPackagesButton.IsEnabled=_lastLifecycle?.IsComplete==true&&
+            profiles.Count>0;
         if (groups.Count == 0)
         {
             ProfileBars.Children.Add(new TextBlock { Text = "لا توجد كروت على الراوتر", Foreground = new SolidColorBrush(Color.FromRgb(75,27,50)) });
@@ -565,6 +571,13 @@ public partial class DashboardView : UserControl
             new SolidColorBrush(Color.FromRgb(57,104,185)),
             new SolidColorBrush(Color.FromRgb(168,100,31))
         };
+        ProfileBars.Children.Add(new TextBlock
+        {
+            Text="أعلى 4 | المستخدمة / الإجمالي (كل الباقات في الزر)",
+            FontSize=10,Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,
+            TextWrapping=TextWrapping.Wrap,
+            Margin=new Thickness(1,0,1,6)
+        });
         int max = groups[0].Count;
         for (int i = 0; i < groups.Count; i++)
         {
@@ -572,17 +585,23 @@ public partial class DashboardView : UserControl
             var stack = new StackPanel { Margin = new Thickness(0, 3, 0, 11) };
             var label=new Grid{FlowDirection=FlowDirection.RightToLeft};
             label.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
-            label.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(90)});
+            label.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(115)});
             label.Children.Add(new TextBlock {
                 Text=groups[i].Name,FontSize=12,FontWeight=FontWeights.Bold,
                 Margin=new Thickness(4,0,10,0),
                 Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,TextTrimming=TextTrimming.CharacterEllipsis,
                 VerticalAlignment=VerticalAlignment.Center});
+            var used=_lastLifecycle?.Users.Count(x=>
+                x.Started && string.Equals(x.Profile,groups[i].Name,
+                    StringComparison.OrdinalIgnoreCase))??0;
             var count=new TextBlock{
-                Text=groups[i].Count.ToString("N0",CultureInfo.InvariantCulture),
-                FontSize=12,FontWeight=FontWeights.ExtraBold,
+                Text=used.ToString("N0",CultureInfo.InvariantCulture)+" / "+
+                     groups[i].Count.ToString("N0",CultureInfo.InvariantCulture),
+                FontSize=11,FontWeight=FontWeights.ExtraBold,
                 Foreground=barBrush,
-                TextAlignment=TextAlignment.Center
+                TextAlignment=TextAlignment.Center,
+                ToolTip="المستخدمة: كروت ثبت بدء استخدامها | الإجمالي: "+
+                    "كل الحسابات التي تحمل اسم هذه الباقة حاليا في الراوتر."
             };
             Grid.SetColumn(count,1);label.Children.Add(count);
             stack.Children.Add(label);

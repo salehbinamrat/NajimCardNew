@@ -29,6 +29,18 @@ public sealed class UserManagerAccountsScreen : UserControl
         public string Sessions=>UmUi.Number(Source.ActiveSessions);
     }
 
+    private sealed record CardSessionDisplay(UmSessionRow Source)
+    {
+        public string Started=>Source.StartedAt?.ToString(
+            "yyyy-MM-dd HH:mm:ss",CultureInfo.InvariantCulture)??Source.Started;
+        public string Duration=>Source.Uptime;
+        public string Status=>Source.Status;
+        public string Address=>Source.Address;
+        public string Download=>UmUi.Bytes(Source.DownloadBytes);
+        public string Upload=>UmUi.Bytes(Source.UploadBytes);
+        public string Total=>UmUi.Bytes(Source.TotalBytes);
+    }
+
     public UserManagerAccountsScreen(RouterGateway gateway,Action openLegacy)
     {
         var title=UmUi.Header("إدارة المستخدمين",
@@ -123,58 +135,157 @@ public sealed class UserManagerAccountsScreen : UserControl
             var window=new Window
             {
                 Title="معلومات الكرت — "+row.Name,
-                Width=660,Height=520,MinWidth=550,MinHeight=380,
+                Width=865,Height=665,MinWidth=720,MinHeight=540,
                 WindowStartupLocation=WindowStartupLocation.CenterOwner,
                 Owner=Window.GetWindow(this),
                 FlowDirection=FlowDirection.RightToLeft,
                 Background=UmUi.Light
             };
             var sessionDetails=UmUi.Label(
-                "اضغط «سجل الجلسات» لتحميل اتصالات هذا الكرت من الراوتر.",12);
-            var viewSessions=UmUi.Action("عرض سجل الجلسات",true,140);
+                "اضغط «عرض سجل الجلسات» لجلب سجلات هذا الكرت من RouterOS. "+
+                "لا تعني الجلسات التاريخية أن الكرت متصل حاليا.",12);
+            var sessionGrid=UmUi.Table(
+                ("بداية الاتصال","Started",156),
+                ("المدة","Duration",90),
+                ("الحالة","Status",86),
+                ("IP","Address",110),
+                ("التنزيل","Download",100),
+                ("الرفع","Upload",100),
+                ("الإجمالي","Total",100));
+            sessionGrid.MinHeight=235;
+            sessionGrid.MaxHeight=270;
+            var viewSessions=UmUi.Action("عرض سجل الجلسات",true,145);
             var manage=UmUi.Action("خيارات الإدارة الأخرى",false,165);
-            var close=UmUi.Action("إغلاق");
+            var close=UmUi.Action("إغلاق",false,70);
+            var export=UmUi.Action("تصدير سجل CSV",false,125);
+            var stateFilter=UmUi.Combo(
+                new[]{"كل الحالات","نشطة","منتهية","غير معروف"},110);
+            var pageSize=UmUi.Combo(new[]{"20","50","100"},70);
+            var previousSessions=UmUi.Action("السابق",false,75);
+            var nextSessions=UmUi.Action("التالي",false,75);
+            var pageLabel=UmUi.Label("لم تُقرأ الجلسات بعد",12,true,UmUi.Blue);
+            UmSessionRow[] history=[];
+            UmSessionRow[] filtered=[];
+            int sessionPage=0;
+            bool sessionsLoaded=false;
+            void RenderHistory()
+            {
+                if(!sessionsLoaded)return;
+                var requested=stateFilter.SelectedItem?.ToString()??"كل الحالات";
+                filtered=history.Where(x=>requested=="كل الحالات" ||
+                    x.Status==requested).ToArray();
+                int size=int.TryParse(pageSize.SelectedItem?.ToString(),out var n)?n:20;
+                int pages=Math.Max(1,(filtered.Length+size-1)/size);
+                sessionPage=Math.Clamp(sessionPage,0,pages-1);
+                var shown=filtered.Skip(sessionPage*size).Take(size).ToArray();
+                sessionGrid.ItemsSource=shown.Select(x=>new CardSessionDisplay(x)).ToArray();
+                int verifiedActive=history.Count(x=>x.IsActive==true);
+                int verifiedEnded=history.Count(x=>x.IsActive==false);
+                int unknown=history.Length-verifiedActive-verifiedEnded;
+                sessionDetails.Text=$"عدد سجلات الكرت على الراوتر: {history.Length:N0} | "+
+                    $"نشطة مؤكدة: {verifiedActive:N0} | منتهية: {verifiedEnded:N0} | "+
+                    $"حالة غير معروفة: {unknown:N0}. "+
+                    "العدد يمثل سجلات User Manager التاريخية وليس عدد الأجهزة المتصلة حاليا.";
+                pageLabel.Text=$"المعروض الآن: {shown.Length:N0} من {filtered.Length:N0} "+
+                    $"بعد التصفية | صفحة {sessionPage+1:N0} من {pages:N0}";
+                previousSessions.IsEnabled=sessionPage>0;
+                nextSessions.IsEnabled=sessionPage+1<pages;
+                export.IsEnabled=filtered.Length>0;
+            }
             viewSessions.Click+=async(_,_)=>
             {
                 viewSessions.IsEnabled=false;
-                sessionDetails.Text="يجري قراءة السجلات من User Manager...";
+                sessionDetails.Text="يجري جلب سجلات User Manager والتحقق من المعرفات...";
                 try
                 {
                     var sessions=await gateway.ReadUmSessionsAsync();
                     if(!window.IsLoaded)return;
                     if(sessions.Generation!=version)
                     {
-                        sessionDetails.Text="تغير إصدار الراوتر؛ حدث الصفحة الرئيسية.";
+                        sessionsLoaded=false;
+                        sessionGrid.ItemsSource=null;
+                        sessionDetails.Text="تغير إصدار الراوتر؛ حدث صفحة المستخدمين قبل متابعة السجل.";
                         return;
                     }
-                    var history=sessions.Rows.Where(x=>x.Name==row.Name)
-                        .OrderByDescending(x=>x.StartedAt).ToArray();
-                    sessionDetails.Text=history.Length==0
-                        ?"لا توجد جلسات مثبتة لهذا الكرت في سجلات الراوتر."
-                        :$"عدد الجلسات: {history.Length:N0} | أحدث 20 جلسة:\n"+
-                          string.Join("\n",history.Take(20).Select(x=>
-                            $"{x.Started} | {x.Status} | {x.Address} | {UmUi.Bytes(x.TotalBytes)}"));
+                    // Do not conflate a user with similarly prefixed voucher
+                    // numbers. Exact case-insensitive account match only.
+                    history=sessions.Rows
+                        .Where(x=>string.Equals(x.Name,row.Name,
+                            StringComparison.OrdinalIgnoreCase))
+                        .OrderByDescending(x=>x.StartedAt??DateTime.MinValue)
+                        .ThenByDescending(x=>x.Id,StringComparer.Ordinal)
+                        .ToArray();
+                    sessionsLoaded=true;
+                    sessionPage=0;
+                    RenderHistory();
+                    if(history.Length==0)
+                        sessionDetails.Text="لا توجد جلسات مسجلة لهذا الكرت "+
+                            "في بيانات User Manager التي أعادها الراوتر.";
                 }
-                catch(Exception ex){sessionDetails.Text="تعذر قراءة الجلسات: "+ex.Message;}
+                catch(Exception ex)
+                {
+                    sessionsLoaded=false;
+                    history=[];filtered=[];
+                    sessionGrid.ItemsSource=null;
+                    export.IsEnabled=false;
+                    pageLabel.Text="لم يتم اعتماد عدد جلسات بسبب فشل القراءة.";
+                    sessionDetails.Text="تعذر قراءة سجل الجلسات؛ "+
+                        "لا يُعرض عدد صفري مضلل: "+ex.Message;
+                }
                 finally{viewSessions.IsEnabled=true;}
+            };
+            stateFilter.SelectionChanged+=(_,_)=>{sessionPage=0;RenderHistory();};
+            pageSize.SelectionChanged+=(_,_)=>{sessionPage=0;RenderHistory();};
+            previousSessions.Click+=(_,_)=>{sessionPage--;RenderHistory();};
+            nextSessions.Click+=(_,_)=>{sessionPage++;RenderHistory();};
+            export.Click+=(_,_) =>
+            {
+                if(!sessionsLoaded||filtered.Length==0)return;
+                var picker=new SaveFileDialog
+                {
+                    Filter="CSV (*.csv)|*.csv",DefaultExt=".csv",AddExtension=true,
+                    FileName="NajimCardNew-UM-Card-Sessions-"+
+                        DateTime.Now.ToString("yyyyMMdd-HHmmss")+".csv"
+                };
+                if(picker.ShowDialog(window)!=true)return;
+                try
+                {
+                    UmCsv.Export(picker.FileName,
+                        ["الكرت","بداية الاتصال","انتهاء الاتصال","المدة",
+                            "الحالة","IP","MAC","التنزيل","الرفع","الإجمالي"],
+                        filtered.Select(x=>(IReadOnlyList<string>)[
+                            row.Name,x.Started,x.Ended,x.Uptime,x.Status,x.Address,
+                            x.Mac,UmUi.Bytes(x.DownloadBytes),UmUi.Bytes(x.UploadBytes),
+                            UmUi.Bytes(x.TotalBytes)]));
+                    pageLabel.Text="تم تصدير "+filtered.Length+
+                        " جلسة مثبتة دون بيانات اعتماد.";
+                }
+                catch(Exception ex){pageLabel.Text="فشل تصدير الجلسات: "+ex.Message;}
             };
             manage.Click+=(_,_)=>{window.Close();openLegacy();};
             close.Click+=(_,_)=>window.Close();
             var content=UmUi.Stack(
-                UmUi.Header("معلومات الكرت","البيانات الفعلية من User Manager دون إظهار كلمات المرور."),
+                UmUi.Header("معلومات الكرت",
+                    "البيانات الفعلية من User Manager دون إظهار كلمات المرور."),
                 UmUi.Panel(UmUi.Stack(
                     UmUi.Label("اسم المستخدم: "+row.Name,14,true),
-                    UmUi.Label("الباقة: "+row.Profile,12),
-                    UmUi.Label("الحالة: "+row.Status,12),
-                    UmUi.Label("الحد الكلي: "+UmUi.Bytes(row.TransferLimit),12),
-                    UmUi.Label("المستهلك: "+UmUi.Bytes(row.UsedBytes),12),
-                    UmUi.Label("المتبقي: "+(row.Remaining=="غير متاح"?
-                        "غير متاح":UmUi.Bytes(long.TryParse(row.Remaining,out var left)?left:null)),12),
-                    UmUi.Label("انتهاء الباقة: "+row.EndTime,12),
-                    UmUi.Label("الجلسات النشطة المثبتة: "+UmUi.Number(row.ActiveSessions),12),
-                    UmUi.Label("آخر ظهور: "+row.LastSeen,12))),
+                    UmUi.Row(UmUi.Label("الباقة: "+row.Profile,12),
+                        UmUi.Label("الحالة: "+row.Status,12),
+                        UmUi.Label("الانتهاء: "+row.EndTime,12)),
+                    UmUi.Row(UmUi.Label("الحد: "+UmUi.Bytes(row.TransferLimit),12),
+                        UmUi.Label("المستهلك: "+UmUi.Bytes(row.UsedBytes),12),
+                        UmUi.Label("المتبقي: "+(row.Remaining=="غير متاح"?
+                            "غير متاح":UmUi.Bytes(
+                                long.TryParse(row.Remaining,out var left)?left:null)),12)),
+                    UmUi.Label("الجلسات النشطة حسب بيانات الحساب: "+
+                        UmUi.Number(row.ActiveSessions)+
+                        " | آخر ظهور: "+row.LastSeen,12))),
                 UmUi.Panel(UmUi.Stack(
-                    UmUi.Row(viewSessions,manage,close),sessionDetails)));
+                    UmUi.Row(viewSessions,manage,close),sessionDetails,
+                    UmUi.Row(UmUi.Label("تصفية الحالة",12),stateFilter,
+                        UmUi.Label("صفوف",12),pageSize,export),
+                    sessionGrid,
+                    UmUi.Row(previousSessions,nextSessions,pageLabel))));
             window.Content=UmUi.Scroller(content);
             window.ShowDialog();
         }
