@@ -58,13 +58,13 @@ public partial class GeneratorView
             var sample=new Button{Width=25,Height=25,Margin=new Thickness(2),
                 Background=(Brush)new BrushConverter().ConvertFrom(hex)!,
                 BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
-                BorderThickness=new Thickness(1),ToolTip=hex};
+                BorderThickness=new Thickness(1),ToolTip="لون"};
             sample.Click+=(_,_)=>{target.Text=hex;popup.IsOpen=false;};
             palette.Children.Add(sample);
         }
         popup.Child=new Border
         {
-            Background=Brushes.White,BorderBrush=(Brush)new BrushConverter().ConvertFrom("#74203D")!,
+            Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
             BorderThickness=new Thickness(2),Padding=new Thickness(5),
             Child=palette
         };
@@ -380,7 +380,7 @@ public partial class GeneratorView
                 var entry=new TextBox{
                     Text=value,FontFamily=new FontFamily("Arial"),
                     Foreground=Brushes.Black,
-                    Background=(Brush)new BrushConverter().ConvertFrom("#FFFAF0")!,
+                    Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,
                     BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
                     BorderThickness=new Thickness(1),
                     MinHeight=34,Margin=new Thickness(6,2,6,8)};
