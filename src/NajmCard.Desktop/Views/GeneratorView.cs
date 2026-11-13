@@ -95,6 +95,7 @@ public partial class GeneratorView : UserControl
     private readonly TextBox _designTextColor = PageUi.Input("#4C1730");
     private readonly TextBox _designBorderColor = PageUi.Input("#B89159");
     private readonly TextBox _designBorderWidth = PageUi.Input("1");
+    private readonly TextBox _designElementScale = PageUi.Input("1");
     private readonly ComboBox _designFontFamily = new()
     {
         ItemsSource = new[] {"Arial", "Tahoma", "Segoe UI", "Calibri"},
@@ -502,6 +503,7 @@ public partial class GeneratorView : UserControl
             ElementColor=_designElementColor.Text.Trim(),
             BorderColor=_designBorderColor.Text.Trim(),
             BorderWidth=Number(_designBorderWidth.Text),
+            ElementScale=Number(_designElementScale.Text),
             ShowPassword=_designShowPassword.IsChecked==true,
             ShowProfile=_designShowProfile.IsChecked==true,
             ShowCapacity=_designShowCapacity.IsChecked==true,

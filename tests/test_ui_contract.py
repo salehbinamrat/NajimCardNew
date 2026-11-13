@@ -64,6 +64,7 @@ class UiDesignContract(unittest.TestCase):
                     "GeneratorView.SaveToast.cs",
                     "GeneratorView.PackageSettings.cs"})
             if view=="PrintingView":
+                expected.add("PrintingView.BurgundyDropdowns.cs")
                 expected.add("PrintingView.PrintSelectors.cs")
                 expected.add("PrintingView.DraftDelivery.cs")
                 expected.add("PrintingView.BatchSnapshots.cs")

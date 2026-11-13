@@ -156,12 +156,12 @@ public sealed partial class RouterGateway
             "/tool/user-manager/profile/print",
             new Dictionary<string,string> { [".proplist"]=v7
                 ?".id,name,price,validity,starts-when"
-                :".id,name,price,validity,starts-at" },ct);
+                :".id,name,owner,price,validity,starts-at" },ct);
         var limitations=await client.CommandAsync(v7?"/user-manager/limitation/print":
             "/tool/user-manager/profile/limitation/print",
             new Dictionary<string,string> { [".proplist"]=v7
                 ?".id,name,transfer-limit,download-limit,upload-limit,uptime-limit,rate-limit-rx,rate-limit-tx"
-                :".id,name,transfer-limit,download-limit,upload-limit,uptime-limit,rate-limit-rx,rate-limit-tx" },ct);
+                :".id,name,owner,transfer-limit,download-limit,upload-limit,uptime-limit,rate-limit-rx,rate-limit-tx" },ct);
         var relations=await client.CommandAsync(v7?"/user-manager/profile-limitation/print":
             "/tool/user-manager/profile/profile-limitation/print",
             new Dictionary<string,string> { [".proplist"]="profile,limitation" },ct);
@@ -213,7 +213,8 @@ public sealed partial class RouterGateway
                 UmValue(row,".id"),"Profile",name,UmKnown(row,"price"),
                 UmKnown(row,"validity"),UmKnown(row,v7?"starts-when":"starts-at"),
                 "غير متاح","غير متاح","غير متاح","غير متاح",
-                "غير متاح","غير متاح",linked));
+                "غير متاح","غير متاح",linked)
+            { Owner=v7?"":UmValue(row,"owner") });
         }
         foreach(var row in limitations)
         {
@@ -224,7 +225,8 @@ public sealed partial class RouterGateway
                 UmKnown(row,"upload-limit"),UmKnown(row,"uptime-limit"),
                 UmKnown(row,"rate-limit-rx"),UmKnown(row,"rate-limit-tx"),
                 string.Join("، ",grouped.Where(x=>x.Value.Contains(UmValue(row,"name")))
-                    .Select(x=>x.Key).OrderBy(x=>x,StringComparer.OrdinalIgnoreCase))));
+                    .Select(x=>x.Key).OrderBy(x=>x,StringComparer.OrdinalIgnoreCase)))
+            { Owner=v7?"":UmValue(row,"owner") });
         }
         return new UmDataSnapshot<UmPlanRow>(version,rows)
         {

@@ -197,6 +197,11 @@ public partial class PrintingView : UserControl
         var ordering=new UniformGrid{Columns=selectedBatch is null?4:3,
             Margin=new Thickness(2,1,2,3)};
         var (batchSelector,selectedPrinter)=CreatePrintSelectors(store,selectedBatch);
+        // The currently selected batch and the surrounding print dropdowns
+        // share one scoped burgundy/white theme; preview and print values stay
+        // bound to their original ComboBox instances.
+        foreach(var choice in new[]{paper,orientation,order,batchSelector,selectedPrinter})
+            ApplyBurgundyDropdown(choice);
         Field(ordering,"الدفعة",batchSelector);
         Field(ordering,"الطابعة",selectedPrinter);
         Field(ordering,"ترتيب الكروت",order);
@@ -405,8 +410,8 @@ public partial class PrintingView : UserControl
                         {
                             Text=value,FontFamily=family,
                             Tag=credential?VoucherPdfExporter.CopyableCredentialTag:null,
-                            FontWeight=usernameCredential?FontWeights.ExtraBold:FontWeights.Bold,FontSize=size,
-                            Foreground=usernameCredential?numberInk:ink,TextAlignment=TextAlignment.Center,
+                            FontWeight=credential?FontWeights.ExtraBold:FontWeights.Bold,FontSize=size,
+                            Foreground=credential?numberInk:ink,TextAlignment=TextAlignment.Center,
                             FlowDirection=FlowDirection.LeftToRight,
                             TextTrimming=TextTrimming.CharacterEllipsis,
                             Background=Brushes.Transparent
@@ -422,33 +427,33 @@ public partial class PrintingView : UserControl
                     }
                     AddText(appearance.NetworkTitle,
                         appearance.TitlePosition??CardElementPanel.DefaultTitle,
-                        10*appearance.TitleScale,appearance.ShowTitle);
+                        10*appearance.TitleScale*appearance.ElementScale,appearance.ShowTitle);
                     AddText(card.Username,appearance.CredentialsPosition??
                         CardElementPanel.DefaultCredentials,appearance.UsernameFontSize,
                         credential:true,usernameCredential:true);
                     AddText(card.Password,appearance.PasswordPosition??
                         CardElementPanel.PasswordBelow(appearance.CredentialsPosition),
-                        10*appearance.PasswordScale,appearance.ShowPassword,credential:true);
+                        appearance.UsernameFontSize,appearance.ShowPassword,credential:true);
                     AddText(card.Profile+" · "+card.Service,appearance.ProfilePosition??
-                        CardElementPanel.DefaultProfile,9*appearance.ProfileScale,
+                        CardElementPanel.DefaultProfile,9*appearance.ProfileScale*appearance.ElementScale,
                         appearance.ShowProfile);
                     AddText(appearance.CapacityText,appearance.CapacityPosition??
-                        new CardElementPosition(0.96,0.24),9,
+                        new CardElementPosition(0.96,0.24),9*appearance.ElementScale,
                         appearance.ShowCapacity);
                     AddText(appearance.PhoneText,appearance.PhonePosition??
-                        new CardElementPosition(0.02,0.98),9,
+                        new CardElementPosition(0.02,0.98),9*appearance.ElementScale,
                         appearance.ShowPhone);
                     AddText(card.CreatedAt.ToString("HH:mm",CultureInfo.InvariantCulture),
                         appearance.TimePosition??new CardElementPosition(0.94,0.76),
-                        9,appearance.ShowTime);
+                        9*appearance.ElementScale,appearance.ShowTime);
                     AddText(card.CreatedAt.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture),
                         appearance.DatePosition??new CardElementPosition(0.98,0.98),
-                        9,appearance.ShowDate);
+                        9*appearance.ElementScale,appearance.ShowDate);
                     AddText((slot.VoucherIndex+1).ToString("D4",CultureInfo.InvariantCulture),
                         appearance.SequencePosition??new CardElementPosition(0.08,0.57),
-                        9,appearance.ShowSequence);
+                        9*appearance.ElementScale,appearance.ShowSequence);
                     AddText(card.Service,appearance.RoutePosition??
-                        new CardElementPosition(0.08,0.13),9,appearance.ShowRoute);
+                        new CardElementPosition(0.08,0.13),9*appearance.ElementScale,appearance.ShowRoute);
                     if(appearance.ShowQr)
                     {
                         var qr=new Image

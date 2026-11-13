@@ -21,7 +21,7 @@ public partial class DashboardView : UserControl
     private CancellationTokenSource? _refreshToken;
     private CancellationTokenSource? _initialLifecycleToken;
     private CancellationTokenSource? _lifecycleToken;
-    private readonly DispatcherTimer _telemetryTimer=new() {Interval=TimeSpan.FromSeconds(1)};
+    private readonly DispatcherTimer _telemetryTimer=new() {Interval=TimeSpan.FromSeconds(3)};
     private bool _initialSnapshotLoaded;
     private bool _refreshAfterUnloaded;
     private bool _initialLifecycleAttempted;
@@ -73,8 +73,9 @@ public partial class DashboardView : UserControl
     private void Reports_Click(object sender, RoutedEventArgs e) => _navigate("reports");
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
 
-    // RouterOS count-only connected clients and resource telemetry at a 1-second
-    // display cadence. Never run overlapping requests or download UM user lists.
+    // Refresh online telemetry every three seconds: one-second polling on a
+    // slow v6 API can starve profile retrieval during a full card inventory.
+    // Never overlap requests or download UM user lists here.
     private async Task RefreshLiveTelemetryAsync()
     {
         // Avoid RouterOS polling when the operator minimizes NajmCard.
@@ -212,7 +213,7 @@ public partial class DashboardView : UserControl
     }
 
     private async void Lifecycle_Click(object sender,RoutedEventArgs e)
-        => await RefreshLifecycleAsync();
+        => await RefreshLifecycleAsync(force:true);
 
     private async Task ScheduleInitialLifecycleAsync()
     {
@@ -225,7 +226,7 @@ public partial class DashboardView : UserControl
         _initialLifecycleToken=pending;
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(5),pending.Token);
+            await Task.Delay(TimeSpan.FromSeconds(1),pending.Token);
             if(IsLoaded && !pending.IsCancellationRequested)
             {
                 await RefreshLifecycleAsync();
@@ -244,7 +245,7 @@ public partial class DashboardView : UserControl
         }
     }
 
-    private async Task RefreshLifecycleAsync()
+    private async Task RefreshLifecycleAsync(bool force=false)
     {
         if(_lifecycleReading || !IsLoaded)return;
         _lifecycleReading=true;
@@ -254,7 +255,7 @@ public partial class DashboardView : UserControl
         _lifecycleToken=cts;
         try
         {
-            var state=await _gateway.ReadCachedUserManagerV6InventoryAsync(false,cts.Token);
+            var state=await _gateway.ReadCachedUserManagerV6InventoryAsync(force,cts.Token);
             if(!IsLoaded)return;
             if(!state.IsComplete)
             {
@@ -562,67 +563,69 @@ public partial class DashboardView : UserControl
             });
             return;
         }
-        // Rank actual started vouchers, NEVER accounting sessions or
-        // sales. Older dashboard code ranked by total assigned accounts.
-        var groups=profiles
-            .Select(p=>new
+
+        // One grouped pass, not four full-table scans on the WPF thread.
+        // "الجلسات" means current active-sessions reported on the account
+        // rows. If this field is missing for any card, display an em dash
+        // instead of fabricating zero or downloading the entire RADIUS log.
+        var groups=inventory.Users
+            .Where(u=>!string.IsNullOrWhiteSpace(u.Profile))
+            .GroupBy(u=>u.Profile,StringComparer.OrdinalIgnoreCase)
+            .Select(g=>new
             {
-                p.Name,p.Count,
-                Used=inventory.Users.Count(x=>x.Started &&
-                    string.Equals(x.Profile,p.Name,StringComparison.OrdinalIgnoreCase))
+                Name=g.Key,
+                Count=g.Count(),
+                Used=g.Count(u=>u.Started),
+                Sessions=g.All(u=>u.ActiveSessionsVerified)
+                    ?g.Sum(u=>(long)u.ActiveSessions).ToString("N0",CultureInfo.InvariantCulture)
+                    :"—"
             })
-            .OrderByDescending(x=>x.Used)
-            .ThenByDescending(x=>x.Count)
-            .ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(g=>g.Used)
+            .ThenByDescending(g=>g.Count)
+            .ThenBy(g=>g.Name,StringComparer.OrdinalIgnoreCase)
             .Take(4).ToArray();
         if(groups.Length==0)
         {
             ProfileBars.Children.Add(new TextBlock
             {
-                Text="لا توجد حسابات باقات مثبتة في الراوتر",
+                Text="لا توجد بيانات باقات مؤكدة",
                 Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,
                 TextWrapping=TextWrapping.Wrap
             });
             return;
         }
+
         var surfaces=new[]{"#E7F4F0","#FBE9EF","#E9EFFB","#FFF0DB"};
         var accents=new[]{"#116F62","#9E2B54","#2D5EA9","#9B611F"};
         for(var i=0;i<groups.Length;i++)
         {
             var p=groups[i];
+            var accent=(Brush)new BrushConverter().ConvertFrom(accents[i])!;
             var panel=new Border
             {
                 Background=(Brush)new BrushConverter().ConvertFrom(surfaces[i])!,
-                BorderBrush=(Brush)new BrushConverter().ConvertFrom(accents[i])!,
-                BorderThickness=new Thickness(1),
-                CornerRadius=new CornerRadius(9),
-                Margin=new Thickness(3,2,3,3),
+                BorderBrush=accent,BorderThickness=new Thickness(1),
+                CornerRadius=new CornerRadius(8),Margin=new Thickness(3,2,3,3),
                 Padding=new Thickness(7,5,7,5),
-                ToolTip=$"الباقة: {p.Name} | بدأت استخدامها: {p.Used:N0} كرت | "+
-                    $"إجمالي الحسابات المرتبطة: {p.Count:N0}. "+
-                    "هذه أعداد كروت، وليست عددا للجلسات."
+                ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0} "+
+                    $"| إجمالي الكروت: {p.Count:N0} | الجلسات الحالية: {p.Sessions}. "+
+                    "الجلسات التاريخية لا تجمع من هذا العداد."
             };
-            var content=new StackPanel();
-            content.Children.Add(new TextBlock
+            var content=new Grid{FlowDirection=FlowDirection.RightToLeft};
+            content.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
+            content.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
+            content.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
+            TextBlock Label(string label,Brush color)=>new()
             {
-                Text=p.Name,FontSize=12,FontWeight=FontWeights.Bold,
-                TextTrimming=TextTrimming.CharacterEllipsis,
-                Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,
-                FlowDirection=FlowDirection.RightToLeft
-            });
-            content.Children.Add(new TextBlock
-            {
-                Text=$"بدأ استخدامها: {p.Used:N0}",
-                FontSize=11,FontWeight=FontWeights.SemiBold,
-                Foreground=(Brush)new BrushConverter().ConvertFrom(accents[i])!,
-                Margin=new Thickness(0,5,0,1)
-            });
-            content.Children.Add(new TextBlock
-            {
-                Text=$"إجمالي الكروت: {p.Count:N0}",
-                FontSize=11,FontWeight=FontWeights.SemiBold,
-                Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!
-            });
+                Text=label,Foreground=color,FontFamily=new FontFamily("Arial"),
+                FontSize=11,FontWeight=FontWeights.Bold,Margin=new Thickness(2,1,2,1),
+                TextTrimming=TextTrimming.CharacterEllipsis
+            };
+            var package=Label("الباقة: "+p.Name,accent);
+            var cards=Label($"عدد الكروت: {p.Used:N0}",(Brush)new BrushConverter().ConvertFrom("#471A30")!);
+            var sessions=Label($"الجلسات: {p.Sessions}",accent);
+            Grid.SetRow(cards,1);Grid.SetRow(sessions,2);
+            content.Children.Add(package);content.Children.Add(cards);content.Children.Add(sessions);
             panel.Child=content;
             ProfileBars.Children.Add(panel);
         }

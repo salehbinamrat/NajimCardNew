@@ -37,7 +37,7 @@ public partial class GeneratorView
         // cache, while service/owner changes still load fresh definitions.
         if(!force && _lastCatalogService==service && _loadedProfilesReady &&
            _profile.SelectedIndex>=0 && _profile.Items.Count>0 &&
-           DateTimeOffset.UtcNow-_lastCatalogLoadedAt<TimeSpan.FromSeconds(12))
+           DateTimeOffset.UtcNow-_lastCatalogLoadedAt<TimeSpan.FromMinutes(2))
             return;
         var requestVersion=++_profileRequestVersion;
         _loadedProfilesReady=false;
@@ -82,7 +82,7 @@ public partial class GeneratorView
             }
             else if(service=="userman")
             {
-                umProfiles=await _gateway.ReadUserManagerV6ProfilesAsync();
+                umProfiles=await _gateway.ReadCachedCreatorProfilesAsync(force);
                 if(!IsCurrent())return;
                 names=umProfiles.Select(row=>row.Name).Where(name=>
                     !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -90,7 +90,7 @@ public partial class GeneratorView
                 // package definitions. Owners on the real profiles are usable.
                 try
                 {
-                    var rows=await _gateway.ReadUserManagerV6CustomersAsync();
+                    var rows=await _gateway.ReadCachedCreatorCustomersAsync(force);
                     customers=rows.Select(row=>row.Login)
                         .Concat(umProfiles.Select(row=>row.Owner))
                         .Where(name=>!string.IsNullOrWhiteSpace(name))

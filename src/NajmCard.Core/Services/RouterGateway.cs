@@ -466,23 +466,23 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         try
         {
             rows=await client.CommandAsync(path,
-                new Dictionary<string,string> { [".proplist"]=projection },ct);
+                new Dictionary<string,string> { [".proplist"]=projection },ct).ConfigureAwait(false);
         }
         catch(RouterOsTrapException ex) when (
             ex.Message.Contains("unknown parameter",StringComparison.OrdinalIgnoreCase)
             || ex.Message.Contains("invalid argument",StringComparison.OrdinalIgnoreCase)
             || ex.Message.Contains("no such argument",StringComparison.OrdinalIgnoreCase))
         {
-            rows=await client.CommandAsync(path,cancellationToken:ct);
+            rows=await client.CommandAsync(path,cancellationToken:ct).ConfigureAwait(false);
         }
 
         if(rows.Count>0&&!rows.Any(HasLifecycleFields))
-            rows=await client.CommandAsync(path,cancellationToken:ct);
+            rows=await client.CommandAsync(path,cancellationToken:ct).ConfigureAwait(false);
 
         var observed=rows.Any(HasLifecycleFields);
         IReadOnlyDictionary<string,long> limitMap=new Dictionary<string,long>();
         string warning="";
-        try { limitMap=await UserManagerV6ProfileTransferLimitsAsync(ct); }
+        try { limitMap=await UserManagerV6ProfileTransferLimitsAsync(ct).ConfigureAwait(false); }
         catch (RouterOsTrapException ex)
         {
             warning="تعذرت قراءة تعريفات حدود الباقات: "+ex.Message;
