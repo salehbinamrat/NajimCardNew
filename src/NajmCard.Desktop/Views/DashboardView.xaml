@@ -255,10 +255,10 @@
            <UniformGrid Columns="3" Rows="1" Margin="0,0,0,6">
               <Button Content="⏻ تعطيل الهوتسبوت" Click="DisableHotspot_Click"
                       Style="{StaticResource QuickButton}"
-                      Foreground="White" Background="#96243F" ToolTip="اختيار سيرفر محدد وتعطيله بعد تأكيد"/>
+                      Foreground="White" Background="#96243F" ToolTip="فتح صفحة سيرفرات Hotspot لتحديد سيرفر أو عدة سيرفرات وتعطيلها"/>
               <Button Content="✓ استعادة الهوتسبوت" Click="RestoreHotspot_Click"
                       Style="{StaticResource QuickButton}"
-                      Foreground="White" Background="#197A54" ToolTip="إعادة تفعيل سيرفر Hotspot معطل"/>
+                      Foreground="White" Background="#197A54" ToolTip="فتح صفحة سيرفرات Hotspot لتحديد السيرفرات وإعادة تفعيلها"/>
               <Button Content="↻ إعادة تشغيل الراوتر" Click="RebootRouter_Click"
                       Style="{StaticResource QuickButton}"
                       Foreground="White" Background="#A16618" ToolTip="تتطلب تأكيدين وتؤدي لانقطاع الخدمة"/>

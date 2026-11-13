@@ -28,6 +28,12 @@ class HadramoutManagementScreens(unittest.TestCase):
             self.assertIn(label,s)
         main=(ROOT/"src"/"NajmCard.Desktop"/"MainWindow.xaml.cs").read_text(encoding="utf-8")
         self.assertIn('"tools" => new NetworkMaintenanceView(',main)
+        # Maintenance and sidebar share the same exact-ID action surface.
+        self.assertIn('new ServersView(gateway,embedded:true)',s)
+        server=(V/"ServersView.cs").read_text(encoding="utf-8")
+        self.assertIn('ReadHotspotServerStatusAsync',server)
+        self.assertIn('ChangeHotspotServersStateAsync',server)
+        self.assertIn('grid.SelectionMode=DataGridSelectionMode.Extended',server)
 
     def test_activity_is_standalone_filtered_local_sqlite_log(self):
         s=(V/"ActivityView.cs").read_text(encoding="utf-8")
