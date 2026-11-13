@@ -565,9 +565,7 @@ public partial class DashboardView : UserControl
         }
 
         // One grouped pass, not four full-table scans on the WPF thread.
-        // "الجلسات" means current active-sessions reported on the account
-        // rows. If this field is missing for any card, display an em dash
-        // instead of fabricating zero or downloading the entire RADIUS log.
+        // Count only accounts whose User Manager lifecycle says they started.
         var groups=inventory.Users
             .Where(u=>!string.IsNullOrWhiteSpace(u.Profile))
             .GroupBy(u=>u.Profile,StringComparer.OrdinalIgnoreCase)
