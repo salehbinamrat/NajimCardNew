@@ -33,7 +33,7 @@ class CreatorCreamBurgundyTests(unittest.TestCase):
         workspace=source("VoucherWorkspaceView.cs")
         self.assertIn("#FFF4DF",preview)
         self.assertIn("#75203E",preview)
-        self.assertIn("#FFFAF0",workspace)
+        self.assertIn("#FFF4DF",workspace)
         self.assertIn("PaletteButton(",designer)
         self.assertIn("popup.IsOpen=!popup.IsOpen",designer)
         self.assertIn('ShapeCell("العرض (مم)"',designer)
