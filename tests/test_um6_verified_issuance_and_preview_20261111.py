@@ -39,11 +39,19 @@ class UserManagerDeliveryParity(unittest.TestCase):
         self.assertIn('card.DeliveryStatus=="SENT"',printer)
         self.assertIn('لا تُطبع الحالات CREATED/UNKNOWN/FAILED',printer)
 
-    def test_preview_and_presend_pdf_are_visibly_invalid_and_never_promoted(self):
+    def test_failed_batches_get_watermarked_pdf_but_success_renders_once(self):
         ui=(VIEWS/"VoucherWorkspaceView.cs").read_text(encoding="utf-8")
         printer=(VIEWS/"PrintingView.cs").read_text(encoding="utf-8")+(VIEWS/"PrintingView.BatchSnapshots.cs").read_text(encoding="utf-8")
         self.assertIn('printer.SaveDraftArchivePdfAsync(cards,appearance,options,savedBeforeSend)',ui)
         self.assertIn('await printer.SaveBatchArchivePdfAsync(confirmed,appearance,options,path)',ui)
+        self.assertLess(ui.index('var sent=await creator.CreateAndSendAsync('),ui.index('if(!sent)'))
+        self.assertLess(ui.index('if(!sent)'),ui.index('printer.SaveDraftArchivePdfAsync(cards,appearance,options,savedBeforeSend)'))
+        self.assertLess(ui.index('printer.SaveDraftArchivePdfAsync(cards,appearance,options,savedBeforeSend)'),ui.index('var confirmed=creator.ConfirmedBatch().ToArray();'))
+        # A successful issuance does not waste a complete preliminary PDF
+        # render; SQLite already has the cards and their print snapshot.
+        on_saved=ui[ui.index('saveBeforeSend:generated=>'):ui.index('if(!sent)')]
+        self.assertNotIn('SaveDraftArchivePdfAsync',on_saved)
+        self.assertIn('_store.SaveBatch(newCards,snapshot)',(VIEWS/"GeneratorView.cs").read_text(encoding="utf-8"))
         self.assertNotIn('File.Move(savedBeforeSend!',ui)
         self.assertIn('if(previewOnly)',printer)
         draft=(VIEWS/"PrintingView.DraftDelivery.cs").read_text(encoding="utf-8")

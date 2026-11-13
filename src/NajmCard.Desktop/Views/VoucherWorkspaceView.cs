@@ -251,8 +251,8 @@ public sealed class VoucherWorkspaceView : UserControl
         }
         async Task WithCardProgressAsync(string operation,Func<Action<string>,Task> work)
         {
-            // Measure actual stage durations, including two PDF renders, the
-            // RouterOS preflight and the durable per-card sending loop. No
+            // Measure actual stage durations. Successful archive sends render
+            // one verified PDF; failed sends may render one watermarked draft. No
             // estimated completion percentage or network credentials are logged.
             var popup=new VoucherOperationProgressWindow(operation);
             if(Window.GetWindow(this) is Window owner)popup.Owner=owner;
@@ -370,32 +370,55 @@ public sealed class VoucherWorkspaceView : UserControl
             var appearance=creator.ReadDraftPreviewAppearance();
             string? folder=null;
             string? savedBeforeSend=null;
+            Voucher[] cards=[];
             int archivedCount=0;
-            var sent=await creator.CreateAndSendAsync(saveBeforeSend:async cards=>
+            // PrepareBatchAsync has already persisted the whole CREATED batch,
+            // its appearance and print snapshot to SQLite before this callback.
+            // Do not rasterize a second, unconfirmed PDF before the router write:
+            // on the successful path it would immediately be discarded.
+            var sent=await creator.CreateAndSendAsync(saveBeforeSend:generated=>
             {
-                folder=VoucherBatchArchive.CreateDirectory(picker.FolderName,cards);
+                folder=VoucherBatchArchive.CreateDirectory(picker.FolderName,generated);
                 savedBeforeSend=Path.Combine(folder,"محفوظة-قبل-الإرسال-لا-تطبع.pdf");
-                report("حفظ ملف PDF الأولي للكروت قبل الإرسال...");
-                await printer.SaveDraftArchivePdfAsync(cards,appearance,options,savedBeforeSend);
-                archivedCount=cards.Count;
-                status.Text="حُفظت "+cards.Count+" كرتا قبل الإرسال في: "+folder;
+                cards=generated.ToArray();
+                archivedCount=cards.Length;
+                report("حفظ الدفعة وإعدادات الطباعة محليا قبل الإرسال...");
+                status.Text="حُفظت "+cards.Length+
+                    " كرتا في قاعدة البيانات قبل الإرسال. سجل الدفعات: "+folder;
+                return Task.CompletedTask;
             });
             if(!sent)
             {
-                status.Text=archivedCount>0
-                    ?"حُفظت الدفعة ولم يتأكد إرسالها: "+creator.LastOperationMessage+" | سجل الدفعات: "+folder
-                    :"تعذر إنشاء الدفعة: "+creator.LastOperationMessage;
+                // The durable SQLite batch still permits recovery if the app
+                // closes. Export an explicitly invalid draft ONLY on failure;
+                // never let an unconfirmed voucher look printable.
+                var outcome=creator.LastOperationMessage;
+                if(archivedCount>0 && savedBeforeSend is not null)
+                {
+                    try
+                    {
+                        report("حفظ PDF أولي غير مؤكد لدفعة لم يكتمل إرسالها...");
+                        await printer.SaveDraftArchivePdfAsync(cards,appearance,options,savedBeforeSend);
+                        status.Text="لم يتأكد إرسال جميع الكروت: "+outcome+
+                            " | المسودة غير صالحة للطباعة: "+savedBeforeSend+
+                            " | راجع سجل الدفعات قبل إعادة أي إرسال.";
+                    }
+                    catch(Exception ex)
+                    {
+                        status.Text="لم يتأكد إرسال الدفعة: "+outcome+
+                            " | تعذر حفظ مسودة PDF: "+ex.Message+
+                            " | البيانات باقية محليا في سجل الدفعات: "+folder;
+                    }
+                }
+                else status.Text="تعذر إنشاء الدفعة: "+outcome;
                 return;
             }
             var confirmed=creator.ConfirmedBatch().ToArray();
             var path=Path.Combine(folder!,"كروت-مؤكدة-"+confirmed.Length+".pdf");
-            // A pre-send PDF is visibly watermarked, never promoted as if
-            // those unverified cards had been activated. Render the final PDF
-            // solely from readback-confirmed vouchers, then remove the draft.
+            // A successful batch needs exactly one PDF render: only SENT
+            // vouchers reverified against the database can be printed.
             report("حفظ ملف PDF النهائي للكروت المؤكدة في الراوتر...");
             await printer.SaveBatchArchivePdfAsync(confirmed,appearance,options,path);
-            if(savedBeforeSend is not null && File.Exists(savedBeforeSend))
-                File.Delete(savedBeforeSend);
             status.Text="حُفظت الكروت وأُرسل "+confirmed.Length+" كرتا. ملف PDF: "+path;
             if(confirmed.Length<archivedCount) status.Text+=" | راجع بقية الكروت في «سجل الدفعات».";
             try {PrintingView.OpenPreviewPdf(path);}
