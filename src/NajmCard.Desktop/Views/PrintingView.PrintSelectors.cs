@@ -1,5 +1,7 @@
 using System.Printing;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using NajmCard.Core.Models;
 using NajmCard.Desktop.Services;
 
@@ -45,13 +47,63 @@ public partial class PrintingView
     private (ComboBox BatchSelector,ComboBox PrinterSelector) CreatePrintSelectors(
         VoucherStore store,Func<IReadOnlyList<Voucher>>? selectedBatch)
     {
-        var batchSelector=new ComboBox{MinWidth=0,ToolTip=
-            "الدفعة الحالية أو دفعة سابقة مؤكدة الإرسال، دون طباعة حالات فاشلة."};
-        _batchSelector=batchSelector;
-        batchSelector.Items.Add(new ComboBoxItem
+        // Scope the requested light-burgundy / white theme to the BATCH
+        // selector only. Printer, paper, orientation and other controls retain
+        // their saved settings and independent appearance.
+        var burgundy=(Brush)new BrushConverter().ConvertFrom("#B75D7D")!;
+        var hoverBurgundy=(Brush)new BrushConverter().ConvertFrom("#C87692")!;
+        var batchStyle=new Style(typeof(ComboBox),
+            (Style)Application.Current.FindResource("DarkComboBox"));
+        batchStyle.Setters.Add(new Setter(Control.BackgroundProperty,burgundy));
+        batchStyle.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        batchStyle.Setters.Add(new Setter(Control.BorderBrushProperty,
+            (Brush)new BrushConverter().ConvertFrom("#76223F")!));
+        var rowStyle=new Style(typeof(ComboBoxItem));
+        rowStyle.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        rowStyle.Setters.Add(new Setter(Control.BackgroundProperty,burgundy));
+        rowStyle.Setters.Add(new Setter(Control.FontFamilyProperty,new FontFamily("Arial")));
+        rowStyle.Setters.Add(new Setter(Control.FontWeightProperty,FontWeights.SemiBold));
+        rowStyle.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(10,7,10,7)));
+        var visual=new ControlTemplate(typeof(ComboBoxItem));
+        var surface=new FrameworkElementFactory(typeof(Border));
+        surface.Name="BatchOptionBackground";
+        surface.SetBinding(Border.BackgroundProperty,new System.Windows.Data.Binding(
+            nameof(ComboBoxItem.Background))
         {
-            Content=selectedBatch is null?"الدفعة الأخيرة":"الدفعة الحالية",Tag=null
+            RelativeSource=new System.Windows.Data.RelativeSource(
+                System.Windows.Data.RelativeSourceMode.TemplatedParent)
         });
+        var text=new FrameworkElementFactory(typeof(ContentPresenter));
+        text.SetValue(ContentPresenter.ContentSourceProperty,"Content");
+        text.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
+        text.SetValue(System.Windows.Documents.TextElement.ForegroundProperty,Brushes.White);
+        surface.SetBinding(Border.PaddingProperty,new System.Windows.Data.Binding(
+            nameof(ComboBoxItem.Padding))
+        {
+            RelativeSource=new System.Windows.Data.RelativeSource(
+                System.Windows.Data.RelativeSourceMode.TemplatedParent)
+        });
+        surface.AppendChild(text);
+        visual.VisualTree=surface;
+        var hovered=new Trigger{Property=ComboBoxItem.IsHighlightedProperty,Value=true};
+        hovered.Setters.Add(new Setter(Control.BackgroundProperty,hoverBurgundy));
+        visual.Triggers.Add(hovered);
+        var chosen=new Trigger{Property=ComboBoxItem.IsSelectedProperty,Value=true};
+        chosen.Setters.Add(new Setter(Control.BackgroundProperty,
+            (Brush)new BrushConverter().ConvertFrom("#8B3554")!));
+        visual.Triggers.Add(chosen);
+        rowStyle.Setters.Add(new Setter(Control.TemplateProperty,visual));
+        batchStyle.Setters.Add(new Setter(ItemsControl.ItemContainerStyleProperty,rowStyle));
+        var batchSelector=new ComboBox
+        {
+            MinWidth=0,Style=batchStyle,Foreground=Brushes.White,
+            ToolTip="الدفعة الحالية أو دفعة سابقة مؤكدة الإرسال، دون طباعة حالات فاشلة."
+        };
+        _batchSelector=batchSelector;
+        ComboBoxItem BatchChoice(string caption,PrintableBatchSummary? saved=null)=>
+            new(){Content=caption,Tag=saved,Style=rowStyle,Foreground=Brushes.White};
+        batchSelector.Items.Add(BatchChoice(
+            selectedBatch is null?"الدفعة الأخيرة":"الدفعة الحالية"));
         batchSelector.SelectedIndex=0;
         bool loadingBatches=false;
         batchSelector.DropDownOpened+=async (_,_) =>
@@ -64,16 +116,14 @@ public partial class PrintingView
                 var previous=(batchSelector.SelectedItem as ComboBoxItem)?.Tag
                     as PrintableBatchSummary;
                 batchSelector.Items.Clear();
-                batchSelector.Items.Add(new ComboBoxItem
-                {
-                    Content=selectedBatch is null?"الدفعة الأخيرة":"الدفعة الحالية",
-                    Tag=null
-                });
+                batchSelector.Items.Add(BatchChoice(
+                    selectedBatch is null?"الدفعة الأخيرة":"الدفعة الحالية"));
                 foreach(var info in history)
-                    batchSelector.Items.Add(new ComboBoxItem
-                    {
-                        Content=info.DisplayName,ToolTip=info.DisplayName,Tag=info
-                    });
+                {
+                    var option=BatchChoice(info.DisplayName,info);
+                    option.ToolTip=info.DisplayName;
+                    batchSelector.Items.Add(option);
+                }
                 var selected=batchSelector.Items.OfType<ComboBoxItem>().FirstOrDefault(x=>
                     x.Tag is PrintableBatchSummary item && previous is not null &&
                     item.BatchId==previous.BatchId && item.Service==previous.Service);
