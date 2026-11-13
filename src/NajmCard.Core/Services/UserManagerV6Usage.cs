@@ -93,10 +93,13 @@ public static class UserManagerV6Usage
         else if (!started && profile.Length>0) { status="valid";reason="لم يبدأ الاستخدام"; }
         else { status="unclassified";reason="لا يوجد دليل كافٍ على حالة الكرت"; }
         var rawSessions=Get(row,"active-sessions");
+        bool verifiedSessions=row.ContainsKey("active-sessions") &&
+            int.TryParse(rawSessions,NumberStyles.Integer,CultureInfo.InvariantCulture,out _)
+            && !rawSessions.TrimStart().StartsWith('-');
         int.TryParse(rawSessions,NumberStyles.Integer,CultureInfo.InvariantCulture,out int sessions);
         return new UserManagerV6Voucher(id,username,profile,status,reason,source,
             down,up,transfer,started,disabled,incomplete,
             Get(row,"uptime-used"),Get(row,"last-seen"),
-            Math.Clamp(sessions,0,1000000));
+            Math.Clamp(sessions,0,1000000),verifiedSessions);
     }
 }

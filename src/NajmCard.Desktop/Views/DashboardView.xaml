@@ -47,9 +47,10 @@
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Border Grid.Row="0" Tag="DashboardPanel" Style="{StaticResource WorkspaceTitleFrame}">
-      <Grid MinHeight="42">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+      <Grid MinHeight="42" FlowDirection="LeftToRight">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left"
+                    VerticalAlignment="Center" FlowDirection="LeftToRight">
           <Button x:Name="LifecycleButton" Content="◉ تحديث حالة الكروت"
                   Style="{StaticResource QuickButton}"
                   Padding="12,6" Margin="3,0" Background="#634A94" Foreground="White"
@@ -62,7 +63,9 @@
                        FontWeight="ExtraBold"/>
           </Border>
         </StackPanel>
-        <TextBlock Text="الرئيسية" Style="{StaticResource WorkspaceTitleText}"/>
+        <TextBlock Grid.Column="1" Text="الرئيسية" HorizontalAlignment="Right"
+                   FlowDirection="RightToLeft" TextAlignment="Right"
+                   Style="{StaticResource WorkspaceTitleText}"/>
       </Grid>
     </Border>
     <!-- Row 1: total, live connections and compact CPU/RAM, not duplicated lifecycle cards. -->

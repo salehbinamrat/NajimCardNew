@@ -73,9 +73,17 @@ public sealed class UserManagerPlansScreen : UserControl
         {
             var block=UmUi.Stack(UmUi.Label(label,12,true),control);
             block.Margin=new Thickness(4,3,4,3);
+            control.Width=double.NaN;
+            control.MinWidth=0;
+            control.HorizontalAlignment=HorizontalAlignment.Stretch;
+            control.VerticalAlignment=VerticalAlignment.Center;
             return block;
         }
-        var editorFields=new UniformGrid{Columns=4};
+        var editorFields=new UniformGrid
+        {
+            Columns=4,Rows=2,HorizontalAlignment=HorizontalAlignment.Stretch,
+            Margin=new Thickness(0,3,0,5)
+        };
         foreach(var cell in new FrameworkElement[]
         {
             Field("اسم الباقة أو القيد",name),Field("السعر",price),
