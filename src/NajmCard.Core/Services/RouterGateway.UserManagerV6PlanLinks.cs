@@ -78,6 +78,7 @@ public sealed partial class RouterGateway
                id[0]!='*'||id.Skip(1).Any(c=>!char.IsAsciiHexDigit(c)))
             {
                 InvalidateUmPlansCache();
+            InvalidateUserManagerV6LifecycleCache();
                 return new UmPlanMutationResult(false,true,
                     "الربط ربما تم دون معرف تأكيد. افحص الراوتر قبل التكرار.");
             }
@@ -90,10 +91,12 @@ public sealed partial class RouterGateway
         catch(Exception ex) when(ex is IOException or OperationCanceledException or ObjectDisposedException)
         {
             InvalidateUmPlansCache();
+            InvalidateUserManagerV6LifecycleCache();
             return new UmPlanMutationResult(false,true,
                 "نتيجة الربط غير مؤكدة بسبب انقطاع الاتصال.");
         }
         InvalidateUmPlansCache();
+            InvalidateUserManagerV6LifecycleCache();
         try
         {
             var after=await query.QueryByIdAsync(relationPath,id,

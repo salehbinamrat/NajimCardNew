@@ -14,12 +14,14 @@ public sealed partial class RouterGateway
     private readonly object _umPlansCacheLock=new();
     private UmDataSnapshot<UmPlanRow>? _umPlansCache;
     private DateTimeOffset _umPlansCachedAt;
+    private long _umPlansCacheEpoch;
     private static readonly TimeSpan UmPlansTtl=TimeSpan.FromSeconds(45);
 
     public void InvalidateUmPlansCache()
     {
         lock(_umPlansCacheLock)
         {
+            _umPlansCacheEpoch++;
             _umPlansCache=null;
             _umPlansCachedAt=DateTimeOffset.MinValue;
         }
@@ -41,11 +43,17 @@ public sealed partial class RouterGateway
         try
         {
             if(!force && CurrentPlansCache() is { } refreshed)return refreshed;
+            long epoch;
+            lock(_umPlansCacheLock)epoch=_umPlansCacheEpoch;
             var snapshot=await ReadUmPlansAsync(ct).ConfigureAwait(false);
             lock(_umPlansCacheLock)
             {
-                _umPlansCache=snapshot.IsComplete?snapshot:null;
-                _umPlansCachedAt=DateTimeOffset.UtcNow;
+                // Do not resurrect a stale in-flight read after a write.
+                if(epoch==_umPlansCacheEpoch)
+                {
+                    _umPlansCache=snapshot.IsComplete?snapshot:null;
+                    _umPlansCachedAt=DateTimeOffset.UtcNow;
+                }
             }
             return snapshot;
         }

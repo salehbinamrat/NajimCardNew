@@ -215,6 +215,21 @@ public sealed class UserManagerV6PlanMutationTests
     }
 
     [Fact]
+    public async Task LegacySetInvalidatesCachedDefinitionsBeforeNextRead()
+    {
+        var spy=new LegacySpy();
+        spy.SeedProfile();spy.SeedLimit();
+        var gateway=new RouterGateway(spy);
+        var original=await gateway.ReadCachedUmPlansAsync();
+        var chosen=original.Rows.Single(x=>x.Kind=="Profile");
+        var result=await gateway.ChangeUmPlanAsync("set",Profile(),chosen);
+        Assert.True(result.Success,result.Message);
+        var refreshed=await gateway.ReadCachedUmPlansAsync();
+        Assert.NotSame(original,refreshed);
+        Assert.Equal("logon",refreshed.Rows.Single(x=>x.Kind=="Profile").StartsWhen);
+    }
+
+    [Fact]
     public async Task PlanCacheReusesCompleteReadAndForceRefreshBypassesIt()
     {
         var spy=new LegacySpy();

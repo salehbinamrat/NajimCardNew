@@ -177,6 +177,7 @@ public sealed partial class RouterGateway
                 {
                     InvalidateCreatorCatalog();
                     InvalidateUmPlansCache();
+            InvalidateUserManagerV6LifecycleCache();
                     return new UmPlanMutationResult(false,true,
                         "قد تكون الإضافة تمت دون معرف مؤكد. افحص الراوتر ولا تكرر.");
                 }
@@ -192,12 +193,14 @@ public sealed partial class RouterGateway
         {
             InvalidateCreatorCatalog();
             InvalidateUmPlansCache();
+            InvalidateUserManagerV6LifecycleCache();
             return new UmPlanMutationResult(false,true,
                 "انقطع تأكيد العملية. تحقق من RouterOS قبل أي محاولة أخرى.");
         }
 
         InvalidateCreatorCatalog();
         InvalidateUmPlansCache();
+            InvalidateUserManagerV6LifecycleCache();
         try
         {
             var id=action=="add"?createdId!:selected!.Id;
