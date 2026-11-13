@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using NajmCard.Core.Services;
 
 namespace NajmCard.Desktop.Views;
 
@@ -9,8 +10,6 @@ namespace NajmCard.Desktop.Views;
 /// distribution. The fixed-size dashboard itself remains scroll-free.</summary>
 public partial class DashboardView
 {
-    private sealed record PackageUsageDisplay(string Name,int Used);
-
     private async void AllPackages_Click(object sender,RoutedEventArgs e)
     {
         // A first click must not silently do nothing while the expensive
@@ -33,13 +32,7 @@ public partial class DashboardView
         // Use only the confirmed, full v6 inventory for per-package counts.
         // Assigned users are not necessarily currently online, and Started
         // does not prove a recent purchase or accounting session.
-        var groups=inventory.Users
-            .Where(x=>!string.IsNullOrWhiteSpace(x.Profile))
-            .GroupBy(x=>x.Profile,StringComparer.OrdinalIgnoreCase)
-            .Select(g=>new PackageUsageDisplay(g.Key,g.Count(x=>x.Started)))
-            .OrderByDescending(x=>x.Used)
-            .ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var groups=UserManagerV6PackageUsage.CountUsed(inventory);
         var grid=UmUi.Table(
             ("الباقة","Name",360),
             ("عدد الكروت المستخدمة","Used",200));
