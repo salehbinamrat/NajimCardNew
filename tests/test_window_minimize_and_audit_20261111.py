@@ -56,7 +56,7 @@ class TaskbarAndAuditRegressions(unittest.TestCase):
         servers=source(VIEWS/"ServersView.cs")
         self.assertIn("if(busy||!IsLoaded)return;",sessions)
         self.assertIn("refresh.IsEnabled=false;",sessions)
-        self.assertIn("Loaded+=async(_,_ )=>",sessions.replace("Loaded+=async(_,_)=>","Loaded+=async(_,_ )=>"))
+        self.assertIn("Loaded+=async(_,_)=>",sessions)
         self.assertIn("if(busy)return;",servers)
         self.assertIn("busy=true;UpdateActions();",servers)
         self.assertIn("refresh.IsEnabled=!busy;",servers)
