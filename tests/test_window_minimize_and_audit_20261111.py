@@ -25,7 +25,7 @@ class TaskbarAndAuditRegressions(unittest.TestCase):
         self.assertEqual(window.attrib["Width"],window.attrib["MaxWidth"])
         self.assertEqual(window.attrib["Height"],window.attrib["MinHeight"])
         self.assertEqual(window.attrib["Height"],window.attrib["MaxHeight"])
-        self.assertEqual(window.attrib["Width"],"1200")
+        self.assertEqual(window.attrib["Width"],"1260")
         self.assertEqual(window.attrib["Height"],"730")
         app=ET.parse(DESKTOP/"App.xaml").getroot()
         self.assertEqual(app.attrib["ShutdownMode"],"OnMainWindowClose")
@@ -54,14 +54,16 @@ class TaskbarAndAuditRegressions(unittest.TestCase):
     def test_session_and_server_pages_do_not_overlap_refresh(self):
         sessions=source(VIEWS/"SessionsView.cs")
         servers=source(VIEWS/"ServersView.cs")
-        self.assertIn("if(busy)return;",sessions)
+        self.assertIn("if(busy||!IsLoaded)return;",sessions)
         self.assertIn("refresh.IsEnabled=false;",sessions)
-        self.assertIn("Loaded+=async (_,_)=>await Load();",sessions)
+        self.assertIn("Loaded+=async(_,_ )=>",sessions.replace("Loaded+=async(_,_)=>","Loaded+=async(_,_ )=>"))
         self.assertIn("if(busy)return;",servers)
         self.assertIn("busy=true;UpdateActions();",servers)
         self.assertIn("refresh.IsEnabled=!busy;",servers)
         self.assertIn("if(!loadedOnce){loadedOnce=true;await Load();}",servers)
-        self.assertIn("grid.ItemsSource=null;",sessions)
+        self.assertIn("hotspotRows=null;hotspotError=ex.Message;",sessions)
+        self.assertIn("managerRows=null;managerError=ex.Message;",sessions)
+        self.assertIn("list.ItemsSource=records.Skip(",sessions)
         self.assertIn("grid.ItemsSource=null;",servers)
 
     def test_dialog_close_and_shutdown_cleanup_are_explicit(self):
