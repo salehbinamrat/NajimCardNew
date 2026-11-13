@@ -5,6 +5,7 @@ using Microsoft.Win32;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using NajmCard.Core.Models;
 using NajmCard.Core.Services;
 using NajmCard.Desktop.Services;
 
