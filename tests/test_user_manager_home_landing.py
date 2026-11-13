@@ -71,9 +71,9 @@ class UserManagerHomeContract(unittest.TestCase):
     def test_visual_smoke_captures_actual_home_not_mockup(self):
         smoke=(ROOT/"tests/NajmCard.VisualSmoke/Program.cs").read_text(encoding="utf-8")
         ci=(ROOT/".github/workflows/windows-ci.yml").read_text(encoding="utf-8")
-        self.assertIn('user-manager-home-1200x730.png',smoke)
+        self.assertIn('user-manager-home-1260x730.png',smoke)
         self.assertIn('VerifyUserManagerHome',smoke)
-        self.assertIn('NajmCard-usermanager-home-1200x730',ci)
+        self.assertIn('NajmCard-usermanager-home-1260x730',ci)
 
 if __name__=="__main__":
     unittest.main()
