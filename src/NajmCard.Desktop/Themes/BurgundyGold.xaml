@@ -18,10 +18,10 @@
     <LinearGradientBrush x:Key="GoldGradient" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Color="#BE9048" Offset="0"/><GradientStop Color="#F0D493" Offset="0.48"/><GradientStop Color="#A97E3B" Offset="1"/>
     </LinearGradientBrush>
-    <Style TargetType="Window"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/><Setter Property="Background" Value="{StaticResource CanvasBrush}"/><Setter Property="FlowDirection" Value="RightToLeft"/></Style>
-    <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/></Style>
+    <Style TargetType="Window"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="#000000"/><Setter Property="Background" Value="{StaticResource CanvasBrush}"/><Setter Property="FlowDirection" Value="RightToLeft"/></Style>
+    <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="#000000"/></Style>
     <Style TargetType="Label"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/><Setter Property="Margin" Value="0,2,0,6"/></Style>
-    <Style TargetType="TextBox"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource CreamTextBrush}"/><Setter Property="Background" Value="#FFFAF0"/><Setter Property="CaretBrush" Value="{StaticResource GoldBrush}"/><Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="10,8"/><Setter Property="MinHeight" Value="36"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="14"/></Style>
+    <Style TargetType="TextBox"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource CreamTextBrush}"/><Setter Property="Background" Value="#FFFAF0"/><Setter Property="CaretBrush" Value="{StaticResource GoldBrush}"/><Setter Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="10,8"/><Setter Property="MinHeight" Value="36"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="14"/></Style>
     <Style TargetType="PasswordBox"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/><Setter Property="Background" Value="#270D1D"/><Setter Property="CaretBrush" Value="{StaticResource GoldBrush}"/><Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/><Setter Property="Padding" Value="10,8"/><Setter Property="MinHeight" Value="42"/><Setter Property="FontSize" Value="14"/></Style>
     <Style TargetType="CheckBox">
         <Setter Property="FontFamily" Value="Arial"/>
@@ -92,7 +92,7 @@
     <Style x:Key="DarkComboBox" TargetType="ComboBox">
         <Setter Property="FontFamily" Value="Arial"/>
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-        <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}"/>
+        <Setter Property="Background" Value="{StaticResource CreamPanelBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="MinHeight" Value="42"/>
@@ -112,7 +112,7 @@
                                 <ControlTemplate TargetType="ToggleButton">
                                     <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                                             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
-                                        <Path Data="M 0,0 L 4,4 L 8,0" Stroke="{StaticResource GoldBrightBrush}"
+                                        <Path Data="M 0,0 L 4,4 L 8,0" Stroke="{StaticResource MaroonLineBrush}"
                                               StrokeThickness="1.5" HorizontalAlignment="Right" VerticalAlignment="Center"
                                               Margin="0,0,9,0"/>
                                     </Border>
@@ -134,7 +134,7 @@
                         <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"
                                PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                                IsOpen="{TemplateBinding IsDropDownOpen}" Focusable="False">
-                            <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource GoldBrush}"
+                            <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource MaroonLineBrush}"
                                     BorderThickness="1" MinWidth="{TemplateBinding ActualWidth}"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -145,10 +145,10 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="DropDownToggle" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
+                            <Setter TargetName="DropDownToggle" Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                            <Setter TargetName="DropDownToggle" Property="BorderBrush" Value="{StaticResource GoldBrightBrush}"/>
+                            <Setter TargetName="DropDownToggle" Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="DropDownToggle" Property="Opacity" Value="0.6"/>
@@ -165,7 +165,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
-                    <Border x:Name="ItemSurface" Background="{StaticResource SurfaceBrush}" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="ItemSurface" Background="{StaticResource CreamPanelBrush}" Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center"
                                           TextElement.Foreground="{TemplateBinding Foreground}"
                                           RecognizesAccessKey="True">
@@ -181,11 +181,11 @@
                         <!-- Selected/hovered options must use a light surface AND
                              dark text; unselected dark surface uses cream text. -->
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="ItemSurface" Property="Background" Value="#F5DDAA"/>
-                            <Setter Property="Foreground" Value="#471A30"/>
+                            <Setter TargetName="ItemSurface" Property="Background" Value="#F0E2CC"/>
+                            <Setter Property="Foreground" Value="#000000"/>
                         </Trigger>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="ItemSurface" Property="Background" Value="#EAC67F"/>
+                            <Setter TargetName="ItemSurface" Property="Background" Value="#E8D2B5"/>
                             <Setter Property="Foreground" Value="#471A30"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
