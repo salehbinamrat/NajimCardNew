@@ -4,10 +4,11 @@ using NajmCard.Core.Models;
 namespace NajmCard.Core.Services;
 
 /// <summary>
-/// Opt-in RouterOS 7 profile/limitation CRUD. Every edit is scoped to an
+/// Verified profile/limitation CRUD, with a separate owner-scoped v6 path.
+/// Every edit is scoped to an
 /// exact ID, uses pre/post readback, never retries ambiguous writes and
 /// blocks removal of profiles/limits referenced by an assignment.
-/// Legacy v6 mutations need separate owner-specific verification and remain closed.
+/// Legacy v6 writes require an explicitly supplied owner and separate readback.
 /// </summary>
 public sealed partial class RouterGateway
 {
@@ -71,10 +72,8 @@ public sealed partial class RouterGateway
     {
         ValidateUmDraft(draft,action);
         var generation=await ReadRouterOsGenerationAsync(ct);
-        if(generation!=RouterOsGeneration.V7)
-            throw new NotSupportedException(
-                "عمليات تعديل الباقات والقيود عبر هذه الواجهة تتطلب RouterOS 7. "+
-                "تعريفات v6 مرتبطة بمالك User Manager وتحتاج فحصا خاصا.");
+        if(generation==RouterOsGeneration.V6)
+            return await ChangeUmPlanV6Async(action,draft,selected,ct);
         if(client is not IRouterQueryClient exact)
             throw new NotSupportedException(
                 "الاتصال لا يدعم قراءة السجل بالمعرف والتحقق قبل التعديل.");

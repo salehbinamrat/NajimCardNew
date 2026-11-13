@@ -34,7 +34,7 @@ class UserManagerSixScreensContract(unittest.TestCase):
     def test_real_users_packages_sessions_and_advanced_search(self):
         for file,read,refresh in (
             ("UserManagerAccountsScreen.cs","ReadUmAccountsAsync","Draw()"),
-            ("UserManagerPlansScreen.cs","ReadUmPlansAsync","Draw()"),
+            ("UserManagerPlansScreen.cs","ReadCachedUmPlansAsync","Draw()"),
             ("UserManagerSessionsScreen.cs","ReadUmSessionsAsync","Update()"),
             ("UserManagerSearchScreen.cs","ReadUmSessionsAsync","Draw()")):
             with self.subTest(file=file):
@@ -46,6 +46,10 @@ class UserManagerSixScreensContract(unittest.TestCase):
                 self.assertIn("Skip(page*",ui)
                 self.assertIn("Take(",ui)
         plans=(VIEWS/"UserManagerPlansScreen.cs").read_text(encoding="utf-8")
+        cache=(CORE/"RouterGateway.CachedUmPlans.cs").read_text(encoding="utf-8")
+        self.assertIn("await ReadUmPlansAsync(ct)",cache)
+        self.assertIn("CurrentPlansCache()",cache)
+        self.assertIn("ReadCachedUmPlansAsync(force,request.Token)",plans)
         for action in ("ChangeUmPlanAsync","LinkUmProfileLimitationAsync",
                        "Profiles (الباقات)","Limitations (القيود)"):
             self.assertIn(action,plans)

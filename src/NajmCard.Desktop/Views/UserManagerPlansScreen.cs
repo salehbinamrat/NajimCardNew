@@ -17,6 +17,7 @@ public sealed class UserManagerPlansScreen : UserControl
     private sealed record Display(UmPlanRow Source)
     {
         public string Name=>Source.Name;
+        public string Owner=>Source.Owner.Length==0?"—":Source.Owner;
         public string Status=>"من الراوتر";
         public string Price=>Source.Price;
         public string Duration=>Source.Validity;
@@ -38,7 +39,7 @@ public sealed class UserManagerPlansScreen : UserControl
         var copy=UmUi.Action("نسخ إلى نموذج");
         var refresh=UmUi.Action("تحديث",true);
         var search=UmUi.SearchBox("البحث في الباقات أو القيود");
-        var table=UmUi.Table(("الاسم","Name",145),("السرعة (RX/TX)","Speed",215),
+        var table=UmUi.Table(("الاسم","Name",145),("المالك","Owner",105),("السرعة (RX/TX)","Speed",215),
             ("السعة","Quota",110),("المدة","Duration",100),
             ("السعر","Price",82),("القيود المرتبطة","Limits",190));
         table.MinHeight=325;table.MaxHeight=425;
@@ -53,6 +54,7 @@ public sealed class UserManagerPlansScreen : UserControl
         );
 
         var name=UmUi.SearchBox("اسم Profile أو Limitation");name.Width=185;
+        var owner=UmUi.SearchBox("مالك User Manager v6 (owner)");owner.Width=185;
         var price=UmUi.SearchBox("السعر، مثال 250");price.Width=185;
         var duration=UmUi.SearchBox("مثال 30d");duration.Width=185;
         var starts=UmUi.Combo(new[]{"first-auth","assigned"},185);
@@ -91,8 +93,10 @@ public sealed class UserManagerPlansScreen : UserControl
             Field("الحجم (GiB)",quota),Field("سرعة الرفع RX",up),
             Field("سرعة التحميل TX",down),Field("حد الوقت",uptime)
         })editorFields.Children.Add(cell);
+        var ownerCell=Field("حساب مالك User Manager v6",owner);
+        ownerCell.Visibility=Visibility.Collapsed;
         var editor=UmUi.Stack(UmUi.Label("إضافة / تعديل",16,true),
-            editorFields,UmUi.Row(save,clear),new Separator(),
+            editorFields,ownerCell,UmUi.Row(save,clear),new Separator(),
             UmUi.Row(UmUi.Label("ربط قيد موجود",12,true),limitOptions,link),
             alert);
         var editorScroll=UmUi.Scroller(editor);
@@ -123,8 +127,13 @@ public sealed class UserManagerPlansScreen : UserControl
             bool isProfile=kind=="Profile";
             price.IsEnabled=duration.IsEnabled=starts.IsEnabled=isProfile;
             quota.IsEnabled=up.IsEnabled=down.IsEnabled=uptime.IsEnabled=!isProfile;
-            limitOptions.IsEnabled=link.IsEnabled=isProfile&&
-                snapshot?.Generation==RouterOsGeneration.V7&&!busy;
+            bool writable=(snapshot?.Generation is RouterOsGeneration.V6 or RouterOsGeneration.V7)
+                && snapshot.IsComplete && !busy;
+            ownerCell.Visibility=snapshot?.Generation==RouterOsGeneration.V6
+                ?Visibility.Visible:Visibility.Collapsed;
+            owner.IsEnabled=snapshot?.Generation==RouterOsGeneration.V6 &&
+                editing is null && !busy;
+            limitOptions.IsEnabled=link.IsEnabled=isProfile&&writable&&editing is not null;
             profilesTab.Background=isProfile?UmUi.Cyan:UmUi.Light;
             profilesTab.Foreground=isProfile?System.Windows.Media.Brushes.White:UmUi.Navy;
             limitsTab.Background=isProfile?UmUi.Light:UmUi.Cyan;
@@ -133,7 +142,7 @@ public sealed class UserManagerPlansScreen : UserControl
         void ResetForm()
         {
             editing=null;table.SelectedItem=null;
-            name.Clear();price.Text="0";duration.Text="30d";
+            name.Clear();owner.Clear();price.Text="0";duration.Text="30d";
             quota.Clear();up.Clear();down.Clear();uptime.Clear();
             starts.SelectedIndex=0;
             SetEditorKind();
@@ -167,12 +176,13 @@ public sealed class UserManagerPlansScreen : UserControl
             finally {suppressSelectionChanged=false;}
             pager.Text=$"إجمالي {kind}: {filtered.Length} | صفحة {page+1} من {pages}";
             prev.IsEnabled=page>0;next.IsEnabled=page+1<pages;
-            bool canWrite=snapshot?.Generation==RouterOsGeneration.V7&&!busy;
+            bool canWrite=(snapshot?.Generation is RouterOsGeneration.V6 or RouterOsGeneration.V7)
+                && snapshot.IsComplete && !busy;
             save.IsEnabled=add.IsEnabled=canWrite;
             remove.IsEnabled=copy.IsEnabled=canWrite&&Selected()!=null;
             SetEditorKind();
         }
-        async Task Load()
+        async Task Load(bool force=false)
         {
             if(busy||!IsLoaded)return;
             busy=true;refresh.IsEnabled=false;
@@ -180,7 +190,7 @@ public sealed class UserManagerPlansScreen : UserControl
             using var request=new CancellationTokenSource();pending=request;
             try
             {
-                var result=await gateway.ReadUmPlansAsync(request.Token);
+                var result=await gateway.ReadCachedUmPlansAsync(force,request.Token);
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 snapshot=result;editing=null;page=0;
                 limitOptions.Items.Clear();limitOptions.Items.Add("اختر قيدا");
@@ -192,7 +202,7 @@ public sealed class UserManagerPlansScreen : UserControl
                     result.Rows.Count(x=>x.Kind=="Profile")+
                     " | Limitations: "+result.Rows.Count(x=>x.Kind=="Limitation")+
                     (result.Generation==RouterOsGeneration.V6
-                        ?" | التعديل عبر هذه الواجهة مقيد حتى التحقق من مالك الباقات في v6."
+                        ?" | إدارة v6 تتطلب owner صحيحا وتأكيد المعرف قبل التعديل وبعده."
                         :" | إدارة v7 مع إعادة قراءة النتائج بعد كل أمر.")+
                     (result.IsComplete?"":" | قراءة روابط غير مكتملة: "+result.Diagnostic);
             }
@@ -215,11 +225,13 @@ public sealed class UserManagerPlansScreen : UserControl
                 :"";
             return new UmPlanDraft(kind,name.Text.Trim(),price.Text.Trim(),
                 duration.Text.Trim(),kind=="Profile"?starts.SelectedItem?.ToString()??"":"",
-                transfer,"","",""+uptime.Text.Trim(),up.Text.Trim(),down.Text.Trim());
+                transfer,"","",""+uptime.Text.Trim(),up.Text.Trim(),down.Text.Trim())
+            {Owner=owner.Text.Trim()};
         }
         async Task Mutate(string action)
         {
-            if(busy||snapshot?.Generation!=RouterOsGeneration.V7)return;
+            if(busy || snapshot?.IsComplete!=true ||
+               snapshot.Generation is not (RouterOsGeneration.V6 or RouterOsGeneration.V7))return;
             UmPlanDraft draft;
             try{draft=Draft();}
             catch(Exception ex){status.Text=ex.Message;return;}
@@ -227,7 +239,8 @@ public sealed class UserManagerPlansScreen : UserControl
             {status.Text="حدد باقة حقيقية من الجدول أولا.";return;}
             if(!PageUi.Confirm(
                 (action=="add"?"إنشاء":action=="set"?"تعديل":"حذف")+
-                " «"+(action=="remove"?editing?.Name:draft.Name)+"» على RouterOS 7؟ "+
+                " «"+(action=="remove"?editing?.Name:draft.Name)+
+                "» على RouterOS "+(int)snapshot.Generation+"؟ "+
                 "لن يُعاد الأمر تلقائيا إذا انقطع الاتصال."))return;
             busy=true;Draw();
             try
@@ -239,7 +252,7 @@ public sealed class UserManagerPlansScreen : UserControl
                 if(result.Success)
                 {
                     busy=false;
-                    await Load();
+                    await Load(force:true);
                     busy=true;
                 }
             }
@@ -253,7 +266,8 @@ public sealed class UserManagerPlansScreen : UserControl
 
         async Task Link()
         {
-            if(busy||snapshot?.Generation!=RouterOsGeneration.V7||
+            if(busy||snapshot?.IsComplete!=true ||
+               snapshot.Generation is not (RouterOsGeneration.V6 or RouterOsGeneration.V7) ||
                kind!="Profile"||Selected() is not UmPlanRow profile)return;
             var limit=limitOptions.SelectedItem?.ToString()??"";
             if(limit=="اختر قيدا")return;
@@ -263,13 +277,15 @@ public sealed class UserManagerPlansScreen : UserControl
             busy=true;Draw();
             try
             {
-                var result=await gateway.LinkUmProfileLimitationAsync(profile.Name,limit);
+                var result=snapshot.Generation==RouterOsGeneration.V6
+                    ?await gateway.LinkUmProfileLimitationV6Async(profile.Name,limit,profile.Owner)
+                    :await gateway.LinkUmProfileLimitationAsync(profile.Name,limit);
                 status.Text=result.Message;
                 snapshot=null;Draw();
                 if(result.Success)
                 {
                     busy=false;
-                    await Load();
+                    await Load(force:true);
                     busy=true;
                 }
             }
@@ -292,16 +308,23 @@ public sealed class UserManagerPlansScreen : UserControl
             }
             editing=row;
             name.Text=row.Name;
+            owner.Text=row.Owner;
             price.Text=row.Price=="غير متاح"?"":row.Price;
             duration.Text=row.Validity=="غير متاح"?"":row.Validity;
-            starts.SelectedItem=row.StartsWhen;
+            starts.SelectedItem=row.StartsWhen switch
+            {
+                "now"=>"assigned",
+                "logon"=>"first-auth",
+                _=>row.StartsWhen
+            };
             quota.Text=long.TryParse(row.TransferLimit,out var bytes)
                 ?UserManagerQuotaMath.ToEditorGiB(bytes):"";
             up.Text=row.DownloadRate=="غير متاح"?"":row.DownloadRate;
             down.Text=row.UploadRate=="غير متاح"?"":row.UploadRate;
             uptime.Text=row.UptimeLimit=="غير متاح"?"":row.UptimeLimit;
             remove.IsEnabled=copy.IsEnabled=
-                snapshot?.Generation==RouterOsGeneration.V7&&!busy;
+                (snapshot?.Generation is RouterOsGeneration.V6 or RouterOsGeneration.V7)
+                && snapshot.IsComplete && !busy;
         };
         profilesTab.Click+=(_,_)=>{kind="Profile";page=0;ResetForm();Draw();};
         limitsTab.Click+=(_,_)=>{kind="Limitation";page=0;ResetForm();Draw();};
@@ -311,7 +334,7 @@ public sealed class UserManagerPlansScreen : UserControl
         remove.Click+=async(_,_)=>await Mutate("remove");
         clear.Click+=(_,_)=>ResetForm();
         link.Click+=async(_,_)=>await Link();
-        refresh.Click+=async(_,_)=>await Load();
+        refresh.Click+=async(_,_)=>await Load(force:true);
         UmUi.Debounce(search,this,()=>{page=0;Draw();});
         size.SelectionChanged+=(_,_)=>{page=0;Draw();};
         prev.Click+=(_,_)=>{page--;Draw();};

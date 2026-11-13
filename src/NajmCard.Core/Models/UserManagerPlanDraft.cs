@@ -4,6 +4,10 @@ namespace NajmCard.Core.Models;
 public sealed record UmPlanDraft(
     string Kind,string Name,string Price,string Validity,string StartsWhen,
     string TransferLimit,string DownloadLimit,string UploadLimit,string UptimeLimit,
-    string RateRx,string RateTx="");
+    string RateRx,string RateTx="")
+{
+    // Required explicitly for legacy v6 writes; v7 does not use it.
+    public string Owner { get; init; }="";
+}
 
 public sealed record UmPlanMutationResult(bool Success,bool Uncertain,string Message);
