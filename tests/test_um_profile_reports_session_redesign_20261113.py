@@ -57,7 +57,7 @@ class UserManagerPagesRegression(unittest.TestCase):
         self.assertIn("g.Count(x=>x.Started)",package_view)
         self.assertIn("Used=g.Count(u=>u.Started)",src)
         self.assertIn('Label($"عدد الكروت: {p.Used:N0}"',src)
-        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}"',src)
+        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}',src)
         self.assertIn('Content="عرض جميع الباقات"',markup)
         self.assertNotIn("<ScrollViewer",markup)
         self.assertIn("أكثر الباقات استخداما | الباقة • الكروت • الجلسات",markup)

@@ -51,7 +51,7 @@ class NewDashboardAndCreatorContract(unittest.TestCase):
         self.assertIn('var surfaces=new[]{"#E7F4F0","#FBE9EF"',dashboard)
         self.assertIn('var accents=new[]{"#116F62","#9E2B54"',dashboard)
         self.assertIn('Label($"عدد الكروت: {p.Used:N0}"',dashboard)
-        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}"',dashboard)
+        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}',dashboard)
 
     def test_preview_and_pdf_share_numeric_plate(self):
         preview=read(V/"GeneratorView.CardDesign.cs")

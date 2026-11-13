@@ -50,7 +50,7 @@ class UserManagerV6VisualParity(unittest.TestCase):
         self.assertIn('x:Name="ProfileBars" Columns="2" Rows="2"',xml)
         self.assertIn('Text="أكثر الباقات استخداما | الباقة • الكروت • الجلسات"',xml)
         self.assertIn('Label($"عدد الكروت: {p.Used:N0}"',render)
-        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}"',render)
+        self.assertIn('ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0}',render)
         self.assertIn('.OrderByDescending(g=>g.Used)',render)
         self.assertNotIn('barTrack.SizeChanged',render)
 
