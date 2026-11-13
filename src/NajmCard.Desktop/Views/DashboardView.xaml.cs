@@ -574,14 +574,9 @@ public partial class DashboardView : UserControl
             .Select(g=>new
             {
                 Name=g.Key,
-                Count=g.Count(),
-                Used=g.Count(u=>u.Started),
-                Sessions=g.All(u=>u.ActiveSessionsVerified)
-                    ?g.Sum(u=>(long)u.ActiveSessions).ToString("N0",CultureInfo.InvariantCulture)
-                    :"—"
+                Used=g.Count(u=>u.Started)
             })
             .OrderByDescending(g=>g.Used)
-            .ThenByDescending(g=>g.Count)
             .ThenBy(g=>g.Name,StringComparer.OrdinalIgnoreCase)
             .Take(4).ToArray();
         if(groups.Length==0)
@@ -607,12 +602,9 @@ public partial class DashboardView : UserControl
                 BorderBrush=accent,BorderThickness=new Thickness(1),
                 CornerRadius=new CornerRadius(8),Margin=new Thickness(3,2,3,3),
                 Padding=new Thickness(7,5,7,5),
-                ToolTip=$"الباقة: {p.Name} | الكروت التي بدأت استخدامها: {p.Used:N0} "+
-                    $"| إجمالي الكروت: {p.Count:N0} | الجلسات الحالية: {p.Sessions}. "+
-                    "الجلسات التاريخية لا تجمع من هذا العداد."
+                ToolTip=$"الباقة: {p.Name} | عدد الكروت المستخدمة: {p.Used:N0}"
             };
             var content=new Grid{FlowDirection=FlowDirection.RightToLeft};
-            content.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
             content.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
             content.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
             TextBlock Label(string label,Brush color)=>new()
@@ -622,10 +614,9 @@ public partial class DashboardView : UserControl
                 TextTrimming=TextTrimming.CharacterEllipsis
             };
             var package=Label("الباقة: "+p.Name,accent);
-            var cards=Label($"عدد الكروت: {p.Used:N0}",(Brush)new BrushConverter().ConvertFrom("#471A30")!);
-            var sessions=Label($"الجلسات: {p.Sessions}",accent);
-            Grid.SetRow(cards,1);Grid.SetRow(sessions,2);
-            content.Children.Add(package);content.Children.Add(cards);content.Children.Add(sessions);
+            var cards=Label($"عدد الكروت المستخدمة: {p.Used:N0}",Brushes.Black);
+            Grid.SetRow(cards,1);
+            content.Children.Add(package);content.Children.Add(cards);
             panel.Child=content;
             ProfileBars.Children.Add(panel);
         }
