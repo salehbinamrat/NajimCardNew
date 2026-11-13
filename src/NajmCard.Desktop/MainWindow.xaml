@@ -278,11 +278,40 @@
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Bottom" Margin="10">
                         <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,5,0,14"/>
-                        <Border Background="#4B1730" BorderBrush="#BA6679" BorderThickness="1"
-                                CornerRadius="9" Padding="10,9" Margin="2,0,2,9">
-                            <TextBlock x:Name="SidebarLicense" Text="حالة الترخيص"
-                                       Foreground="#FFF5E5" FontFamily="Arial" FontWeight="ExtraBold"
-                                       FontSize="13" TextAlignment="Center" TextWrapping="Wrap"/>
+                        <Border BorderBrush="#F6DFAC" BorderThickness="1.2"
+                                CornerRadius="10" Padding="9,10" Margin="2,0,2,9"
+                                ToolTip="حالة التجربة المجانية أو الترخيص المدفوع">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#F9E5AE" Offset="0"/>
+                                    <GradientStop Color="#E7C071" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="25"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Background="#FFF1CE"
+                                        BorderBrush="#C59446" BorderThickness="1"
+                                        Width="25" Height="28" CornerRadius="7"
+                                        VerticalAlignment="Center">
+                                    <Path x:Name="SidebarLicenseIcon"
+                                          Data="M4,2 L20,2 M4,22 L20,22 M6,3 L6,7 L12,12 L6,17 L6,21 M18,3 L18,7 L12,12 L18,17 L18,21"
+                                          Stroke="#591C39" StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" Stretch="Uniform"
+                                          Width="19" Height="21"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          ToolTip="عداد التجربة المجانية"/>
+                                </Border>
+                                <TextBlock Grid.Column="1" x:Name="SidebarLicense"
+                                           Text="حالة الترخيص" Margin="5,0,0,0"
+                                           Foreground="#591C39" FontFamily="Arial"
+                                           FontWeight="ExtraBold" FontSize="12"
+                                           TextAlignment="Center" TextWrapping="Wrap"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <Button Content="تسجيل الخروج" Background="#790D20" Foreground="White"
                                 Height="46" Style="{StaticResource OutlineButton}" Click="Logout_Click"/>

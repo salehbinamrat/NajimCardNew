@@ -148,26 +148,46 @@ internal static class UmUi
 
     internal static DatePicker DateInput(string hint,int width=125)
     {
-        // An inherited burgundy CalendarDayButton style can leave the text
-        // invisible inside the pale calendar popup. Scope a contrasting
-        // readable calendar palette to User Manager date filters only.
+        // The editable date field stays cream with dark text. Its popup uses
+        // a scoped LIGHT burgundy / WHITE palette, including month-year buttons.
+        // Calendar's explicit child-style properties are reliable even if the
+        // default Windows theme supplies its own CalendarItem template.
+        var lightBurgundy=Solid("#AF5472");
+        var highlightedBurgundy=Solid("#C47490");
+        var selectedBurgundy=Solid("#7D2A4C");
+        var popupBorder=Solid("#823452");
         var days=new Style(typeof(CalendarDayButton));
-        days.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
-        days.Setters.Add(new Setter(Control.BackgroundProperty,Light));
-        days.Setters.Add(new Setter(Control.BorderBrushProperty,Gray));
+        days.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        days.Setters.Add(new Setter(Control.BackgroundProperty,lightBurgundy));
+        days.Setters.Add(new Setter(Control.BorderBrushProperty,popupBorder));
         days.Setters.Add(new Setter(Control.FontFamilyProperty,new FontFamily("Arial")));
+        days.Setters.Add(new Setter(Control.FontWeightProperty,FontWeights.SemiBold));
         var selectedDay=new Trigger
         {
             Property=CalendarDayButton.IsSelectedProperty,Value=true
         };
         selectedDay.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
-        selectedDay.Setters.Add(new Setter(Control.BackgroundProperty,Blue));
+        selectedDay.Setters.Add(new Setter(Control.BackgroundProperty,selectedBurgundy));
         days.Triggers.Add(selectedDay);
+        var hoveredDay=new Trigger{Property=UIElement.IsMouseOverProperty,Value=true};
+        hoveredDay.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        hoveredDay.Setters.Add(new Setter(Control.BackgroundProperty,highlightedBurgundy));
+        days.Triggers.Add(hoveredDay);
+        var monthButtons=new Style(typeof(CalendarButton));
+        monthButtons.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        monthButtons.Setters.Add(new Setter(Control.BackgroundProperty,lightBurgundy));
+        monthButtons.Setters.Add(new Setter(Control.FontFamilyProperty,new FontFamily("Arial")));
+        var calendarItem=new Style(typeof(CalendarItem));
+        calendarItem.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        calendarItem.Setters.Add(new Setter(Control.BackgroundProperty,lightBurgundy));
+        calendarItem.Setters.Add(new Setter(Control.BorderBrushProperty,popupBorder));
         var calendar=new Style(typeof(Calendar));
-        calendar.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
-        calendar.Setters.Add(new Setter(Control.BackgroundProperty,Light));
-        calendar.Setters.Add(new Setter(Control.BorderBrushProperty,Gray));
-        calendar.Resources.Add(typeof(CalendarDayButton),days);
+        calendar.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        calendar.Setters.Add(new Setter(Control.BackgroundProperty,lightBurgundy));
+        calendar.Setters.Add(new Setter(Control.BorderBrushProperty,popupBorder));
+        calendar.Setters.Add(new Setter(Calendar.CalendarDayButtonStyleProperty,days));
+        calendar.Setters.Add(new Setter(Calendar.CalendarButtonStyleProperty,monthButtons));
+        calendar.Setters.Add(new Setter(Calendar.CalendarItemStyleProperty,calendarItem));
         return new DatePicker
         {
             Width=width,Height=35,Margin=new Thickness(4),
