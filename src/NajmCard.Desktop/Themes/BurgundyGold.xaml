@@ -18,10 +18,10 @@
     <LinearGradientBrush x:Key="GoldGradient" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Color="#BE9048" Offset="0"/><GradientStop Color="#F0D493" Offset="0.48"/><GradientStop Color="#A97E3B" Offset="1"/>
     </LinearGradientBrush>
-    <Style TargetType="Window"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="#000000"/><Setter Property="Background" Value="{StaticResource CanvasBrush}"/><Setter Property="FlowDirection" Value="RightToLeft"/></Style>
-    <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="#000000"/></Style>
+    <Style TargetType="Window"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/><Setter Property="Background" Value="{StaticResource CanvasBrush}"/><Setter Property="FlowDirection" Value="RightToLeft"/></Style>
+    <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/></Style>
     <Style TargetType="Label"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/><Setter Property="Margin" Value="0,2,0,6"/></Style>
-    <Style TargetType="TextBox"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource CreamTextBrush}"/><Setter Property="Background" Value="#FFFAF0"/><Setter Property="CaretBrush" Value="{StaticResource GoldBrush}"/><Setter Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="10,8"/><Setter Property="MinHeight" Value="36"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="14"/></Style>
+    <Style TargetType="TextBox"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource CreamTextBrush}"/><Setter Property="Background" Value="#FFFAF0"/><Setter Property="CaretBrush" Value="{StaticResource GoldBrush}"/><Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="10,8"/><Setter Property="MinHeight" Value="36"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="14"/></Style>
     <Style TargetType="PasswordBox"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/><Setter Property="Background" Value="#270D1D"/><Setter Property="CaretBrush" Value="{StaticResource GoldBrush}"/><Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/><Setter Property="Padding" Value="10,8"/><Setter Property="MinHeight" Value="42"/><Setter Property="FontSize" Value="14"/></Style>
     <Style TargetType="CheckBox">
         <Setter Property="FontFamily" Value="Arial"/>
@@ -91,9 +91,9 @@
     </Style>
     <Style x:Key="DarkComboBox" TargetType="ComboBox">
         <Setter Property="FontFamily" Value="Arial"/>
-        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="Foreground" Value="#000000"/>
         <Setter Property="Background" Value="{StaticResource CreamPanelBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="MinHeight" Value="42"/>
         <Setter Property="Padding" Value="7"/>
@@ -160,7 +160,7 @@
     </Style>
     <Style TargetType="ComboBox" BasedOn="{StaticResource DarkComboBox}"/>
     <Style TargetType="ComboBoxItem">
-        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="Foreground" Value="#000000"/>
         <Setter Property="Padding" Value="8,5"/>
         <Setter Property="Template">
             <Setter.Value>
