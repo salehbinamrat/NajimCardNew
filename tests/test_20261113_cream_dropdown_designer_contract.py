@@ -59,6 +59,11 @@ class CreamDropdownAndDesignerTests(unittest.TestCase):
         self.assertIn('var cards=Label($"عدد الكروت المستخدمة: {p.Used:N0}"', dashboard)
         self.assertNotIn('var sessions=Label(', dashboard)
         self.assertNotIn('الجلسات:', dashboard)
+        stats = read(VIEWS / "DashboardView.PackageStatistics.cs")
+        self.assertIn('("عدد الكروت المستخدمة","Used",200)', stats)
+        self.assertNotIn('"Total"', stats)
+        self.assertNotIn('"Sessions"', stats)
+        self.assertNotIn('x=>x.Total', stats)
 
 
 if __name__ == "__main__":
