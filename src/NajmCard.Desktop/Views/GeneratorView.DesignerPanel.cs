@@ -223,9 +223,9 @@ public partial class GeneratorView
 
         // Card size and styling are always visible directly beneath the preview.
         var shapeOptions=new Grid{Margin=new Thickness(0,2,0,3)};
-        foreach(var weight in new[]{0.90,0.90,0.75,0.85,1.55,0.85})
+        for(int i=0;i<6;i++)
             shapeOptions.ColumnDefinitions.Add(new ColumnDefinition
-            {Width=new GridLength(weight,GridUnitType.Star)});
+            {Width=new GridLength(1,GridUnitType.Star)});
         FrameworkElement ShapeOption(string label,FrameworkElement field)
         {
             var holder=PageUi.Column();
@@ -236,7 +236,8 @@ public partial class GeneratorView
                 FontSize=11,TextAlignment=TextAlignment.Center,
                 Foreground=(Brush)new BrushConverter().ConvertFrom("#48192A")!
             });
-            field.MinWidth=0;
+            field.MinWidth=0;field.Height=30;field.MinHeight=30;field.MaxHeight=30;
+            field.HorizontalAlignment=HorizontalAlignment.Stretch;
             holder.Children.Add(field);
             return holder;
         }
@@ -409,7 +410,7 @@ public partial class GeneratorView
                 entry.Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
                 entry.Foreground=Brushes.Black;
                 entry.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
-                entry.CaretBrush=Brushes.White;entry.Margin=new Thickness(2,2,2,8);
+                entry.CaretBrush=Brushes.Black;entry.Margin=new Thickness(2,2,2,8);
                 DockPanel.SetDock(arrow,Dock.Left);
                 holder.Children.Add(arrow);holder.Children.Add(entry);
                 section.Children.Add(holder);
