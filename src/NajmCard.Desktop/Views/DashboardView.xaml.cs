@@ -552,67 +552,80 @@ public partial class DashboardView : UserControl
     private void RenderProfiles(IReadOnlyList<ProfileCount> profiles)
     {
         ProfileBars.Children.Clear();
-        // Display every genuine package, not just four popular names.
-        // Counts represent assigned UM users, never historical purchases.
-        // Compact dashboard remains fixed-size and has no scrolling.
-        // The complete dataset is available in AllPackages_Click.
-        var groups = profiles.Take(4).ToList();
-        AllPackagesButton.IsEnabled=_lastLifecycle?.IsComplete==true&&
-            profiles.Count>0;
-        if (groups.Count == 0)
+        var inventory=_lastLifecycle;
+        AllPackagesButton.IsEnabled=inventory?.IsComplete==true&&profiles.Count>0;
+        if(inventory is null||!inventory.IsComplete)
         {
-            ProfileBars.Children.Add(new TextBlock { Text = "لا توجد كروت على الراوتر", Foreground = new SolidColorBrush(Color.FromRgb(75,27,50)) });
+            ProfileBars.Children.Add(new TextBlock
+            {
+                Text="القراءة غير مكتملة",Foreground=Brushes.DarkRed
+            });
             return;
         }
-        var palette=new Brush[]
+        // Rank actual started vouchers, NEVER accounting sessions or
+        // sales. Older dashboard code ranked by total assigned accounts.
+        var groups=profiles
+            .Select(p=>new
+            {
+                p.Name,p.Count,
+                Used=inventory.Users.Count(x=>x.Started &&
+                    string.Equals(x.Profile,p.Name,StringComparison.OrdinalIgnoreCase))
+            })
+            .OrderByDescending(x=>x.Used)
+            .ThenByDescending(x=>x.Count)
+            .ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
+            .Take(4).ToArray();
+        if(groups.Length==0)
         {
-            new SolidColorBrush(Color.FromRgb(31,126,102)),
-            new SolidColorBrush(Color.FromRgb(195,69,104)),
-            new SolidColorBrush(Color.FromRgb(57,104,185)),
-            new SolidColorBrush(Color.FromRgb(168,100,31))
-        };
-        ProfileBars.Children.Add(new TextBlock
+            ProfileBars.Children.Add(new TextBlock
+            {
+                Text="لا توجد حسابات باقات مثبتة في الراوتر",
+                Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,
+                TextWrapping=TextWrapping.Wrap
+            });
+            return;
+        }
+        var surfaces=new[]{"#E7F4F0","#FBE9EF","#E9EFFB","#FFF0DB"};
+        var accents=new[]{"#116F62","#9E2B54","#2D5EA9","#9B611F"};
+        for(var i=0;i<groups.Length;i++)
         {
-            Text="أعلى 4 | المستخدمة / الإجمالي (كل الباقات في الزر)",
-            FontSize=10,Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,
-            TextWrapping=TextWrapping.Wrap,
-            Margin=new Thickness(1,0,1,6)
-        });
-        int max = groups[0].Count;
-        for (int i = 0; i < groups.Count; i++)
-        {
-            var barBrush=palette[i%palette.Length];
-            var stack = new StackPanel { Margin = new Thickness(0, 3, 0, 11) };
-            var label=new Grid{FlowDirection=FlowDirection.RightToLeft};
-            label.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
-            label.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(115)});
-            label.Children.Add(new TextBlock {
-                Text=groups[i].Name,FontSize=12,FontWeight=FontWeights.Bold,
-                Margin=new Thickness(4,0,10,0),
-                Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,TextTrimming=TextTrimming.CharacterEllipsis,
-                VerticalAlignment=VerticalAlignment.Center});
-            var used=_lastLifecycle?.Users.Count(x=>
-                x.Started && string.Equals(x.Profile,groups[i].Name,
-                    StringComparison.OrdinalIgnoreCase))??0;
-            var count=new TextBlock{
-                Text=used.ToString("N0",CultureInfo.InvariantCulture)+" / "+
-                     groups[i].Count.ToString("N0",CultureInfo.InvariantCulture),
-                FontSize=11,FontWeight=FontWeights.ExtraBold,
-                Foreground=barBrush,
-                TextAlignment=TextAlignment.Center,
-                ToolTip="المستخدمة: كروت ثبت بدء استخدامها | الإجمالي: "+
-                    "كل الحسابات التي تحمل اسم هذه الباقة حاليا في الراوتر."
+            var p=groups[i];
+            var panel=new Border
+            {
+                Background=(Brush)new BrushConverter().ConvertFrom(surfaces[i])!,
+                BorderBrush=(Brush)new BrushConverter().ConvertFrom(accents[i])!,
+                BorderThickness=new Thickness(1),
+                CornerRadius=new CornerRadius(9),
+                Margin=new Thickness(3,2,3,3),
+                Padding=new Thickness(7,5,7,5),
+                ToolTip=$"الباقة: {p.Name} | بدأت استخدامها: {p.Used:N0} كرت | "+
+                    $"إجمالي الحسابات المرتبطة: {p.Count:N0}. "+
+                    "هذه أعداد كروت، وليست عددا للجلسات."
             };
-            Grid.SetColumn(count,1);label.Children.Add(count);
-            stack.Children.Add(label);
-            var barTrack = new Grid { Background = (Brush)new BrushConverter().ConvertFrom("#E8D4C6")!, Height = 8, Margin = new Thickness(0, 4, 0, 0) };
-            var bar = new Border { Background = barBrush,
-                CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Left };
-            barTrack.Children.Add(bar);
-            int value = groups[i].Count;
-            barTrack.SizeChanged += (_, _) => bar.Width = Math.Max(0, barTrack.ActualWidth * value / Math.Max(1, max));
-            stack.Children.Add(barTrack);
-            ProfileBars.Children.Add(stack);
+            var content=new StackPanel();
+            content.Children.Add(new TextBlock
+            {
+                Text=p.Name,FontSize=12,FontWeight=FontWeights.Bold,
+                TextTrimming=TextTrimming.CharacterEllipsis,
+                Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!,
+                FlowDirection=FlowDirection.RightToLeft
+            });
+            content.Children.Add(new TextBlock
+            {
+                Text=$"بدأ استخدامها: {p.Used:N0}",
+                FontSize=11,FontWeight=FontWeights.SemiBold,
+                Foreground=(Brush)new BrushConverter().ConvertFrom(accents[i])!,
+                Margin=new Thickness(0,5,0,1)
+            });
+            content.Children.Add(new TextBlock
+            {
+                Text=$"إجمالي الكروت: {p.Count:N0}",
+                FontSize=11,FontWeight=FontWeights.SemiBold,
+                Foreground=(Brush)new BrushConverter().ConvertFrom("#471A30")!
+            });
+            panel.Child=content;
+            ProfileBars.Children.Add(panel);
         }
     }
+
 }

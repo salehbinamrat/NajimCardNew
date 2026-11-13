@@ -66,18 +66,28 @@ public sealed class UserManagerPlansScreen : UserControl
         var alert=UmUi.Label("حدود البيانات تُدخل بالـ GiB وتحول إلى بايت؛ "+
             "السرعات من وجهة نظر MikroTik: RX رفع العميل، TX تنزيل العميل.",
             11,false,UmUi.Gray);
-        var editor=UmUi.Stack(UmUi.Label("إضافة / تعديل",17,true),new Separator(),
-            UmUi.Label("اسم الباقة أو القيد",12,true),name,
-            UmUi.Label("السعر",12),price,UmUi.Label("المدة",12),duration,
-            UmUi.Label("بدء الصلاحية",12),starts,
-            UmUi.Label("الحجم (GiB)",12),quota,
-            UmUi.Label("سرعة الرفع RX",12),up,
-            UmUi.Label("سرعة التحميل TX",12),down,
-            UmUi.Label("حد الوقت",12),uptime,
-            UmUi.Row(save,clear),new Separator(),
-            UmUi.Label("ربط قيد موجود",12,true),limitOptions,link,alert);
+        // Compact horizontal editor: four labeled fields per row rather than
+        // a tall, single-column input strip. Preserve existing bound controls.
+        FrameworkElement Field(string label,Control control)
+        {
+            var block=UmUi.Stack(UmUi.Label(label,12,true),control);
+            block.Margin=new Thickness(4,3,4,3);
+            return block;
+        }
+        var editorFields=new UniformGrid{Columns=4};
+        foreach(var cell in new FrameworkElement[]
+        {
+            Field("اسم الباقة أو القيد",name),Field("السعر",price),
+            Field("المدة",duration),Field("بدء الصلاحية",starts),
+            Field("الحجم (GiB)",quota),Field("سرعة الرفع RX",up),
+            Field("سرعة التحميل TX",down),Field("حد الوقت",uptime)
+        })editorFields.Children.Add(cell);
+        var editor=UmUi.Stack(UmUi.Label("إضافة / تعديل",16,true),
+            editorFields,UmUi.Row(save,clear),new Separator(),
+            UmUi.Row(UmUi.Label("ربط قيد موجود",12,true),limitOptions,link),
+            alert);
         var editorScroll=UmUi.Scroller(editor);
-        editorScroll.MaxHeight=300;
+        editorScroll.MaxHeight=320;
 
         // Use the full page width for the real profile/limitation inventory.
         // Editable fields belong BELOW the list instead of squeezing it

@@ -29,15 +29,15 @@ public partial class DashboardView
         var grid=UmUi.Table(
             ("اسم الباقة","Name",260),
             ("الكروت المستخدمة","Used",160),
-            ("إجمالي الكروت المرتبطة","Total",180));
+            ("إجمالي الكروت المرتبطة (ليس الجلسات)","Total",230));
         grid.ItemsSource=groups;
         grid.MinHeight=300;
         grid.MaxHeight=430;
         var summary=UmUi.Label(
             $"عدد الباقات: {groups.Length:N0} | "+
             $"الحسابات المصنفة ضمنها: {groups.Sum(x=>x.Total):N0} | "+
-            "المستخدمة تعني بدء استخدام الكرت حسب User Manager، "+
-            "وليس عدد الجلسات أو إيرادات المبيعات.",12);
+            "المستخدمة تعني كروتا بدأت استخدامها حسب User Manager، "+
+            "والإجمالي حسابات الباقة وليس عدد الجلسات أو إيرادات المبيعات.",12);
         summary.TextWrapping=TextWrapping.Wrap;
         var close=UmUi.Action("إغلاق",true,105);
         var dialog=new Window

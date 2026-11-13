@@ -360,40 +360,75 @@ public partial class GeneratorView
                 fields.Children.Add(section);
                 return entry;
             }
-            ComboBox Choices(string label,string current,string[] presets)
+            // Use a genuine editable TextBox alongside a burgundy popup.
+            // The inherited WPF ComboBox template has no PART_EditableTextBox.
+            TextBox Choices(string label,string current,string[] presets)
             {
-                var section=PageUi.Column();
-                section.Children.Add(new TextBlock
+                var entry=Editable(label,current);
+                var section=(Panel)fields.Children[fields.Children.Count-1];
+                section.Children.Remove(entry);
+                var holder=new DockPanel{LastChildFill=true};
+                var arrow=PageUi.Button("▾",false);
+                arrow.Width=32;arrow.MinWidth=32;arrow.MinHeight=34;
+                arrow.Margin=new Thickness(2,2,0,8);
+                var burgundy=(Brush)new BrushConverter().ConvertFrom("#AF5472")!;
+                arrow.Background=burgundy;arrow.Foreground=Brushes.White;
+                entry.Background=burgundy;entry.Foreground=Brushes.White;
+                entry.CaretBrush=Brushes.White;entry.Margin=new Thickness(2,2,2,8);
+                DockPanel.SetDock(arrow,Dock.Left);
+                holder.Children.Add(arrow);holder.Children.Add(entry);
+                section.Children.Add(holder);
+                var popupChoices=new Popup
                 {
-                    Text=label,Foreground=(Brush)new BrushConverter().ConvertFrom("#F8E6C7")!,
-                    FontFamily=new FontFamily("Arial"),FontWeight=FontWeights.Bold
-                });
-                var combo=new ComboBox
-                {
-                    IsEditable=true,ItemsSource=presets,Text=current,
-                    MinHeight=34,Margin=new Thickness(6,2,6,8),
-                    Foreground=(Brush)new BrushConverter().ConvertFrom("#48192A")!,
-                    Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!
+                    PlacementTarget=arrow,Placement=PlacementMode.Bottom,
+                    StaysOpen=false,AllowsTransparency=true
                 };
-                var itemStyle=new Style(typeof(ComboBoxItem));
-                itemStyle.Setters.Add(new Setter(Control.ForegroundProperty,
-                    (Brush)new BrushConverter().ConvertFrom("#48192A")!));
-                itemStyle.Setters.Add(new Setter(Control.BackgroundProperty,
-                    (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
-                combo.ItemContainerStyle=itemStyle;
-                section.Children.Add(combo);
-                fields.Children.Add(section);
-                return combo;
+                var list=new WrapPanel{MaxWidth=290};
+                foreach(var value in presets)
+                {
+                    var option=new Button
+                    {
+                        Content=value,MinWidth=63,MinHeight=31,
+                        Margin=new Thickness(2),Padding=new Thickness(6,3,6,3),
+                        FontFamily=new FontFamily("Arial"),FontSize=12,
+                        Foreground=Brushes.White,Background=burgundy,
+                        BorderBrush=(Brush)new BrushConverter().ConvertFrom("#E5A1B4")!,
+                        BorderThickness=new Thickness(1)
+                    };
+                    option.Click+=(_,_)=>{entry.Text=value;popupChoices.IsOpen=false;};
+                    list.Children.Add(option);
+                }
+                popupChoices.Child=new Border
+                {
+                    Background=burgundy,BorderBrush=(Brush)new BrushConverter().ConvertFrom("#702442")!,
+                    BorderThickness=new Thickness(1),Padding=new Thickness(4),
+                    CornerRadius=new CornerRadius(7),Child=list
+                };
+                arrow.Click+=(_,_)=>popupChoices.IsOpen=!popupChoices.IsOpen;
+                entry.ToolTip="اختر من القائمة أو أدخل قيمة مخصصة.";
+                return entry;
             }
-            var paletteOptions=new[]{"#FFF6EB","#FFFFFF","#FAF2FF","#E5C5FF",
-                "#4C1730","#75203E","#210B47","#111111","#197C59","#2169A0"};
+            TextBox ColorChoice(string label,string current)
+            {
+                // Reuse the exact visible swatch palette of "مظهر الكرت".
+                var entry=Editable(label,current);
+                var section=(Panel)fields.Children[fields.Children.Count-1];
+                section.Children.Remove(entry);
+                var holder=new DockPanel{LastChildFill=true};
+                var palette=PaletteButton("الألوان",entry);
+                palette.Width=68;palette.Margin=new Thickness(2,2,0,8);
+                DockPanel.SetDock(palette,Dock.Left);
+                holder.Children.Add(palette);holder.Children.Add(entry);
+                section.Children.Add(holder);
+                return entry;
+            }
             var name=Editable("اسم الشبكة",_designTitle.Text);
-            var background=Choices("لون خلفية البطاقة",_designBackground.Text,paletteOptions);
+            var background=ColorChoice("لون خلفية البطاقة",_designBackground.Text);
             var fontSize=Choices("حجم رقم الكرت",_designFontSize.Text,
                 new[]{"12","14","16","18","20","22","24","28","32","36","40"});
-            var numberColor=Choices("لون رقم الكرت",_designTextColor.Text,paletteOptions);
-            var elementColor=Choices("لون بقية النصوص",_designElementColor.Text,paletteOptions);
-            var borderColor=Choices("لون الحدود",_designBorderColor.Text,paletteOptions);
+            var numberColor=ColorChoice("لون رقم الكرت",_designTextColor.Text);
+            var elementColor=ColorChoice("لون بقية النصوص",_designElementColor.Text);
+            var borderColor=ColorChoice("لون الحدود",_designBorderColor.Text);
             var borderWidth=Choices("سمك الحدود",_designBorderWidth.Text,
                 new[]{"0","0.5","1","1.5","2","3","4","5"});
             var capacity=Editable("نص السعة (اختياري)",_designCapacityText.Text);
@@ -439,18 +474,9 @@ public partial class GeneratorView
             var height=Editable("ارتفاع الكرت (مم)",
                 livePrint?.CardHeightMm.ToString(CultureInfo.InvariantCulture)??"19");
             width.IsEnabled=height.IsEnabled=ApplyPrintOptions is not null;
-            var fontCell=PageUi.Column();
-            fontCell.Children.Add(new TextBlock{
-                Text="نوع الخط",Foreground=(Brush)new BrushConverter().ConvertFrom("#F8E6C7")!,
-                FontFamily=new FontFamily("Arial"),FontWeight=FontWeights.Bold});
-            var font=new ComboBox{
-                ItemsSource=new[]{"Arial","Tahoma","Segoe UI","Calibri"},
-                SelectedItem=_designFontFamily.SelectedItem?.ToString()??"Arial",
-                Foreground=(Brush)new BrushConverter().ConvertFrom("#FFF4E6")!,
-                Background=(Brush)new BrushConverter().ConvertFrom("#301529")!,
-                MinHeight=34,Margin=new Thickness(6,2,6,8)};
-            fontCell.Children.Add(font);
-            fields.Children.Add(fontCell);
+            var font=Choices("نوع الخط",
+                _designFontFamily.SelectedItem?.ToString()??"Arial",
+                new[]{"Arial","Tahoma","Segoe UI","Calibri"});
             var showPassword=new CheckBox{
                 Content="إظهار كلمة المرور",IsChecked=_designShowPassword.IsChecked,
                 Foreground=(Brush)new BrushConverter().ConvertFrom("#F8E6C7")!,
@@ -499,7 +525,7 @@ public partial class GeneratorView
                             .Where(value=>value.Length>0));
                     _designShowPhone.IsChecked=showPhone.IsChecked;
                     _designQrSize.Text=qrSize.Text;
-                    _designFontFamily.SelectedItem=font.SelectedItem?.ToString()??"Arial";
+                    _designFontFamily.SelectedItem=font.Text.Trim();
                     _designShowPassword.IsChecked=showPassword.IsChecked;
                     _designShowProfile.IsChecked=showProfile.IsChecked;
                     ApplyCardAppearance(ReadCurrentAppearance());
