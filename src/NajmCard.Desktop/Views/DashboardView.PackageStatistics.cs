@@ -9,8 +9,7 @@ namespace NajmCard.Desktop.Views;
 /// distribution. The fixed-size dashboard itself remains scroll-free.</summary>
 public partial class DashboardView
 {
-    private sealed record PackageUsageDisplay(string Name,int Used,int Total,
-        string Sessions);
+    private sealed record PackageUsageDisplay(string Name,int Used);
 
     private void AllPackages_Click(object sender,RoutedEventArgs e)
     {
@@ -22,19 +21,13 @@ public partial class DashboardView
         var groups=inventory.Users
             .Where(x=>!string.IsNullOrWhiteSpace(x.Profile))
             .GroupBy(x=>x.Profile,StringComparer.OrdinalIgnoreCase)
-            .Select(g=>new PackageUsageDisplay(g.Key,
-                g.Count(x=>x.Started),g.Count(),
-                g.All(x=>x.ActiveSessionsVerified)
-                    ?g.Sum(x=>(long)x.ActiveSessions).ToString("N0")
-                    :"—"))
+            .Select(g=>new PackageUsageDisplay(g.Key,g.Count(x=>x.Started)))
             .OrderByDescending(x=>x.Total)
             .ThenBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var grid=UmUi.Table(
-            ("اسم الباقة","Name",260),
-            ("الكروت المستخدمة","Used",160),
-            ("إجمالي الكروت المرتبطة","Total",170),
-            ("الجلسات الحالية (إن توفرت)","Sessions",190));
+            ("الباقة","Name",360),
+            ("عدد الكروت المستخدمة","Used",200));
         grid.ItemsSource=groups;
         grid.MinHeight=300;
         grid.MaxHeight=430;
@@ -55,9 +48,9 @@ public partial class DashboardView
             Background=UmUi.Light,
             FlowDirection=FlowDirection.RightToLeft,
             Content=UmUi.Stack(
-                UmUi.Header("جميع باقات User Manager",
-                    "بيانات مباشرة من آخر قراءة مكتملة للحسابات على الراوتر."),
-                UmUi.Panel(UmUi.Stack(summary,grid)),
+                UmUi.Header("أكثر الباقات استخداما",
+                    "عدد الكروت التي بدأت استخدامها في كل باقة."),
+                UmUi.Panel(grid),
                 UmUi.Row(close))
         };
         close.Click+=(_,_)=>dialog.Close();
