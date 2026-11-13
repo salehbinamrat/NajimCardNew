@@ -111,7 +111,22 @@ public partial class GeneratorView
             button.Background=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
             toolbar.Children.Add(button);
         }
-        var themeMenu=new ContextMenu{PlacementTarget=templateImage,Placement=PlacementMode.Bottom};
+        var themeMenu=new ContextMenu
+        {
+            PlacementTarget=templateImage,Placement=PlacementMode.Bottom,
+            Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,
+            Foreground=(Brush)new BrushConverter().ConvertFrom("#48192A")!,
+            BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!
+        };
+        // The global dark MenuItem theme otherwise hides captions on the light
+        // template-choice popup. Scope this high-contrast style to this menu.
+        var themeItemStyle=new Style(typeof(MenuItem));
+        themeItemStyle.Setters.Add(new Setter(Control.ForegroundProperty,
+            (Brush)new BrushConverter().ConvertFrom("#48192A")!));
+        themeItemStyle.Setters.Add(new Setter(Control.BackgroundProperty,
+            (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
+        themeItemStyle.Setters.Add(new Setter(Control.FontWeightProperty,FontWeights.SemiBold));
+        themeMenu.ItemContainerStyle=themeItemStyle;
         var restoreTheme=new MenuItem{Header="قالب نجم نت الافتراضي"};
         restoreTheme.Click+=(_,_)=>
         {
@@ -286,7 +301,7 @@ public partial class GeneratorView
             bool savedSuccessfully=false;
             var popup=new Window{
                 Title="نجم كارد — التعديلات المتقدمة",
-                Width=700,Height=480,MinWidth=590,MinHeight=360,
+                Width=790,Height=570,MinWidth=650,MinHeight=440,
                 WindowStartupLocation=WindowStartupLocation.CenterOwner,
                 Owner=Window.GetWindow(this),FlowDirection=FlowDirection.RightToLeft,
                 Background=(Brush)new BrushConverter().ConvertFrom("#200E1E")!
@@ -310,16 +325,51 @@ public partial class GeneratorView
                 fields.Children.Add(section);
                 return entry;
             }
+            ComboBox Choices(string label,string current,string[] presets)
+            {
+                var section=PageUi.Column();
+                section.Children.Add(new TextBlock
+                {
+                    Text=label,Foreground=(Brush)new BrushConverter().ConvertFrom("#F8E6C7")!,
+                    FontFamily=new FontFamily("Arial"),FontWeight=FontWeights.Bold
+                });
+                var combo=new ComboBox
+                {
+                    IsEditable=true,ItemsSource=presets,Text=current,
+                    MinHeight=34,Margin=new Thickness(6,2,6,8),
+                    Foreground=(Brush)new BrushConverter().ConvertFrom("#48192A")!,
+                    Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!
+                };
+                var itemStyle=new Style(typeof(ComboBoxItem));
+                itemStyle.Setters.Add(new Setter(Control.ForegroundProperty,
+                    (Brush)new BrushConverter().ConvertFrom("#48192A")!));
+                itemStyle.Setters.Add(new Setter(Control.BackgroundProperty,
+                    (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
+                combo.ItemContainerStyle=itemStyle;
+                section.Children.Add(combo);
+                fields.Children.Add(section);
+                return combo;
+            }
+            var paletteOptions=new[]{"#FFF6EB","#FFFFFF","#FAF2FF","#E5C5FF",
+                "#4C1730","#75203E","#210B47","#111111","#197C59","#2169A0"};
             var name=Editable("اسم الشبكة",_designTitle.Text);
-            var background=Editable("لون خلفية البطاقة (#RRGGBB)",_designBackground.Text);
-            var fontSize=Editable("حجم رقم الكرت",_designFontSize.Text);
-            var numberColor=Editable("لون رقم الكرت",_designTextColor.Text);
-            var elementColor=Editable("لون النص",_designElementColor.Text);
-            var borderColor=Editable("لون الحدود",_designBorderColor.Text);
-            var borderWidth=Editable("سمك الحدود",_designBorderWidth.Text);
+            var background=Choices("لون خلفية البطاقة",_designBackground.Text,paletteOptions);
+            var fontSize=Choices("حجم رقم الكرت",_designFontSize.Text,
+                new[]{"12","14","16","18","20","22","24","28","32","36","40"});
+            var numberColor=Choices("لون رقم الكرت",_designTextColor.Text,paletteOptions);
+            var elementColor=Choices("لون بقية النصوص",_designElementColor.Text,paletteOptions);
+            var borderColor=Choices("لون الحدود",_designBorderColor.Text,paletteOptions);
+            var borderWidth=Choices("سمك الحدود",_designBorderWidth.Text,
+                new[]{"0","0.5","1","1.5","2","3","4","5"});
             var capacity=Editable("نص السعة (اختياري)",_designCapacityText.Text);
-            var phone=Editable("رقم الهاتف على الكرت (اختياري)",_designPhoneText.Text);
-            var qrSize=Editable("حجم QR",_designQrSize.Text);
+            // Keep the existing persisted PhoneText format so older presets
+            // remain compatible, but let the operator edit both numbers.
+            var phoneParts=_designPhoneText.Text.Split(" - ",2,StringSplitOptions.TrimEntries);
+            var phone1=Editable("رقم الهاتف الأول (اختياري)",phoneParts[0]);
+            var phone2=Editable("رقم الهاتف الثاني (اختياري)",
+                phoneParts.Length>1?phoneParts[1]:"");
+            var qrSize=Choices("حجم QR",_designQrSize.Text,
+                new[]{"12","16","20","24","28","32","40","48","60","72"});
 
             // Advanced layout controls use the same live print model as the
             // inline editor; no shadow printer state or pretend dimensions.
@@ -342,6 +392,7 @@ public partial class GeneratorView
                     CultureInfo.InvariantCulture);
                 _designShowPassword.IsChecked=originalAppearance.ShowPassword;
                 _designShowProfile.IsChecked=originalAppearance.ShowProfile;
+                _designShowPhone.IsChecked=originalAppearance.ShowPhone;
                 _designCapacityText.Text=originalAppearance.CapacityText;
                 _designPhoneText.Text=originalAppearance.PhoneText;
                 _designQrSize.Text=originalAppearance.QrSize.ToString(CultureInfo.InvariantCulture);
@@ -373,8 +424,16 @@ public partial class GeneratorView
                 Content="إظهار الباقة",IsChecked=_designShowProfile.IsChecked,
                 Foreground=(Brush)new BrushConverter().ConvertFrom("#F8E6C7")!,
                 Margin=new Thickness(6,10,6,8)};
+            var showPhone=new CheckBox
+            {
+                Content="عرض أرقام الهاتف على الكرت",
+                IsChecked=_designShowPhone.IsChecked,
+                Foreground=(Brush)new BrushConverter().ConvertFrom("#F8E6C7")!,
+                Margin=new Thickness(6,10,6,8)
+            };
             fields.Children.Add(showPassword);
             fields.Children.Add(showProfile);
+            fields.Children.Add(showPhone);
             var chooseImage=PageUi.Button("اختيار صورة الكرت لهذه الباقة",false);
             chooseImage.MinWidth=0;chooseImage.Margin=new Thickness(6,6,6,8);
             chooseImage.Foreground=Brushes.White;
@@ -400,7 +459,10 @@ public partial class GeneratorView
                     _designBorderColor.Text=borderColor.Text;
                     _designBorderWidth.Text=borderWidth.Text;
                     _designCapacityText.Text=capacity.Text;
-                    _designPhoneText.Text=phone.Text;
+                    _designPhoneText.Text=string.Join(" - ",
+                        new[]{phone1.Text.Trim(),phone2.Text.Trim()}
+                            .Where(value=>value.Length>0));
+                    _designShowPhone.IsChecked=showPhone.IsChecked;
                     _designQrSize.Text=qrSize.Text;
                     _designFontFamily.SelectedItem=font.SelectedItem?.ToString()??"Arial";
                     _designShowPassword.IsChecked=showPassword.IsChecked;

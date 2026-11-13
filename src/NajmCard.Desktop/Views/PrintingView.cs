@@ -394,16 +394,9 @@ public partial class PrintingView : UserControl
                     {
                         FlowDirection=FlowDirection.LeftToRight,ClipToBounds=true
                     };
-                    UIElement Layer(TextBlock text)
-                    {
-                        if(!hasArtwork)return text;
-                        return new Border
-                        {
-                            Background=new SolidColorBrush(ChooseArtworkTextBacking(appearance.EffectiveElementColor)),
-                            CornerRadius=new CornerRadius(3),Padding=new Thickness(1,0,1,0),
-                            Child=text
-                        };
-                    }
+                    // Preserve fully transparent overlays for every text layer.
+                    // A template image must remain visible through the text.
+                    UIElement Layer(TextBlock text)=>text;
                     void AddText(string value,CardElementPosition pos,double size,
                         bool enabled=true,bool credential=false,bool usernameCredential=false)
                     {

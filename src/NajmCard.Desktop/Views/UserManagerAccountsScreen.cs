@@ -43,11 +43,15 @@ public sealed class UserManagerAccountsScreen : UserControl
         var add=UmUi.Action("＋ إضافة مستخدم",true,122);
         var export=UmUi.Action("تصدير CSV");
         var print=UmUi.Action("طباعة الصفحة");
-        var delete=UmUi.Action("حذف محدد");
+        var delete=UmUi.Action("حذف المحدد");
+        var selectPage=UmUi.Action("تحديد الكل بالصفحة");
+        var clearSelection=UmUi.Action("إلغاء التحديد");
+        var cardInfo=UmUi.Action("معلومات الكرت",true);
         var disable=UmUi.Action("تعطيل");
         var enable=UmUi.Action("تفعيل");
         var refresh=UmUi.Action("تحديث",true);
-        var actions=UmUi.Row(add,export,print,delete,disable,enable,refresh);
+        var actions=UmUi.Row(add,cardInfo,selectPage,clearSelection,
+            export,print,delete,disable,enable,refresh);
         var find=UmUi.SearchBox("بحث برقم الكرت أو الاسم");
         var statusFilter=UmUi.Combo(new[]{"كل الحالات"},115);
         var profileFilter=UmUi.Combo(new[]{"كل الباقات"},125);
@@ -62,6 +66,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             ("الحالة","Status",110));
         table.MinHeight=300;
         table.MaxHeight=385;
+        table.SelectionMode=DataGridSelectionMode.Extended;
 
         var detail=UmUi.Stack(UmUi.Label("تفاصيل الكرت",17,true),
             UmUi.Label("حدد مستخدما من الجدول",12,false));
@@ -104,7 +109,75 @@ public sealed class UserManagerAccountsScreen : UserControl
         bool busy=false,everLoaded=false,resetFilters=false;
         int page=0;
 
-        UmAccountRow? Selected()=> (table.SelectedItem as DisplayRow)?.Source;
+        UmAccountRow[] SelectedRows()=>table.SelectedItems.OfType<DisplayRow>()
+            .Select(row=>row.Source).ToArray();
+        UmAccountRow? Selected()
+        {
+            var rows=SelectedRows();
+            return rows.Length==1?rows[0]:null;
+        }
+        void ShowCardInfo()
+        {
+            var row=Selected();
+            if(row is null)return;
+            var window=new Window
+            {
+                Title="معلومات الكرت — "+row.Name,
+                Width=660,Height=520,MinWidth=550,MinHeight=380,
+                WindowStartupLocation=WindowStartupLocation.CenterOwner,
+                Owner=Window.GetWindow(this),
+                FlowDirection=FlowDirection.RightToLeft,
+                Background=UmUi.Light
+            };
+            var sessionDetails=UmUi.Label(
+                "اضغط «سجل الجلسات» لتحميل اتصالات هذا الكرت من الراوتر.",12);
+            var viewSessions=UmUi.Action("عرض سجل الجلسات",true,140);
+            var manage=UmUi.Action("خيارات الإدارة الأخرى",false,165);
+            var close=UmUi.Action("إغلاق");
+            viewSessions.Click+=async(_,_)=>
+            {
+                viewSessions.IsEnabled=false;
+                sessionDetails.Text="يجري قراءة السجلات من User Manager...";
+                try
+                {
+                    var sessions=await gateway.ReadUmSessionsAsync();
+                    if(!window.IsLoaded)return;
+                    if(sessions.Generation!=version)
+                    {
+                        sessionDetails.Text="تغير إصدار الراوتر؛ حدث الصفحة الرئيسية.";
+                        return;
+                    }
+                    var history=sessions.Rows.Where(x=>x.Name==row.Name)
+                        .OrderByDescending(x=>x.StartedAt).ToArray();
+                    sessionDetails.Text=history.Length==0
+                        ?"لا توجد جلسات مثبتة لهذا الكرت في سجلات الراوتر."
+                        :$"عدد الجلسات: {history.Length:N0} | أحدث 20 جلسة:\n"+
+                          string.Join("\n",history.Take(20).Select(x=>
+                            $"{x.Started} | {x.Status} | {x.Address} | {UmUi.Bytes(x.TotalBytes)}"));
+                }
+                catch(Exception ex){sessionDetails.Text="تعذر قراءة الجلسات: "+ex.Message;}
+                finally{viewSessions.IsEnabled=true;}
+            };
+            manage.Click+=(_,_)=>{window.Close();openLegacy();};
+            close.Click+=(_,_)=>window.Close();
+            var content=UmUi.Stack(
+                UmUi.Header("معلومات الكرت","البيانات الفعلية من User Manager دون إظهار كلمات المرور."),
+                UmUi.Panel(UmUi.Stack(
+                    UmUi.Label("اسم المستخدم: "+row.Name,14,true),
+                    UmUi.Label("الباقة: "+row.Profile,12),
+                    UmUi.Label("الحالة: "+row.Status,12),
+                    UmUi.Label("الحد الكلي: "+UmUi.Bytes(row.TransferLimit),12),
+                    UmUi.Label("المستهلك: "+UmUi.Bytes(row.UsedBytes),12),
+                    UmUi.Label("المتبقي: "+(row.Remaining=="غير متاح"?
+                        "غير متاح":UmUi.Bytes(long.TryParse(row.Remaining,out var left)?left:null)),12),
+                    UmUi.Label("انتهاء الباقة: "+row.EndTime,12),
+                    UmUi.Label("الجلسات النشطة المثبتة: "+UmUi.Number(row.ActiveSessions),12),
+                    UmUi.Label("آخر ظهور: "+row.LastSeen,12))),
+                UmUi.Panel(UmUi.Stack(
+                    UmUi.Row(viewSessions,manage,close),sessionDetails)));
+            window.Content=UmUi.Scroller(content);
+            window.ShowDialog();
+        }
         void SyncFilters()
         {
             var oldStatus=statusFilter.SelectedItem?.ToString()??"كل الحالات";
@@ -137,8 +210,11 @@ public sealed class UserManagerAccountsScreen : UserControl
         }
         void Details()
         {
-            var row=Selected();
-            detailName.Text=row is null?"حدد مستخدما من الجدول":row.Name;
+            var selection=SelectedRows();
+            var row=selection.Length==1?selection[0]:null;
+            detailName.Text=selection.Length>1?
+                $"تم تحديد {selection.Length} مستخدما من الصفحة":
+                row is null?"حدد مستخدما من الجدول":row.Name;
             detailProfile.Text="الباقة: "+(row?.Profile??"—");
             detailQuota.Text="الحجم: "+UmUi.Bytes(row?.TransferLimit);
             detailUsed.Text="الاستهلاك: "+UmUi.Bytes(row?.UsedBytes);
@@ -147,10 +223,13 @@ public sealed class UserManagerAccountsScreen : UserControl
             detailSessions.Text="الجلسات المثبتة: "+UmUi.Number(row?.ActiveSessions);
             enable.IsEnabled=row?.Disabled==true&&!busy;
             disable.IsEnabled=row?.Disabled==false&&!busy;
-            delete.IsEnabled=row is not null && version==RouterOsGeneration.V6 && !busy;
+            delete.IsEnabled=selection.Length>0 &&
+                version==RouterOsGeneration.V6 && !busy;
             delete.ToolTip=version==RouterOsGeneration.V7
                 ?"حذف v7 غير مفعل قبل إتمام اختبار التحقق من هوية المستخدم."
-                :"يحذف حساب v6 واحدا بعد تأكيد الهوية والحالة.";
+                :"يحذف حسابات v6 المحددة مع فحص مستقل لكل حساب وتأكيد صريح.";
+            clearSelection.IsEnabled=selection.Length>0&&!busy;
+            cardInfo.IsEnabled=row is not null&&!busy;
         }
         void Draw()
         {
@@ -173,6 +252,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             next.IsEnabled=page+1<pages;
             export.IsEnabled=filtered.Length>0&&!busy;
             print.IsEnabled=filtered.Length>0&&!busy;
+            selectPage.IsEnabled=table.Items.Count>0&&!busy;
             Details();
         }
 
@@ -250,34 +330,61 @@ public sealed class UserManagerAccountsScreen : UserControl
         disable.Click+=async(_,_)=>await Change(true);
         delete.Click+=async(_,_) =>
         {
-            var row=Selected();
-            if(row is null||version!=RouterOsGeneration.V6||busy)return;
-            // Re-read and compare the selected v6 account through the existing
-            // verified mutation pipeline; never delete using an old table ID.
-            if(!PageUi.Confirm("حذف حساب User Manager v6 «"+row.Name+
-                "» نهائيا؟ العملية لا يمكن التراجع عنها."))return;
+            var rows=SelectedRows();
+            if(rows.Length==0||rows.Length>100||
+                version!=RouterOsGeneration.V6||busy)return;
+            var warning=rows.Length==1
+                ?"حذف حساب User Manager v6 «"+rows[0].Name+"» نهائيا؟"
+                :$"حذف {rows.Length} حسابا محددا من User Manager v6 نهائيا؟";
+            if(!PageUi.Confirm(warning+
+                " لا يمكن التراجع عن الحذف. تحقق من الاختيار قبل الاستمرار."))
+                return;
             busy=true;refresh.IsEnabled=false;Details();
+            var removed=0;
             try
             {
                 var fresh=await gateway.ReadUserManagerV6InventoryAsync();
-                var target=fresh.Users.SingleOrDefault(x=>x.Id==row.Id&&
-                    x.Username==row.Name);
-                if(target is null||!fresh.IsComplete ||
-                    target.Disabled!=row.Disabled)
+                if(!fresh.IsComplete)
+                    throw new InvalidOperationException("البيانات غير مكتملة؛ أُوقف الحذف.");
+                var targets=rows.Select(row=>fresh.Users.SingleOrDefault(x=>
+                    x.Id==row.Id&&x.Username==row.Name&&x.Disabled==row.Disabled))
+                    .ToArray();
+                if(targets.Any(x=>x is null))
                     throw new InvalidOperationException(
-                        "تغيرت بيانات الحساب منذ القراءة؛ أُوقف الحذف.");
-                var result=await gateway.ChangeUserManagerV6UserAsync(target,"remove");
-                message.Text=result.Diagnostic+
-                    (result.UncertainOutcome?" | راجع الراوتر ولا تُعد العملية.":"");
+                        "تغيرت هوية حساب أو حالته منذ القراءة؛ لم يبدأ الحذف.");
+                foreach(var target in targets)
+                {
+                    // This existing command verifies the exact v6 ID, name,
+                    // profile and disabled state before and after each write.
+                    var result=await gateway.ChangeUserManagerV6UserAsync(target!,"remove");
+                    if(!result.Success)
+                    {
+                        message.Text=$"توقف الحذف بعد {removed} حسابا من أصل {rows.Length}: "+
+                            result.Diagnostic+
+                            (result.UncertainOutcome?
+                                " | لا تعِد العملية قبل فحص الراوتر.":"");
+                        return;
+                    }
+                    removed++;
+                }
+                message.Text=$"حُذف {removed} حسابا وتأكد غياب كل حساب من الراوتر.";
             }
-            catch(Exception ex){message.Text="لم يثبت الحذف: "+ex.Message;}
+            catch(Exception ex)
+            {
+                message.Text=$"توقف الحذف بعد تأكيد حذف {removed} حسابا: "+
+                    ex.Message+" | تحقق من الحالة قبل إعادة المحاولة.";
+            }
             finally
             {
-                all=[];version=null;busy=false;refresh.IsEnabled=true;SyncFilters();Draw();
-                message.Text+=" | يلزم تحديث الحسابات.";
+                all=[];version=null;busy=false;refresh.IsEnabled=true;
+                SyncFilters();Draw();
+                message.Text+=" | حدّث القائمة لقراءة البيانات الجديدة.";
             }
         };
         table.SelectionChanged+=(_,_)=>Details();
+        selectPage.Click+=(_,_)=>table.SelectAll();
+        clearSelection.Click+=(_,_)=>table.UnselectAll();
+        cardInfo.Click+=(_,_)=>ShowCardInfo();
         UmUi.Debounce(find,this,()=>{page=0;Draw();});
         statusFilter.SelectionChanged+=(_,_)=>{if(resetFilters)return;page=0;Draw();};
         profileFilter.SelectionChanged+=(_,_)=>{if(resetFilters)return;page=0;Draw();};

@@ -26,6 +26,7 @@ public static partial class RouterOsCommandPolicy
         "/user-manager/limitation/add", "/user-manager/limitation/set", "/user-manager/limitation/remove",
         "/user-manager/profile-limitation/add", "/user-manager/profile-limitation/remove",
         "/tool/user-manager/user/add", "/tool/user-manager/user/set", "/tool/user-manager/user/remove",
+        "/tool/user-manager/session/remove", "/user-manager/session/remove",
         "/tool/user-manager/user/create-and-activate-profile",
         "/tool/user-manager/profile/add", "/tool/user-manager/profile/set",
         "/tool/user-manager/profile/remove",

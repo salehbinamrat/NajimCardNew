@@ -410,15 +410,14 @@ public partial class GeneratorView
         PlacePreviewElements(appearance);
         _previewNetworkName.Text=appearance.NetworkTitle;
         _previewNetworkName.Visibility=appearance.ShowTitle?Visibility.Visible:Visibility.Collapsed;
-        // Demonstration labels belong ONLY to the on-screen sample. The actual
-        // PDF draws capacity/price/phones strictly from explicit per-package
-        // settings, never from these illustrative numbers.
+        // No phone number is drawn unless the operator supplies and enables it.
+        // The built-in demonstration may show capacity/time only in preview.
         var builtInSample=NajmNetCardArtwork.IsDefault(
             appearance.NetworkTitle,appearance.TemplateImagePath,
             appearance.BackgroundColor) &&
             !appearance.ShowCapacity && !appearance.ShowPhone && !appearance.ShowTime;
         _previewCapacity.Text=builtInSample?"2 جيجا":appearance.CapacityText;
-        _previewPhone.Text=builtInSample?"780757658 - 775321455":appearance.PhoneText;
+        _previewPhone.Text=appearance.PhoneText;
         _previewTime.Text=builtInSample?"1 يوم":
             DateTime.Now.ToString("HH:mm",CultureInfo.InvariantCulture);
         _previewDate.Text=DateTime.Now.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
@@ -427,14 +426,14 @@ public partial class GeneratorView
         _previewCapacity.Visibility=builtInSample ||
             appearance.ShowCapacity && appearance.CapacityText.Length>0?
             Visibility.Visible:Visibility.Collapsed;
-        _previewPhone.Visibility=builtInSample ||
-            appearance.ShowPhone && appearance.PhoneText.Length>0?
+        _previewPhone.Visibility=appearance.ShowPhone && appearance.PhoneText.Length>0?
             Visibility.Visible:Visibility.Collapsed;
         _previewTime.Visibility=builtInSample || appearance.ShowTime?
             Visibility.Visible:Visibility.Collapsed;
         if(_appearancePreviewBorder is not null && builtInSample)
             _appearancePreviewBorder.ToolTip="صورة نجم نت الافتراضية — الأسعار والسعة "+
-                "والمدة والهواتف في المعاينة أمثلة فقط. لا تطبع إلا القيم التي تحفظها للباقة.";
+                "والمدة في المعاينة أمثلة فقط. تظهر الهواتف عند إدخالها وتفعيلها، "+
+                "ولا تطبع إلا القيم التي تحفظها للباقة.";
         _previewDate.Visibility=appearance.ShowDate?Visibility.Visible:Visibility.Collapsed;
         _previewSequence.Visibility=appearance.ShowSequence?Visibility.Visible:Visibility.Collapsed;
         _previewRoute.Visibility=appearance.ShowRoute?Visibility.Visible:Visibility.Collapsed;
@@ -452,9 +451,7 @@ public partial class GeneratorView
         _previewNetworkName.Foreground=ink;
         _previewNetworkName.Background=Brushes.Transparent;
         _previewPackageName.Foreground=ink;
-        _previewPackageName.Background=builtInSample
-            ?new SolidColorBrush(PrintingView.ChooseArtworkTextBacking(appearance.EffectiveElementColor))
-            :Brushes.Transparent;
+        _previewPackageName.Background=Brushes.Transparent;
         if(_defaultArtworkLayer is not null)
             _defaultArtworkLayer.Visibility=NajmNetCardArtwork.IsDefault(
                 appearance.NetworkTitle,appearance.TemplateImagePath,

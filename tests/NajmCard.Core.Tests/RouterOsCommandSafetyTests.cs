@@ -87,6 +87,19 @@ public sealed class RouterOsCommandSafetyTests
             new Dictionary<string,string> { [".id"]="*A" });
     }
 
+    [Theory]
+    [InlineData("/tool/user-manager/session/remove")]
+    [InlineData("/user-manager/session/remove")]
+    public void Session_Removal_Is_Exact_Id_Only(string command)
+    {
+        RouterOsCommandPolicy.Validate(command,new Dictionary<string,string>{{".id","*A"}});
+        foreach(var invalid in new[]{"*A,*B","admin","*Z","1"})
+            Assert.ThrowsAny<ArgumentException>(()=>RouterOsCommandPolicy.Validate(
+                command,new Dictionary<string,string>{{".id",invalid}}));
+        Assert.ThrowsAny<ArgumentException>(()=>RouterOsCommandPolicy.Validate(command,
+            new Dictionary<string,string>{{"numbers","*A"}}));
+    }
+
     [Fact]
     public async Task Disallowed_Router_Command_Never_Reaches_Live_TCP_Connection()
     {

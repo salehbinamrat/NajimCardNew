@@ -67,7 +67,7 @@ internal static class NajmNetCardArtwork
             Width=280,Height=66,CornerRadius=new CornerRadius(13),
             BorderThickness=new Thickness(2),
             BorderBrush=new SolidColorBrush(Color.FromRgb(150,59,192)),
-            Background=new SolidColorBrush(Color.FromArgb(190,255,255,255))
+            Background=Brushes.Transparent
         };
         Canvas.SetLeft(central,113);Canvas.SetTop(central,63);
         canvas.Children.Add(central);
@@ -76,7 +76,7 @@ internal static class NajmNetCardArtwork
             Width=275,Height=26,CornerRadius=new CornerRadius(8),
             BorderThickness=new Thickness(1),
             BorderBrush=new SolidColorBrush(Color.FromRgb(179,105,211)),
-            Background=new SolidColorBrush(Color.FromArgb(190,255,255,255))
+            Background=Brushes.Transparent
         };
         Canvas.SetLeft(footer,135);Canvas.SetTop(footer,155);
         canvas.Children.Add(footer);

@@ -42,6 +42,10 @@ public sealed class UserManagerSessionsScreen : UserControl
         var refresh=UmUi.Action("تحديث من الراوتر",true,128);
         var download=UmUi.Action("تصدير CSV");
         var print=UmUi.Action("طباعة الصفحة");
+        var selectPage=UmUi.Action("تحديد الكل بالصفحة");
+        var clearSelection=UmUi.Action("إلغاء التحديد");
+        var delete=UmUi.Action("حذف الجلسات المحددة");
+        delete.ToolTip="لحماية المحاسبة لا تحذف إلا جلسات تأكد الراوتر أنها منتهية.";
         var filter=UmUi.Panel(UmUi.Stack(
             UmUi.Row(UmUi.Label("البحث",12,true),search,
                 UmUi.Label("الحالة",12,true),statusFilter),
@@ -52,6 +56,7 @@ public sealed class UserManagerSessionsScreen : UserControl
             ("MAC","Mac",155),("تنزيل","Download",105),
             ("رفع","Upload",100),("الحالة","Status",90));
         grid.MinHeight=310;grid.MaxHeight=380;
+        grid.SelectionMode=DataGridSelectionMode.Extended;
         var page=0;
         var pageSize=UmUi.Combo(new[]{"20","50","100"},80);
         var previous=UmUi.Action("السابق",false,70);
@@ -62,7 +67,7 @@ public sealed class UserManagerSessionsScreen : UserControl
             12,false,UmUi.Gray);
         Content=UmUi.Scroller(UmUi.Stack(header,metrics,filter,
             UmUi.Panel(UmUi.Stack(
-                UmUi.Row(refresh,download,print,pageSize),
+                UmUi.Row(refresh,download,print,selectPage,clearSelection,delete,pageSize),
                 grid,UmUi.Row(previous,next,pageLabel),status))));
 
         UmDataSnapshot<UmSessionRow>? snapshot=null;
@@ -71,6 +76,18 @@ public sealed class UserManagerSessionsScreen : UserControl
         CancellationTokenSource? pending=null;
 
         static long AddSaturated(long a,long b)=>a>long.MaxValue-b?long.MaxValue:a+b;
+        UmSessionRow[] SelectedSessions()=>grid.SelectedItems.OfType<Display>()
+            .Select(display=>display.Source).ToArray();
+        void SyncSelection()
+        {
+            var chosen=SelectedSessions();
+            clearSelection.IsEnabled=chosen.Length>0&&!busy;
+            delete.IsEnabled=chosen.Length>0&&!busy&&snapshot is not null&&
+                chosen.All(row=>row.IsActive==false);
+            delete.ToolTip=chosen.Any(row=>row.IsActive!=false)
+                ?"اختر فقط جلسات أكد الراوتر أنها منتهية؛ الحالة النشطة أو المجهولة ممنوعة."
+                :"يحذف سجلات المحاسبة المحددة بعد التحقق من هوية كل جلسة.";
+        }
         void Update()
         {
             var key=search.Text.Trim();
@@ -94,6 +111,8 @@ public sealed class UserManagerSessionsScreen : UserControl
                 $" | الصفحة {page+1} من {maxPage}";
             previous.IsEnabled=page>0;next.IsEnabled=page+1<maxPage;
             download.IsEnabled=print.IsEnabled=filtered.Length>0&&!busy;
+            selectPage.IsEnabled=grid.Items.Count>0&&!busy;
+            SyncSelection();
         }
         async Task Load()
         {
@@ -139,6 +158,44 @@ public sealed class UserManagerSessionsScreen : UserControl
             }
             finally{pending=null;busy=false;refresh.IsEnabled=true;Update();}
         }
+        grid.SelectionChanged+=(_,_)=>SyncSelection();
+        selectPage.Click+=(_,_)=>grid.SelectAll();
+        clearSelection.Click+=(_,_)=>grid.UnselectAll();
+        delete.Click+=async(_,_)=>
+        {
+            var chosen=SelectedSessions();
+            var version=snapshot?.Generation;
+            if(busy||version is null||chosen.Length==0)return;
+            if(chosen.Any(row=>row.IsActive!=false))
+            {
+                status.Text="تم رفض العملية: بعض الجلسات نشطة أو حالتها غير مثبتة.";
+                return;
+            }
+            if(!PageUi.Confirm($"حذف {chosen.Length:N0} سجلا من تاريخ جلسات User Manager؟ "+
+                "هذه عملية لا يمكن التراجع عنها، ولا تعني فصل المستخدم عن الإنترنت."))
+                return;
+            busy=true;refresh.IsEnabled=false;SyncSelection();
+            try
+            {
+                var result=await gateway.RemoveUmSessionsAsync(version.Value,chosen);
+                status.Text=result.Diagnostic;
+            }
+            catch(Exception ex)
+            {
+                status.Text="توقف حذف الجلسات: "+ex.Message+
+                    " | راجع الراوتر قبل إعادة العملية.";
+            }
+            finally
+            {
+                // Always invalidate the stale snapshot, even for a partial or
+                // uncertain outcome: never offer to re-delete old row IDs.
+                snapshot=null;busy=false;refresh.IsEnabled=true;
+                grid.UnselectAll();
+                for(int i=0;i<5;i++)Value(i).Text="—";
+                Update();
+                status.Text+=" | استخدم تحديث من الراوتر لجلب الحالة الحالية.";
+            }
+        };
         refresh.Click+=async(_,_)=>await Load();
         searchButton.Click+=(_,_)=>{page=0;Update();};
         reset.Click+=(_,_)=>{search.Clear();statusFilter.SelectedIndex=0;
