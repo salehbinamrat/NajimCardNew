@@ -168,7 +168,7 @@ public partial class GeneratorView
         },(style,step)=>style with {UsernameFontSize=Math.Clamp(style.UsernameFontSize+step,8,40)});
         EnableCardEditing(elements,passwordPlate,
             (style,position)=>style with {PasswordPosition=position},
-            (style,step)=>style with {PasswordScale=ResizeScale(style.PasswordScale,step)});
+            (style,step)=>style with {UsernameFontSize=Math.Clamp(style.UsernameFontSize+step,8,40)});
         EnableCardEditing(elements,_previewPackageName,
             (style,position)=>style with {ProfilePosition=position},
             (style,step)=>style with {ProfileScale=ResizeScale(style.ProfileScale,step)});
@@ -350,6 +350,7 @@ public partial class GeneratorView
         _designElementColor.Text=appearance.EffectiveElementColor;
         _designBorderColor.Text=appearance.BorderColor;
         _designBorderWidth.Text=appearance.BorderWidth.ToString(CultureInfo.InvariantCulture);
+        _designElementScale.Text=appearance.ElementScale.ToString(CultureInfo.InvariantCulture);
         _designShowPassword.IsChecked=appearance.ShowPassword;
         _designShowProfile.IsChecked=appearance.ShowProfile;
         _designShowCapacity.IsChecked=appearance.ShowCapacity;
@@ -384,7 +385,7 @@ public partial class GeneratorView
             }
         }
 
-        foreach(var field in new[]{_designFontSize,_designTextColor,_designElementColor,_designBorderColor,_designBorderWidth})
+        foreach(var field in new[]{_designFontSize,_designTextColor,_designElementColor,_designBorderColor,_designBorderWidth,_designElementScale})
             field.TextChanged+=Update;
         _designFontFamily.SelectionChanged+=Update;
         _designShowPassword.Checked+=Update;
@@ -460,16 +461,20 @@ public partial class GeneratorView
         foreach(var element in new[]{_cardPreview,_previewNetworkName,_previewPassword,_previewPackageName,
             _previewCapacity,_previewPhone,_previewTime,_previewDate,_previewSequence,_previewRoute})
             element.FontFamily=family;
-        _previewNetworkName.FontSize=10*appearance.TitleScale;
-        _previewPassword.FontSize=10*appearance.PasswordScale;
-        _previewPackageName.FontSize=(builtInSample?10:9)*appearance.ProfileScale;
+        _previewNetworkName.FontSize=10*appearance.TitleScale*appearance.ElementScale;
+        // Credential pair follows one font-size and one color source.
+        _previewPassword.FontSize=appearance.UsernameFontSize;
+        _previewPackageName.FontSize=(builtInSample?10:9)*appearance.ProfileScale*appearance.ElementScale;
         _cardPreview.FontSize=appearance.UsernameFontSize;
         _cardPreview.Foreground=numberInk;
-        _previewPassword.Foreground=ink;
+        _previewPassword.Foreground=numberInk;
         _previewPassword.Background=Brushes.Transparent;
         foreach(var label in new[]{_previewCapacity,_previewPhone,_previewTime,
             _previewDate,_previewSequence,_previewRoute})
-            label.Foreground=ink;
+            {
+                label.Foreground=ink;
+                label.FontSize=9*appearance.ElementScale;
+            }
         _templateImagePath=appearance.TemplateImagePath;
         if(_previewUsernamePlate is not null)
             CardCredentialPlate.ApplyNumberBacking(_previewUsernamePlate,appearance,hasArtwork);

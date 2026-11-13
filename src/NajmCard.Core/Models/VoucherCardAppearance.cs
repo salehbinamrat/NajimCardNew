@@ -41,7 +41,8 @@ public sealed record VoucherCardAppearance(
     CardElementPosition? DatePosition = null,
     CardElementPosition? SequencePosition = null,
     CardElementPosition? RoutePosition = null,
-    string? ElementColor = null)
+    string? ElementColor = null,
+    double ElementScale = 1)
 {
     // Presets saved before the colors were split used the same ink for every element.
     [System.Text.Json.Serialization.JsonIgnore]
@@ -61,6 +62,8 @@ public sealed record VoucherCardAppearance(
             throw new ArgumentException("نوع الخط غير مدعوم؛ اختر Arial أو Tahoma أو Segoe UI أو Calibri.");
         if(!double.IsFinite(UsernameFontSize) || UsernameFontSize is < 8 or > 40)
             throw new ArgumentException("حجم رقم الكرت يجب أن يكون بين 8 و40.");
+        if(!double.IsFinite(ElementScale) || ElementScale is < 0.5 or > 2.5)
+            throw new ArgumentException("حجم خط عناصر الكرت يجب أن يكون بين 0.5 و2.5.");
         if(!double.IsFinite(BorderWidth) || BorderWidth is < 0 or > 5)
             throw new ArgumentException("سمك حدود الكرت يجب أن يكون بين 0 و5.");
         if(TemplateImagePath is null || TemplateImagePath.Length>1024 ||

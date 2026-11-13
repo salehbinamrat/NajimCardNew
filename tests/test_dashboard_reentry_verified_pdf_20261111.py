@@ -25,12 +25,12 @@ class VerifiedDashboardPdfFlow(unittest.TestCase):
     def test_lifecycle_cancelled_read_can_resume_after_reentering_dashboard(self):
         src=read("DashboardView.xaml.cs")
         schedule=src[src.index("private async Task ScheduleInitialLifecycleAsync()"):
-                     src.index("private async Task RefreshLifecycleAsync()")]
+                     src.index("private async Task RefreshLifecycleAsync(bool force=false)")]
         self.assertIn("_lifecycleScheduleQueued=true;",schedule)
         self.assertIn("await RefreshLifecycleAsync();",schedule)
         self.assertNotIn("_initialLifecycleAttempted=true;",schedule)
         self.assertIn("if(retry)_=ScheduleInitialLifecycleAsync();",schedule)
-        lifecycle=src[src.index("private async Task RefreshLifecycleAsync()"):]
+        lifecycle=src[src.index("private async Task RefreshLifecycleAsync(bool force=false)"):]
         self.assertLess(lifecycle.index("if(!state.IsComplete)"),
                         lifecycle.index("_initialLifecycleAttempted=true;"))
 

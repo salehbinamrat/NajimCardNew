@@ -33,7 +33,7 @@ class VoucherIssuancePerformanceContracts(unittest.TestCase):
     def test_creator_reentry_cache_is_bounded_and_manual_refresh_forced(self):
         catalog=(DESKTOP/"Views/GeneratorView.ProfileLoading.cs").read_text(encoding="utf-8")
         creator=(DESKTOP/"Views/GeneratorView.cs").read_text(encoding="utf-8")
-        self.assertIn("DateTimeOffset.UtcNow-_lastCatalogLoadedAt<TimeSpan.FromSeconds(12)",catalog)
+        self.assertIn("DateTimeOffset.UtcNow-_lastCatalogLoadedAt<TimeSpan.FromMinutes(2)",catalog)
         self.assertIn("LoadProfilesAsync(bool force=false)",catalog)
         self.assertIn("LoadProfilesAsync(force:true)",creator)
         self.assertIn("_profileReadGate.WaitAsync()",catalog)

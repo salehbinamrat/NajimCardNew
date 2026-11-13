@@ -10,6 +10,10 @@ namespace NajmCard.Desktop.Views;
 
 public partial class GeneratorView
 {
+    // Same visible swatches for the inline appearance editor and advanced options.
+    private static readonly string[] CardPaletteColors=[
+        "#4C1730","#74203D","#A33150","#D6263C","#F04438","#F29D38",
+        "#F2C94C","#197C59","#2169A0","#543399","#111111","#FFFFFF"];
     private readonly Grid _designPreviewRow=new();
     private readonly TextBlock _designStatus=PageUi.Status();
     private ComboBox? _inlineWidth;
@@ -49,9 +53,7 @@ public partial class GeneratorView
             StaysOpen=false,AllowsTransparency=true
         };
         var palette=new UniformGrid{Columns=6,Background=Brushes.White};
-        var colors=new[]{"#4C1730","#74203D","#A33150","#D6263C","#F04438","#F29D38",
-            "#F2C94C","#197C59","#2169A0","#543399","#111111","#FFFFFF"};
-        foreach(var hex in colors)
+        foreach(var hex in CardPaletteColors)
         {
             var sample=new Button{Width=25,Height=25,Margin=new Thickness(2),
                 Background=(Brush)new BrushConverter().ConvertFrom(hex)!,
@@ -220,7 +222,10 @@ public partial class GeneratorView
         AddPanel(previewRow,2);
 
         // Card size and styling are always visible directly beneath the preview.
-        var shapeOptions=new UniformGrid{Columns=5,Margin=new Thickness(0,2,0,3)};
+        var shapeOptions=new Grid{Margin=new Thickness(0,2,0,3)};
+        foreach(var weight in new[]{0.90,0.90,0.75,0.85,1.55,0.85})
+            shapeOptions.ColumnDefinitions.Add(new ColumnDefinition
+            {Width=new GridLength(weight,GridUnitType.Star)});
         FrameworkElement ShapeOption(string label,FrameworkElement field)
         {
             var holder=PageUi.Column();
@@ -267,8 +272,14 @@ public partial class GeneratorView
         _inlineWidth.LostKeyboardFocus+=(_,_)=>ApplyInlineSize();
         _inlineHeight.LostKeyboardFocus+=(_,_)=>ApplyInlineSize();
         Loaded+=(_,_)=>RefreshInlineCardDimensions();
-        shapeOptions.Children.Add(ShapeOption("العرض (مم)",_inlineWidth));
-        shapeOptions.Children.Add(ShapeOption("الطول (مم)",_inlineHeight));
+        void ShapeCell(string label,FrameworkElement control,int column)
+        {
+            var cell=ShapeOption(label,control);
+            Grid.SetColumn(cell,column);
+            shapeOptions.Children.Add(cell);
+        }
+        ShapeCell("العرض (مم)",_inlineWidth,0);
+        ShapeCell("الطول (مم)",_inlineHeight,1);
         var qrSizes=new ComboBox{ItemsSource=new[]{"16","20","24","28","32","40","48","60"},
             SelectedItem="24"};
         qrSizes.SelectionChanged+=(_,_)=>
@@ -276,7 +287,7 @@ public partial class GeneratorView
             if(qrSizes.SelectedItem is string size)_designQrSize.Text=size;
         };
         _designQrSize.TextChanged+=(_,_)=>qrSizes.SelectedItem=_designQrSize.Text;
-        shapeOptions.Children.Add(ShapeOption("حجم QR",qrSizes));
+        ShapeCell("حجم QR",qrSizes,2);
         var borderSizes=new ComboBox{ItemsSource=new[]{"0","0.5","1","1.5","2","3","4","5"},
             SelectedItem="1"};
         borderSizes.SelectionChanged+=(_,_)=>
@@ -284,8 +295,26 @@ public partial class GeneratorView
             if(borderSizes.SelectedItem is string size)_designBorderWidth.Text=size;
         };
         _designBorderWidth.TextChanged+=(_,_)=>borderSizes.SelectedItem=_designBorderWidth.Text;
-        shapeOptions.Children.Add(ShapeOption("سمك الحدود",borderSizes));
-        shapeOptions.Children.Add(ShapeOption("لون الحدود",PaletteButton("تغيير",_designBorderColor)));
+        ShapeCell("سمك الحدود",borderSizes,3);
+        var elementSizes=new ComboBox
+        {
+            ItemsSource=new[]{"0.5","0.65","0.75","0.85","1","1.1","1.25","1.5","1.75","2","2.5"},
+            SelectedItem="1",MinWidth=0
+        };
+        elementSizes.ToolTip="حجم نصوص الكرت الأخرى (العنوان، الباقة، الهاتف والتاريخ)، "+
+            "ولا يغير حجم رقم الكرت وكلمة المرور المرتبطين معا.";
+        elementSizes.SelectionChanged+=(_,_) =>
+        {
+            if(elementSizes.SelectedItem is string scale)_designElementScale.Text=scale;
+        };
+        _designElementScale.TextChanged+=(_,_) =>
+        {
+            var scale=_designElementScale.Text;
+            if(!elementSizes.Items.Contains(scale))elementSizes.Items.Add(scale);
+            elementSizes.SelectedItem=scale;
+        };
+        ShapeCell("حجم خط العناصر",elementSizes,4);
+        ShapeCell("لون الحدود",PaletteButton("تغيير",_designBorderColor),5);
         AddPanel(shapeOptions,3);
 
         AddPanel(ReferenceHeader("عناصر الكرت"),4);
@@ -388,7 +417,10 @@ public partial class GeneratorView
                 {
                     var option=new Button
                     {
-                        Content=value,MinWidth=63,MinHeight=31,
+                        Content=new TextBlock{Text=value,Foreground=Brushes.White,
+                            FontFamily=new FontFamily("Arial"),FontSize=12,
+                            TextAlignment=TextAlignment.Center},
+                        MinWidth=63,MinHeight=31,
                         Margin=new Thickness(2),Padding=new Thickness(6,3,6,3),
                         FontFamily=new FontFamily("Arial"),FontSize=12,
                         Foreground=Brushes.White,Background=burgundy,
@@ -410,16 +442,69 @@ public partial class GeneratorView
             }
             TextBox ColorChoice(string label,string current)
             {
-                // Reuse the exact visible swatch palette of "مظهر الكرت".
+                // The operator must see actual color swatches without opening
+                // a second popup (previous palette was hidden by WPF themes).
                 var entry=Editable(label,current);
                 var section=(Panel)fields.Children[fields.Children.Count-1];
                 section.Children.Remove(entry);
-                var holder=new DockPanel{LastChildFill=true};
-                var palette=PaletteButton("الألوان",entry);
-                palette.Width=68;palette.Margin=new Thickness(2,2,0,8);
-                DockPanel.SetDock(palette,Dock.Left);
-                holder.Children.Add(palette);holder.Children.Add(entry);
-                section.Children.Add(holder);
+                var panel=PageUi.Column();
+                panel.Margin=new Thickness(0,1,0,3);
+                var row=new DockPanel{LastChildFill=true};
+                var currentSwatch=new Border
+                {
+                    Width=33,Height=32,Margin=new Thickness(4,2,3,3),
+                    CornerRadius=new CornerRadius(5),
+                    BorderBrush=Brushes.White,BorderThickness=new Thickness(2),
+                    ToolTip="لون القيمة الحالية"
+                };
+                DockPanel.SetDock(currentSwatch,Dock.Left);
+                row.Children.Add(currentSwatch);
+                entry.Margin=new Thickness(2,2,4,3);
+                entry.Background=(Brush)new BrushConverter().ConvertFrom("#AF5472")!;
+                entry.Foreground=Brushes.White;entry.CaretBrush=Brushes.White;
+                row.Children.Add(entry);
+                panel.Children.Add(row);
+                var palette=new WrapPanel
+                {
+                    FlowDirection=FlowDirection.LeftToRight,
+                    Margin=new Thickness(3,0,3,3),
+                    ToolTip="اختر لونا من المربعات أو أدخل كود اللون في الحقل."
+                };
+                var squares=new Dictionary<string,Border>(StringComparer.OrdinalIgnoreCase);
+                foreach(var hex in CardPaletteColors)
+                {
+                    var square=new Border
+                    {
+                        Width=23,Height=23,Margin=new Thickness(1,1,1,1),
+                        Background=(Brush)new BrushConverter().ConvertFrom(hex)!,
+                        BorderBrush=Brushes.White,BorderThickness=new Thickness(1),
+                        CornerRadius=new CornerRadius(3),ToolTip=hex
+                    };
+                    var key=hex;
+                    square.MouseLeftButtonUp+=(_,args)=>
+                    {
+                        entry.Text=key;
+                        args.Handled=true;
+                    };
+                    squares.Add(hex,square);
+                    palette.Children.Add(square);
+                }
+                entry.TextChanged+=(_,_) =>
+                {
+                    var value=entry.Text.Trim();
+                    foreach(var item in squares)
+                    {
+                        item.Value.BorderThickness=new Thickness(
+                            string.Equals(item.Key,value,StringComparison.OrdinalIgnoreCase)?3:1);
+                        item.Value.BorderBrush=Brushes.White;
+                    }
+                    try{currentSwatch.Background=(Brush)new BrushConverter().ConvertFromString(value)!;}
+                    catch(FormatException){currentSwatch.Background=Brushes.Transparent;}
+                };
+                try{currentSwatch.Background=(Brush)new BrushConverter().ConvertFromString(current)!;}
+                catch(FormatException){currentSwatch.Background=Brushes.Transparent;}
+                panel.Children.Add(palette);
+                section.Children.Add(panel);
                 return entry;
             }
             var name=Editable("اسم الشبكة",_designTitle.Text);
@@ -431,6 +516,8 @@ public partial class GeneratorView
             var borderColor=ColorChoice("لون الحدود",_designBorderColor.Text);
             var borderWidth=Choices("سمك الحدود",_designBorderWidth.Text,
                 new[]{"0","0.5","1","1.5","2","3","4","5"});
+            var elementsScale=Choices("حجم خط العناصر",_designElementScale.Text,
+                new[]{"0.5","0.65","0.75","0.85","1","1.1","1.25","1.5","1.75","2","2.5"});
             var capacity=Editable("نص السعة (اختياري)",_designCapacityText.Text);
             // Keep the existing persisted PhoneText format so older presets
             // remain compatible, but let the operator edit both numbers.
@@ -459,6 +546,8 @@ public partial class GeneratorView
                 _designElementColor.Text=originalAppearance.EffectiveElementColor;
                 _designBorderColor.Text=originalAppearance.BorderColor;
                 _designBorderWidth.Text=originalAppearance.BorderWidth.ToString(
+                    CultureInfo.InvariantCulture);
+                _designElementScale.Text=originalAppearance.ElementScale.ToString(
                     CultureInfo.InvariantCulture);
                 _designShowPassword.IsChecked=originalAppearance.ShowPassword;
                 _designShowProfile.IsChecked=originalAppearance.ShowProfile;
@@ -519,6 +608,7 @@ public partial class GeneratorView
                     _designElementColor.Text=elementColor.Text;
                     _designBorderColor.Text=borderColor.Text;
                     _designBorderWidth.Text=borderWidth.Text;
+                    _designElementScale.Text=elementsScale.Text;
                     _designCapacityText.Text=capacity.Text;
                     _designPhoneText.Text=string.Join(" - ",
                         new[]{phone1.Text.Trim(),phone2.Text.Trim()}

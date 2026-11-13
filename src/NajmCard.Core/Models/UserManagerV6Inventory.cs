@@ -8,7 +8,8 @@ public sealed record UserManagerV6Voucher(
     string Id, string Username, string Profile, string Status, string Reason,
     string ExpirySource, long DownloadBytes, long UploadBytes,
     long TransferLimit, bool Started, bool Disabled, bool Incomplete,
-    string UptimeUsed="",string LastSeen="",int ActiveSessions=0)
+    string UptimeUsed="",string LastSeen="",int ActiveSessions=0,
+    bool ActiveSessionsVerified=false)
 {
     public long ConsumedBytes => DownloadBytes > long.MaxValue - UploadBytes
         ? long.MaxValue : DownloadBytes + UploadBytes;

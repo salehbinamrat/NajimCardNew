@@ -27,9 +27,9 @@ class HadramoutWorkspaceContract(unittest.TestCase):
 
     def test_dashboard_fetches_lifecycle_automatically_after_login_without_repeat_scans(self):
         source = (VIEWS / "DashboardView.xaml.cs").read_text(encoding="utf-8")
-        self.assertIn('Task.Delay(TimeSpan.FromSeconds(5)', source)
+        self.assertIn('Task.Delay(TimeSpan.FromSeconds(1)', source)
         self.assertIn('await RefreshLifecycleAsync()', source)
-        self.assertIn('ReadCachedUserManagerV6InventoryAsync(false', source)
+        self.assertIn('ReadCachedUserManagerV6InventoryAsync(force', source)
         self.assertIn('_initialLifecycleToken?.Cancel()', source)
         self.assertIn('_lifecycleReading', source)
 
