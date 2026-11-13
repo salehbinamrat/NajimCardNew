@@ -178,15 +178,14 @@
                         </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <!-- Selected/hovered options must use a light surface AND
-                             dark text; unselected dark surface uses cream text. -->
+                        <!-- Dropdown rows stay cream with black text in every state. -->
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ItemSurface" Property="Background" Value="#F0E2CC"/>
                             <Setter Property="Foreground" Value="#000000"/>
                         </Trigger>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="ItemSurface" Property="Background" Value="#E8D2B5"/>
-                            <Setter Property="Foreground" Value="#471A30"/>
+                            <Setter Property="Foreground" Value="#000000"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="ItemSurface" Property="Opacity" Value="0.6"/>
