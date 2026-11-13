@@ -18,10 +18,10 @@ class ConnectedTabsAndBatchStyle(unittest.TestCase):
         for title in ('PageUi.Button("الكل"', 'PageUi.Button("متصلون اليوزرمنجر"',
                       'PageUi.Button("متصلون الهوتسبوت"'):
             self.assertIn(title,ui)
-        self.assertIn('row.Origin==HotspotConnectionOrigin.UserManagerRadius',ui)
-        self.assertIn('row.Origin==HotspotConnectionOrigin.LocalHotspot',ui)
-        self.assertIn('ReadLiveHotspotConnectionsAsync(request.Token)',ui)
-        self.assertIn('grid.ItemsSource=results',ui)
+        self.assertIn('ConnectedUsersProjection.ForView(selected,',ui)
+        self.assertIn('managerRows??[]',ui)
+        self.assertIn('gateway.ReadSessionsAsync(token.Token)',ui)
+        self.assertIn('list.ItemsSource=records.Skip(page*pageSize).Take(pageSize).ToArray()',ui)
         self.assertIn('/ip/hotspot/active/print',core)
         self.assertNotIn('/tool/user-manager/session/print',core)
         self.assertIn('SourceOf(row)',core)
@@ -37,7 +37,7 @@ class ConnectedTabsAndBatchStyle(unittest.TestCase):
         self.assertIn('caption.SetValue(TextBlock.ForegroundProperty,Brushes.White)',ui)
         self.assertIn('selector.Style=style',ui)
         self.assertIn('selector.ItemContainerStyle=BurgundyDropdownItemStyle()',ui)
-        self.assertGreaterEqual(selectors.count('Style=BurgundyDropdownItemStyle()'),3)
+        self.assertIn('Style=rowStyle,Foreground=Brushes.White',selectors)
         self.assertIn('ApplyBurgundyDropdown(choice)',printing)
         self.assertIn('new[]{paper,orientation,order,batchSelector,selectedPrinter}',printing)
         self.assertIn('GetPrintQueues',selectors)
