@@ -208,11 +208,16 @@
       </Border>
       <Border Grid.Column="2" Style="{StaticResource DashboardPanel}">
         <DockPanel>
-          <TextBlock DockPanel.Dock="Top" Text="أكثر الباقات استخداماً"
-                     Style="{StaticResource HeaderLabel}" Margin="0,0,0,9"/>
-          <StackPanel x:Name="ProfileBars">
-            <TextBlock Text="بانتظار قراءة الباقات" Style="{StaticResource Tiny}"/>
-          </StackPanel>
+          <TextBlock DockPanel.Dock="Top" Text="الباقات: المستخدمة / إجمالي الحسابات"
+                     Style="{StaticResource HeaderLabel}" Margin="0,0,0,9"
+                     ToolTip="إحصائية لكل باقة من حسابات User Manager v6 المقروءة بالكامل. المستخدمة تعني بدء استخدام الكرت، وليست مبيعات أو جلسات حالية."/>
+          <ScrollViewer VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled"
+                        MaxHeight="184">
+            <StackPanel x:Name="ProfileBars">
+              <TextBlock Text="بانتظار قراءة الباقات" Style="{StaticResource Tiny}"/>
+            </StackPanel>
+          </ScrollViewer>
         </DockPanel>
       </Border>
       <Border Grid.Column="4" Style="{StaticResource DashboardPanel}">

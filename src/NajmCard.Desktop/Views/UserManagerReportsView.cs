@@ -72,6 +72,7 @@ public sealed class UserManagerReportsView : UserControl
         UmDataSnapshot<UmSessionRow>? sessions=null;
         UmDataSnapshot<UmApprovedPayment>? payments=null;
         string paymentWarning="المدفوعات لم تُقرأ بعد";
+        string planWarning="";
         bool busy=false;
         CancellationTokenSource? pending=null;
         static long Add(long a,long b)=>a>long.MaxValue-b?long.MaxValue:a+b;
@@ -159,7 +160,7 @@ public sealed class UserManagerReportsView : UserControl
             }
             int total=counts.Sum(x=>x.Count());
             var chart=new StackPanel();
-            foreach(var (group,i) in counts.Take(6).Select((x,i)=>(x,i)))
+            foreach(var (group,i) in counts.Select((x,i)=>(x,i)))
             {
                 var pct=(double)group.Count()/Math.Max(1,total);
                 var bar=new Grid {Margin=new Thickness(3,6,3,3)};
@@ -176,7 +177,11 @@ public sealed class UserManagerReportsView : UserControl
                 Grid.SetColumn(progress,1);bar.Children.Add(progress);
                 chart.Children.Add(bar);
             }
-            distribution.Children.Add(chart);
+            distribution.Children.Add(new ScrollViewer
+            {
+                Content=chart,MaxHeight=220,
+                VerticalScrollBarVisibility=ScrollBarVisibility.Auto
+            });
         }
 
         void Render()
@@ -262,7 +267,8 @@ public sealed class UserManagerReportsView : UserControl
                     ?"هناك مدفوعات معتمدة بلا باقة أو تاريخ صالح؛ لم يُعرض مجموع مضلل. ":"")+
                 (payments is not null&&!lower.HasValue&&!upper.HasValue&&
                  payments.Rows.Any(x=>!x.Date.HasValue)
-                    ?"الرسم اليومي يستبعد مدفوعات بلا تاريخ.":"");
+                    ?"الرسم اليومي يستبعد مدفوعات بلا تاريخ.":"")+
+                (planWarning.Length>0?" | الباقات: "+planWarning:"");
             export.IsEnabled=true;
         }
 
@@ -276,7 +282,22 @@ public sealed class UserManagerReportsView : UserControl
             {
                 var users=await gateway.ReadUmAccountsAsync(request.Token);
                 var connections=await gateway.ReadUmSessionsAsync(request.Token);
-                var plans=await gateway.ReadUmPlansAsync(request.Token);
+                // Package-link failures must NOT discard verified account,
+                // session and payment data. An old v6 router can retain
+                // orphaned links even though all profiles still exist.
+                UmDataSnapshot<UmPlanRow>? plans=null;
+                planWarning="";
+                try
+                {
+                    plans=await gateway.ReadUmPlansAsync(request.Token);
+                    if(!plans.IsComplete)planWarning=plans.Diagnostic;
+                }
+                catch(OperationCanceledException) when(request.IsCancellationRequested){throw;}
+                catch(Exception ex)
+                {
+                    planWarning="تعذرت قراءة جدول الباقات: "+ex.Message+
+                        " | جرى الاعتماد على أسماء الباقات المثبتة في الحسابات فقط.";
+                }
                 UmDataSnapshot<UmApprovedPayment>? confirmed=null;
                 paymentWarning="";
                 if(users.Generation==RouterOsGeneration.V7)
@@ -289,8 +310,13 @@ public sealed class UserManagerReportsView : UserControl
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 accounts=users;sessions=connections;payments=confirmed;
                 package.Items.Clear();package.Items.Add("كل الباقات");
-                foreach(var plan in plans.Rows.Where(x=>x.Kind=="Profile"))
-                    package.Items.Add(plan.Name);
+                var available=users.Rows.Select(x=>x.Profile)
+                    .Concat(plans?.Rows.Where(x=>x.Kind=="Profile").Select(x=>x.Name)
+                        ??Enumerable.Empty<string>())
+                    .Where(x=>!string.IsNullOrWhiteSpace(x)&&x!="غير متاح")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(x=>x,StringComparer.OrdinalIgnoreCase);
+                foreach(var name in available)package.Items.Add(name);
                 package.SelectedIndex=0;
                 Render();
             }

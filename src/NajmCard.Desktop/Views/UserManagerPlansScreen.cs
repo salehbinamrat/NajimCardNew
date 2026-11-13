@@ -77,16 +77,18 @@ public sealed class UserManagerPlansScreen : UserControl
             UmUi.Row(save,clear),new Separator(),
             UmUi.Label("ربط قيد موجود",12,true),limitOptions,link,alert);
         var editorScroll=UmUi.Scroller(editor);
-        editorScroll.MaxHeight=505;
+        editorScroll.MaxHeight=300;
 
-        var contentGrid=new Grid();
-        contentGrid.ColumnDefinitions.Add(new ColumnDefinition {Width=new GridLength(215)});
-        contentGrid.ColumnDefinitions.Add(new ColumnDefinition {Width=new GridLength(1,GridUnitType.Star)});
-        var left=UmUi.Panel(editorScroll);
-        Grid.SetColumn(left,0);contentGrid.Children.Add(left);
-        var right=UmUi.Panel(tableArea);Grid.SetColumn(right,1);contentGrid.Children.Add(right);
+        // Use the full page width for the real profile/limitation inventory.
+        // Editable fields belong BELOW the list instead of squeezing it
+        // beside a narrow, permanently visible sidebar.
+        var inventoryPanel=UmUi.Panel(tableArea);
+        var editorPanel=UmUi.Panel(UmUi.Stack(
+            UmUi.Label("تعديلات الباقات والقيود",15,true,UmUi.Blue),
+            editorScroll));
         var status=UmUi.Label("لم تُقرأ الباقات بعد",12,false,UmUi.Gray);
-        Content=UmUi.Scroller(UmUi.Stack(header,contentGrid,UmUi.Panel(status)));
+        Content=UmUi.Scroller(UmUi.Stack(header,inventoryPanel,
+            editorPanel,UmUi.Panel(status)));
 
         UmDataSnapshot<UmPlanRow>? snapshot=null;
         UmPlanRow? editing=null;
@@ -172,7 +174,8 @@ public sealed class UserManagerPlansScreen : UserControl
                     " | Limitations: "+result.Rows.Count(x=>x.Kind=="Limitation")+
                     (result.Generation==RouterOsGeneration.V6
                         ?" | التعديل عبر هذه الواجهة مقيد حتى التحقق من مالك الباقات في v6."
-                        :" | إدارة v7 مع إعادة قراءة النتائج بعد كل أمر.");
+                        :" | إدارة v7 مع إعادة قراءة النتائج بعد كل أمر.")+
+                    (result.IsComplete?"":" | قراءة روابط غير مكتملة: "+result.Diagnostic);
             }
             catch(OperationCanceledException) when(request.IsCancellationRequested){}
             catch(Exception ex)

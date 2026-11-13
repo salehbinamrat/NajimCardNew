@@ -147,14 +147,38 @@ internal static class UmUi
         };
 
     internal static DatePicker DateInput(string hint,int width=125)
-        => new()
+    {
+        // An inherited burgundy CalendarDayButton style can leave the text
+        // invisible inside the pale calendar popup. Scope a contrasting
+        // readable calendar palette to User Manager date filters only.
+        var days=new Style(typeof(CalendarDayButton));
+        days.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
+        days.Setters.Add(new Setter(Control.BackgroundProperty,Light));
+        days.Setters.Add(new Setter(Control.BorderBrushProperty,Gray));
+        days.Setters.Add(new Setter(Control.FontFamilyProperty,new FontFamily("Arial")));
+        var selectedDay=new Trigger
+        {
+            Property=CalendarDayButton.IsSelectedProperty,Value=true
+        };
+        selectedDay.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
+        selectedDay.Setters.Add(new Setter(Control.BackgroundProperty,Blue));
+        days.Triggers.Add(selectedDay);
+        var calendar=new Style(typeof(Calendar));
+        calendar.Setters.Add(new Setter(Control.ForegroundProperty,Ink));
+        calendar.Setters.Add(new Setter(Control.BackgroundProperty,Light));
+        calendar.Setters.Add(new Setter(Control.BorderBrushProperty,Gray));
+        calendar.Resources.Add(typeof(CalendarDayButton),days);
+        return new DatePicker
         {
             Width=width,Height=35,Margin=new Thickness(4),
             FontSize=12,FontFamily=new FontFamily("Arial"),
             Foreground=Ink,Background=Light,
             BorderBrush=Gray,BorderThickness=new Thickness(1),
+            CalendarStyle=calendar,
+            Language=System.Windows.Markup.XmlLanguage.GetLanguage("en-US"),
             ToolTip=hint
         };
+    }
 
     internal static ComboBox Combo(IEnumerable<string> options,int width=125)
     {

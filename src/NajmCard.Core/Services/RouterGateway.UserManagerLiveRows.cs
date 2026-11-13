@@ -49,7 +49,10 @@ public sealed partial class RouterGateway
             "yyyy-MM-dd HH:mm:ss","yyyy-MM-dd HH:mm",
             "yyyy-MM-ddTHH:mm:ss","MMM/dd/yyyy HH:mm:ss",
             "MMM/dd/yyyy HH:mm","MMM/dd/yyyy","yyyy-MM-dd",
-            "MMM/dd/yyyy h:mm:ss tt"
+            "MMM/dd/yyyy h:mm:ss tt",
+            "MMM/d/yyyy HH:mm:ss","MMM/d/yyyy HH:mm","MMM/d/yyyy",
+            "MMM/d/yyyy h:mm:ss tt","M/d/yyyy HH:mm:ss",
+            "M/d/yyyy h:mm:ss tt","M/d/yyyy"
         };
         return DateTime.TryParseExact(raw,formats,CultureInfo.InvariantCulture,
             DateTimeStyles.None,out var timestamp)
@@ -166,9 +169,12 @@ public sealed partial class RouterGateway
            limitations.Any(row=>!row.ContainsKey(".id")||!row.ContainsKey("name")))
             throw new InvalidDataException(
                 "تفتقد بعض الباقات أو القيود معرفات صحيحة؛ لا يمكن عرض قائمة مكتملة.");
-        if(relations.Any(row=>!row.ContainsKey("profile")||!row.ContainsKey("limitation")))
-            throw new InvalidDataException(
-                "تعذرت قراءة روابط الباقات والقيود؛ لا تعتمد حجما أو سرعة افتراضية.");
+        // Real v6 routers can retain orphaned profile-limitation links after
+        // a profile/limitation was removed. Keep all verified profile rows
+        // visible while clearly flagging these unresolved associations.
+        // Never invent the missing limit or claim a complete association.
+        int unresolved=relations.Count(row=>!row.ContainsKey("profile")||
+            !row.ContainsKey("limitation"));
 
         var names=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
         foreach(var r in limitations)
@@ -187,8 +193,10 @@ public sealed partial class RouterGateway
         {
             if(!profileAliases.TryGetValue(UmValue(r,"profile"),out var profile) ||
                 !names.TryGetValue(UmValue(r,"limitation"),out var limitation))
-                throw new InvalidDataException(
-                    "وجدت روابط Profile/Limitations غير معروفة؛ أُوقف عرض الباقات.");
+            {
+                unresolved++;
+                continue;
+            }
             if(!grouped.TryGetValue(profile,out var set))
                 grouped[profile]=set=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             set.Add(limitation);
@@ -200,7 +208,7 @@ public sealed partial class RouterGateway
             var name=UmValue(row,"name");
             var linked=grouped.TryGetValue(name,out var groups)
                 ?string.Join("، ",groups.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase))
-                :"غير مرتبط";
+                :unresolved>0?"غير مؤكد (توجد روابط ناقصة)":"غير مرتبط";
             rows.Add(new UmPlanRow(
                 UmValue(row,".id"),"Profile",name,UmKnown(row,"price"),
                 UmKnown(row,"validity"),UmKnown(row,v7?"starts-when":"starts-at"),
@@ -218,7 +226,14 @@ public sealed partial class RouterGateway
                 string.Join("، ",grouped.Where(x=>x.Value.Contains(UmValue(row,"name")))
                     .Select(x=>x.Key).OrderBy(x=>x,StringComparer.OrdinalIgnoreCase))));
         }
-        return new UmDataSnapshot<UmPlanRow>(version,rows);
+        return new UmDataSnapshot<UmPlanRow>(version,rows)
+        {
+            IsComplete=unresolved==0,
+            Diagnostic=unresolved==0?"":
+                $"تم عرض الباقات والقيود المقروءة، لكن {unresolved} رابطا "+
+                "بين Profile وLimitation غير قابل للتحقق. "+
+                "لا تعتمد حدود تلك الروابط قبل مراجعة User Manager على الراوتر."
+        };
     }
 
     public async Task<UmDataSnapshot<UmSessionRow>> ReadUmSessionsAsync(
@@ -232,9 +247,13 @@ public sealed partial class RouterGateway
             :".id,user,active,from-time,to-time,uptime,download,upload,ip-address,mac-address";
         var rows=await client.CommandAsync(menu,
             new Dictionary<string,string>{{".proplist",properties}},ct);
-        if(rows.Any(row=>!row.ContainsKey(".id") || !row.ContainsKey("user")))
+        if(rows.Any(row=>!row.ContainsKey(".id") || !row.ContainsKey("user") ||
+            string.IsNullOrWhiteSpace(UmValue(row,".id")) ||
+            string.IsNullOrWhiteSpace(UmValue(row,"user"))) ||
+            rows.Select(row=>UmValue(row,".id")).Distinct(StringComparer.Ordinal).Count()!=rows.Count)
             throw new InvalidDataException(
-                "سجلات الجلسات لا تحتوي معرفات وأسماء مستخدمين موثوقة.");
+                "سجلات الجلسات تحتوي معرفات أو أسماء ناقصة أو مكررة؛ "+
+                "لا يمكن اعتماد عدد الجلسات حتى تعاد قراءة سجلات موثوقة.");
         var output=new List<UmSessionRow>(rows.Count);
         foreach(var row in rows)
         {

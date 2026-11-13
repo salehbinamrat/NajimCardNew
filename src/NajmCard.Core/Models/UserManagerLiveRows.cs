@@ -2,7 +2,13 @@ namespace NajmCard.Core.Models;
 
 /// <summary>Router-originated rows. Missing values stay unknown; no demo data.</summary>
 public sealed record UmDataSnapshot<T>(RouterOsGeneration Generation,
-    IReadOnlyList<T> Rows);
+    IReadOnlyList<T> Rows)
+{
+    // Distinguish reliable profile rows from incomplete legacy references.
+    // Consumers can still use verified accounts/sessions independently.
+    public bool IsComplete { get; init; }=true;
+    public string Diagnostic { get; init; }="";
+}
 
 public sealed record UmAccountRow(
     string Id,string Name,string Profile,string Status,bool? Disabled,
