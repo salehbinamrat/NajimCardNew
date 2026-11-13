@@ -31,6 +31,9 @@ public sealed record UmPlanRow(
     string UploadRate,string AssociatedLimits)
 {
     public string KindLabel => Kind=="Profile"?"باقة":"قيد";
+    // v6 owns each profile and limitation within a User Manager customer.
+    // Not used to infer or grant editing access; mutations verify it again.
+    public string Owner { get; init; }="";
 }
 
 public sealed record UmSessionRow(
