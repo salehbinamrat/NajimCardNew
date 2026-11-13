@@ -98,4 +98,89 @@ public sealed class HadramoutNetworkMaintenanceActionTests
             ()=>new RouterGateway(fake).DisconnectHotspotSessionAsync(selected));
         Assert.Equal(0,fake.Writes);
     }
+
+    private sealed class MultiServerRouter : IRouterCommandClient, IRouterQueryClient
+    {
+        public readonly Dictionary<string,bool> States=new()
+        {
+            ["*AB"]=false,["*AC"]=false
+        };
+        public readonly List<string> Writes=[];
+        public string? UncertainId;
+        public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByIdAsync(
+            string command,string id,IReadOnlyDictionary<string,string>? attributes=null,
+            CancellationToken cancellationToken=default)
+        {
+            Assert.Equal("/ip/hotspot/print",command);
+            var response=new Dictionary<string,string>
+            {
+                [".id"]=id,["name"]=id=="*AB"?"main":"backup",
+                ["interface"]="bridge1",["profile"]="hsprof",
+                ["disabled"]=States[id]?"yes":"no",
+                ["running"]=States[id]?"no":"yes",
+                ["invalid"]="no"
+            };
+            return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>([response]);
+        }
+        public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> CommandAsync(
+            string command,IReadOnlyDictionary<string,string>? attributes=null,
+            CancellationToken cancellationToken=default)
+        {
+            Assert.Equal("/ip/hotspot/set",command);
+            var id=attributes![".id"];
+            Writes.Add(id);
+            if(UncertainId==id)throw new IOException("connection lost after write");
+            States[id]=attributes["disabled"]=="yes";
+            return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>([]);
+        }
+    }
+
+    private static RouterHotspotServerStatus Server(string id) =>
+        new(id,id=="*AB"?"main":"backup","bridge1","hsprof",false,false,true);
+
+    [Fact]
+    public async Task Multiple_Selected_Hotspot_Servers_Change_With_Exact_Id_Readback()
+    {
+        var fake=new MultiServerRouter();
+        var result=await new RouterGateway(fake).ChangeHotspotServersStateAsync(
+            [Server("*AB"),Server("*AC")],true);
+        Assert.Equal(2,result.Changed);
+        Assert.Equal(2,result.Requested);
+        Assert.False(result.UncertainOutcome);
+        Assert.Equal(["*AB","*AC"],fake.Writes);
+        Assert.True(fake.States["*AB"]);
+        Assert.True(fake.States["*AC"]);
+    }
+
+    [Fact]
+    public async Task Duplicate_Server_Id_Aborts_Before_Any_Write()
+    {
+        var fake=new MultiServerRouter();
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>
+            new RouterGateway(fake).ChangeHotspotServersStateAsync(
+                [Server("*AB"),Server("*AB")],true));
+        Assert.Empty(fake.Writes);
+    }
+
+    [Fact]
+    public async Task Uncertain_Response_Stops_Batch_Without_Touching_Later_Server()
+    {
+        var fake=new MultiServerRouter{UncertainId="*AB"};
+        var result=await new RouterGateway(fake).ChangeHotspotServersStateAsync(
+            [Server("*AB"),Server("*AC")],true);
+        Assert.Equal(0,result.Changed);
+        Assert.True(result.UncertainOutcome);
+        Assert.Equal(["*AB"],fake.Writes);
+        Assert.False(fake.States["*AC"]);
+    }
+
+    [Fact]
+    public async Task Unknown_Selected_Server_State_Cannot_Be_Modified()
+    {
+        var fake=new MultiServerRouter();
+        var missing=Server("*AB") with{Disabled=null};
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>
+            new RouterGateway(fake).ChangeHotspotServersStateAsync([missing],true));
+        Assert.Empty(fake.Writes);
+    }
 }

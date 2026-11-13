@@ -30,8 +30,12 @@ class VoucherProgressPopupContract(unittest.TestCase):
         self.assertIn("creator.OperationProgressChanged-=ShowStage;",workspace)
         self.assertIn("popup.Show();",workspace)
         self.assertIn("popup.Close();",workspace)
-        self.assertIn('report("حفظ ملف PDF الأولي',workspace)
+        self.assertIn('report("حفظ الدفعة وإعدادات الطباعة محليا',workspace)
+        self.assertIn('report("حفظ PDF أولي غير مؤكد',workspace)
         self.assertIn('report("حفظ ملف PDF النهائي',workspace)
+        # Draft PDF is generated only for an unsuccessful issuance.
+        self.assertLess(workspace.index('if(!sent)'),
+                        workspace.index('report("حفظ PDF أولي غير مؤكد'))
         # The PDF progress begins only after a real folder was selected.
         self.assertLess(workspace.index("if(picker.ShowDialog()!=true)return;"),
                         workspace.index('WithCardProgressAsync("إنشاء وإرسال وحفظ الكروت"'))

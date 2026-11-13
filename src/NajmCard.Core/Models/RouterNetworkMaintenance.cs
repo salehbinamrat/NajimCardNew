@@ -19,3 +19,10 @@ public sealed record RouterHotspotServerStatus(string Id,string Name,
 
 /// <summary>Only a verified single RouterOS record may be changed.</summary>
 public sealed record RouterHotspotActionResult(bool Success,bool UncertainOutcome,string Diagnostic);
+
+/// <summary>
+/// Confirmed subset of a selected Hotspot server batch, never a guessed total.
+/// Uncertain RouterOS responses stop the remaining operations immediately.
+/// </summary>
+public sealed record RouterHotspotBatchActionResult(
+    int Changed,int Requested,bool UncertainOutcome,string Diagnostic);

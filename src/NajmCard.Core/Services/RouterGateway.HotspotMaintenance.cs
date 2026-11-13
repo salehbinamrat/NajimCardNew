@@ -75,6 +75,58 @@ public sealed partial class RouterGateway
             "لم يثبت التعديل عند إعادة القراءة؛ لا تعاود الإرسال دون تحقق.");
     }
 
+    /// <summary>
+    /// A deliberately sequential batch of verified exact-ID server changes.
+    /// It never sends a broad RouterOS command, and aborts on an unknown or
+    /// ambiguous outcome instead of retrying or continuing the remaining IDs.
+    /// </summary>
+    public async Task<RouterHotspotBatchActionResult> ChangeHotspotServersStateAsync(
+        IReadOnlyList<RouterHotspotServerStatus> selected,bool disabled,
+        CancellationToken ct=default)
+    {
+        ArgumentNullException.ThrowIfNull(selected);
+        if(selected.Count is <1 or >10000)
+            throw new ArgumentException("عدد السيرفرات المحددة غير صالح.",nameof(selected));
+        if(selected.Any(x=>x is null || x.Disabled is null))
+            throw new InvalidOperationException(
+                "لا يمكن تغيير سيرفر حالته غير مؤكدة؛ حدث القائمة.");
+        foreach(var server in selected)CheckHotspotInternalId(server.Id);
+        if(selected.Select(x=>x.Id).Distinct(StringComparer.Ordinal).Count()!=selected.Count)
+            throw new InvalidOperationException(
+                "الاختيار يتضمن معرف سيرفر مكررا؛ لم يبدأ التنفيذ.");
+        var changing=selected.Where(x=>x.Disabled!=disabled).ToArray();
+        if(changing.Length==0)
+            return new RouterHotspotBatchActionResult(0,0,false,
+                "السيرفرات المحددة بالفعل في الحالة المطلوبة.");
+        int completed=0;
+        foreach(var server in changing)
+        {
+            ct.ThrowIfCancellationRequested();
+            RouterHotspotActionResult result;
+            try
+            {
+                result=await ChangeHotspotServerStateAsync(server,disabled,ct);
+            }
+            catch(Exception ex) when(ex is InvalidOperationException or IOException
+                or ObjectDisposedException)
+            {
+                return new RouterHotspotBatchActionResult(completed,changing.Length,
+                    ex is IOException or ObjectDisposedException,
+                    $"توقف التنفيذ عند السيرفر «{server.Name}»: {ex.Message} "+
+                    $"تم تأكيد {completed} من {changing.Length}. حدث البيانات.");
+            }
+            if(!result.Success)
+                return new RouterHotspotBatchActionResult(completed,changing.Length,
+                    result.UncertainOutcome,
+                    $"توقف التنفيذ عند السيرفر «{server.Name}»: {result.Diagnostic} "+
+                    $"تم تأكيد {completed} من {changing.Length}. لا تُكرر دون تحديث.");
+            completed++;
+        }
+        return new RouterHotspotBatchActionResult(completed,changing.Length,false,
+            $"تم {(disabled?"تعطيل":"تفعيل")} {completed} سيرفرا "+
+            "وتأكيد حالة كل سيرفر من الراوتر.");
+    }
+
     public async Task<RouterHotspotActionResult> DisconnectHotspotSessionAsync(
         HotspotSession selected,CancellationToken ct=default)
     {

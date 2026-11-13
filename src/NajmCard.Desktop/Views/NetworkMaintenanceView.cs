@@ -143,61 +143,10 @@ public sealed class NetworkMaintenanceView : UserControl
             finally{readDb.IsEnabled=true;}
         };
 
-        var serversPanel=PageUi.Column();
-        serversPanel.Children.Add(PageUi.Title("سيرفرات الهوتسبوت"));
-        serversPanel.Children.Add(PageUi.Hint(
-            "التفعيل والتعطيل لسيرفر واحد محدد بعد قراءة هوية وحالة السيرفر مباشرة من الراوتر."));
-        var serverGrid=PageUi.Table(("اختيار","Id"),("اسم السيرفر","Name"),
-            ("الواجهة","Interface"),("البروفايل","Profile"),("الحالة","StateLabel"));
-        serverGrid.IsReadOnly=true;serverGrid.EnableRowVirtualization=true;
-        var serverButtons=new WrapPanel();
-        var readServers=PageUi.Button("تحديث السيرفرات");
-        var enable=PageUi.Button("تفعيل المحدد",false);
-        var disable=PageUi.Button("تعطيل المحدد",false);
-        serverButtons.Children.Add(readServers);serverButtons.Children.Add(enable);
-        serverButtons.Children.Add(disable);
-        var serverStatus=PageUi.Status();
-        serversPanel.Children.Add(serverButtons);
-        serversPanel.Children.Add(serverGrid);
-        serversPanel.Children.Add(serverStatus);
-        Add("سيرفرات الهوتسبوت",PageUi.Surface(serversPanel,"#9D5F70"));
-        bool serverBusy=false;
-        async Task LoadServers()
-        {
-            if(serverBusy)return;
-            serverBusy=true;readServers.IsEnabled=false;
-            try
-            {
-                var list=await gateway.ReadHotspotServerStatusAsync();
-                serverGrid.ItemsSource=list;
-                serverStatus.Text="عدد السيرفرات من الراوتر: "+list.Count;
-            }
-            catch(Exception ex){serverGrid.ItemsSource=null;serverStatus.Text="فشلت القراءة: "+ex.Message;}
-            finally{serverBusy=false;readServers.IsEnabled=true;}
-        }
-        readServers.Click+=async(_,_)=>await LoadServers();
-        async Task ServerAction(bool disabled)
-        {
-            if(serverBusy || serverGrid.SelectedItem is not RouterHotspotServerStatus selected)
-            {serverStatus.Text="حدد سيرفر Hotspot واحدا أولا.";return;}
-            if(!PageUi.Confirm((disabled?"تعطيل":"تفعيل")+" السيرفر «"+
-                selected.Name+"» على الراوتر؟ قد يؤثر ذلك على المشتركين."))return;
-            serverBusy=true;enable.IsEnabled=disable.IsEnabled=false;
-            try
-            {
-                var result=await gateway.ChangeHotspotServerStateAsync(selected,disabled);
-                serverStatus.Text=result.Diagnostic;
-                if(result.Success)
-                {
-                    var fresh=await gateway.ReadHotspotServerStatusAsync();
-                    serverGrid.ItemsSource=fresh;
-                }
-            }
-            catch(Exception ex){serverStatus.Text="توقف تعديل السيرفر: "+ex.Message;}
-            finally{serverBusy=false;enable.IsEnabled=disable.IsEnabled=true;}
-        }
-        enable.Click+=async(_,_)=>await ServerAction(false);
-        disable.Click+=async(_,_)=>await ServerAction(true);
+        // Reuse the same verified, multi-selection Hotspot server controls
+        // shown in the main Servers page. No duplicate router mutation path.
+        // ReadHotspotServerStatusAsync is invoked by ServersView on load.
+        Add("سيرفرات الهوتسبوت",new ServersView(gateway,embedded:true));
 
         // Existing FTP, Hotspot template, full interface/inventory tools remain accessible.
         Add("أدوات إضافية",new ToolsView(gateway,routerHost));
