@@ -182,7 +182,7 @@ public partial class GeneratorView : UserControl
         quickSaveButton.FontWeight=FontWeights.Bold;
         quickSaveButton.Foreground=(Brush)new BrushConverter().ConvertFrom("#56172F")!;
         quickSaveButton.Background=(Brush)new BrushConverter().ConvertFrom("#F0C96E")!;
-        quickSaveButton.ToolTip="حفظ خيارات التوليد والتصميم والطباعة لهذه الباقة في قاعدة نجم كارد المحلية.";
+        quickSaveButton.ToolTip="حفظ خيارات التوليد والتصميم والطباعة لهذه الباقة في قاعدة تريم كارد المحلية.";
         WirePackageSaveNotification(quickSaveButton);
         PackageSaveButton=quickSaveButton;
         servicePanel.Children.Add(routeHeader);
@@ -637,7 +637,7 @@ public partial class GeneratorView : UserControl
             var sample=candidates[0];
             SetPreviewCredentials(sample.Username,sample.Password);
             _status.Text=persist
-                ? $"حُفظت {candidates.Length:N0} كرتا في قاعدة نجم كارد. لم تُرسل إلى الراوتر. "+ 
+                ? $"حُفظت {candidates.Length:N0} كرتا في قاعدة تريم كارد. لم تُرسل إلى الراوتر. "+ 
                     (candidates.Length>500?"الجدول يعرض أول 500 كرت لتسريع العرض.":"")
                     +printWarning
                 : $"معاينة {candidates.Length:N0} كرتا؛ لم تُحفظ ولم تُرسل. "+
