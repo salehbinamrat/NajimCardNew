@@ -51,9 +51,11 @@ public sealed class UserManagerCatalogVersionTests
         Assert.Equal(RouterOsGeneration.V6,profiles.Generation);
         Assert.Equal("six-profile",Assert.Single(profiles.Rows).Name);
         Assert.Equal("six-limit",Assert.Single(limits.Rows).Name);
+        // The version was verified once for this gateway and reused across
+        // adjacent read-only sections instead of repeating a router round-trip.
         Assert.Equal([
             "/system/resource/print", "/tool/user-manager/profile/print",
-            "/system/resource/print", "/tool/user-manager/profile/limitation/print"
+            "/tool/user-manager/profile/limitation/print"
         ],spy.Paths);
     }
 
