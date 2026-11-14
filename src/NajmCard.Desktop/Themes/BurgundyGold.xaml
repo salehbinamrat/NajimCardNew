@@ -21,6 +21,37 @@
     <Style TargetType="Window"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/><Setter Property="Background" Value="{StaticResource CanvasBrush}"/><Setter Property="FlowDirection" Value="RightToLeft"/></Style>
     <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/></Style>
     <Style TargetType="Label"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/><Setter Property="Margin" Value="0,2,0,6"/></Style>
+    <!-- Global mouse-hover hints, including sidebar items and creator controls.
+         Preserve their existing text and actions; only replace WPF's white popup. -->
+    <Style TargetType="ToolTip">
+        <Setter Property="FontFamily" Value="Arial"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource CreamTextBrush}"/>
+        <Setter Property="Background" Value="{StaticResource CreamPanelBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="MaxWidth" Value="400"/>
+        <Setter Property="FlowDirection" Value="RightToLeft"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border x:Name="TooltipFrame"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            TextElement.Foreground="{TemplateBinding Foreground}"
+                            CornerRadius="7" SnapsToDevicePixels="True">
+                        <ContentPresenter ContentSource="Content"
+                                          RecognizesAccessKey="True"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style TargetType="TextBox"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource CreamTextBrush}"/><Setter Property="Background" Value="#FFFAF0"/><Setter Property="CaretBrush" Value="{StaticResource GoldBrush}"/><Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="10,8"/><Setter Property="MinHeight" Value="36"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="14"/></Style>
     <Style TargetType="PasswordBox"><Setter Property="FontFamily" Value="Arial"/><Setter Property="Foreground" Value="{StaticResource CreamTextBrush}"/><Setter Property="Background" Value="#FFFAF0"/><Setter Property="CaretBrush" Value="{StaticResource GoldBrush}"/><Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/><Setter Property="Padding" Value="10,8"/><Setter Property="MinHeight" Value="42"/><Setter Property="FontSize" Value="14"/></Style>
     <Style TargetType="CheckBox">
