@@ -49,7 +49,7 @@ public partial class DashboardView
         var close=UmUi.Action("إغلاق",true,105);
         var dialog=new Window
         {
-            Title="نجم كارد | جميع الباقات وإحصائية الحسابات",
+            Title="تريم كارد | جميع الباقات وإحصائية الحسابات",
             Width=770,Height=585,MinWidth=660,MinHeight=495,
             WindowStartupLocation=WindowStartupLocation.CenterOwner,
             Owner=Window.GetWindow(this),
