@@ -15,6 +15,13 @@ class ConnectionsUiLatencyTests(unittest.TestCase):
         draw=src[src.index("void Draw()"):src.index("async Task Load()")]
         self.assertNotIn("connections.Count(row=>",draw)
 
+    def test_card_management_filters_wait_for_typing_to_stop(self):
+        src=(VIEWS/"CardsView.cs").read_text(encoding="utf-8")
+        self.assertIn("UmUi.Debounce(search,_table,",src)
+        self.assertIn("UmUi.Debounce(umSearch,_umGrid,",src)
+        self.assertNotIn("search.TextChanged+=(_,_)=>{page=0;FilterHotspot();};",src)
+        self.assertNotIn("umSearch.TextChanged+=(_,_)=>{umPage=0;FilterUm();};",src)
+
     def test_incomplete_snapshot_never_treated_as_complete(self):
         code=(ROOT/"src/NajmCard.Core/Services/RouterGateway.UserManagerLiveRows.cs").read_text(
             encoding="utf-8")
