@@ -21,7 +21,7 @@ class UserManagerPerformanceAndAppearance(unittest.TestCase):
     def test_dashboard_does_not_download_historical_sessions_to_display_zero(self):
         view=src(D,"Views/DashboardView.xaml.cs")
         classifier=src(C,"Services/UserManagerV6Usage.cs")
-        self.assertIn("Interval=TimeSpan.FromSeconds(3)",view)
+        self.assertIn("Interval=TimeSpan.FromSeconds(10)",view)
         self.assertIn("ReadCachedUserManagerV6InventoryAsync(force,cts.Token)",view)
         self.assertNotIn("ActiveSessionsVerified",view)
         self.assertIn("row.ContainsKey(\"active-sessions\")",classifier)
