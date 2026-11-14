@@ -46,16 +46,16 @@ class CreatorDefaultAndAdvancedEditorTests(unittest.TestCase):
         source=read("GeneratorView.DesignerPanel.cs")
         section=source[source.index('TextBox ColorChoice('):source.index('var name=Editable(',source.index('TextBox ColorChoice('))]
         self.assertIn('new ComboBox',section)
-        self.assertIn('new ComboBoxItem',section)
+        self.assertIn('new DataTemplate(typeof(CardPaletteEntry))',section)
         self.assertIn('ColorChoice',source)
         self.assertIn('entry.Visibility=Visibility.Collapsed',section)
         self.assertIn('entry.Text=selected',section)
-        self.assertIn('item.Content',section)
+        self.assertIn('selector.ItemTemplate=itemTemplate',section)
         self.assertNotIn('palette.Children.Add(square)',section)
         self.assertNotIn('entry.Text=key',section)
         for label in ("لون خلفية البطاقة","لون رقم الكرت","لون بقية النصوص","لون الحدود"):
             self.assertIn('ColorChoice("'+label+'"',source)
-        self.assertIn('("#FFF6EB"',source)
+        self.assertIn('new("سكري فاتح","#FFF6EB")',source)
         self.assertIn('Hex',section)
 
     def test_advanced_dialog_has_grouped_equal_sized_fields_and_safe_save(self):
