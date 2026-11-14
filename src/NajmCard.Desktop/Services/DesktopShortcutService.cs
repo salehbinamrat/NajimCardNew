@@ -11,7 +11,7 @@ namespace NajmCard.Desktop.Services;
 /// </summary>
 public static class DesktopShortcutService
 {
-    private const string LinkName="Najm Card New.lnk";
+    private const string LinkName="تريم كارد.lnk";
 
     public static string ResolveExecutablePath(string? applicationDirectory=null)
     {
@@ -19,7 +19,7 @@ public static class DesktopShortcutService
         var app=Path.Combine(directory,"NajmCard.exe");
         if(!File.Exists(app))
             throw new FileNotFoundException(
-                "تعذر العثور على ملف تشغيل نجم كارد في مجلد البرنامج.",app);
+                "تعذر العثور على ملف تشغيل تريم كارد في مجلد البرنامج.",app);
 
         // An organized Portable/Installer keeps all runtime libraries in
         // App/, but the shortcut must launch the icon-bearing ROOT EXE.
@@ -71,7 +71,7 @@ public static class DesktopShortcutService
                 Set("TargetPath",target);
                 Set("WorkingDirectory",Path.GetDirectoryName(target)!);
                 Set("IconLocation",target+",0");
-                Set("Description","نجم كارد - طباعة الكروت وإدارة الشبكات");
+                Set("Description","تريم كارد - طباعة الكروت وإدارة الشبكات");
                 kind.InvokeMember("Save",BindingFlags.InvokeMethod,
                     null,shortcut,null);
             }
