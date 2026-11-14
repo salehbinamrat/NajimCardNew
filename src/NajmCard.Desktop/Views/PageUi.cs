@@ -11,7 +11,7 @@ using NajmCard.Desktop.Services;
 
 namespace NajmCard.Desktop.Views;
 
-/// <summary>Shared visual system: geometric burgundy panels, colorful vector icons and readable RTL grids.</summary>
+/// <summary>Shared light-cream geometry, softened burgundy accents, and readable RTL grids.</summary>
 internal static class PageUi
 {
     internal static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(88, 37, 58));
@@ -44,7 +44,7 @@ internal static class PageUi
     internal static StackPanel Column() => new() { Orientation = Orientation.Vertical };
     internal static TextBlock Title(string text) => new() { Text = text, FontSize = 23, FontWeight = FontWeights.Bold, FontFamily=new FontFamily("Arial"),
         Foreground = Brushes.White,
-        Background = new SolidColorBrush(Color.FromRgb(114, 32, 58)),
+        Background = new SolidColorBrush(Color.FromRgb(165, 82, 108)),
         Padding = new Thickness(8,5,8,5),Margin = new Thickness(0, 0, 0, 6) };
     internal static TextBlock Hint(string text) => new() { Text = text, Foreground = Muted, FontSize = 14, FontWeight = FontWeights.Medium,
         TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
@@ -81,7 +81,7 @@ internal static class PageUi
             var n when n.Contains("تحديث",StringComparison.Ordinal) ||
                 n.Contains("قراءة",StringComparison.Ordinal)=>"#216C80",
             var n when n.Contains("إعادة تشغيل",StringComparison.Ordinal)=>"#A16618",
-            _=>primary?"#E6BC64":"#68233D"
+            _=>primary?"#E6BC64":"#A5526C"
         };
         button.Background=(Brush)new BrushConverter().ConvertFrom(background)!;
         button.Foreground=(Brush)new BrushConverter().ConvertFrom(
@@ -160,6 +160,10 @@ internal static class PageUi
             FontFamily=new FontFamily("Arial"),FontWeight=FontWeights.Medium,
             AlternationCount=2,EnableRowVirtualization=true,EnableColumnVirtualization=true,
             ColumnWidth = new DataGridLength(1, DataGridLengthUnitType.Star) };
+        // Recycle visible rows on large RouterOS results instead of rebuilding them.
+        VirtualizingPanel.SetIsVirtualizing(grid,true);
+        VirtualizingPanel.SetVirtualizationMode(grid,VirtualizationMode.Recycling);
+        ScrollViewer.SetCanContentScroll(grid,true);
         var textStyle=new Style(typeof(TextBlock));
         textStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis));
         textStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty,VerticalAlignment.Center));

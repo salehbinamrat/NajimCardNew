@@ -73,8 +73,8 @@ public partial class DashboardView : UserControl
     private void Reports_Click(object sender, RoutedEventArgs e) => _navigate("reports");
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
 
-    // Refresh online telemetry every three seconds: one-second polling on a
-    // slow v6 API can starve profile retrieval during a full card inventory.
+    // Refresh online telemetry only while no heavyweight inventory is running;
+    // avoid starving profile retrieval on slow RouterOS v6 connections.
     // Never overlap requests or download UM user lists here.
     private async Task RefreshLiveTelemetryAsync()
     {
@@ -82,7 +82,7 @@ public partial class DashboardView : UserControl
         // The 1-second telemetry display resumes automatically on restore;
         // license monitoring continues independently in the main window.
         if(!IsLoaded || Window.GetWindow(this)?.WindowState==WindowState.Minimized ||
-           _liveTelemetryRunning || _refreshing)return;
+           _liveTelemetryRunning || _refreshing || _lifecycleReading)return;
         _liveTelemetryRunning=true;
         // A 4-second cancellation previously disposed the shared RouterOS TCP
         // session while other views still held a gateway to it. Use the command
@@ -263,6 +263,7 @@ public partial class DashboardView : UserControl
                 Enabled.Text="—";
                 Expired.Text="—";
                 ActiveLegend.Text=ExpiredLegend.Text=DisabledLegend.Text="—";
+                ActiveHeadline.Text=ExpiredHeadline.Text="—";
                 ActivePercent.Text=ExpiredPercent.Text=ValidPercent.Text="—";
 
                 ProfileBars.Children.Clear();
@@ -275,6 +276,8 @@ public partial class DashboardView : UserControl
             Expired.Text=state.Expired.ToString("N0",CultureInfo.InvariantCulture);
             ActiveLegend.Text=state.Active.ToString("N0",CultureInfo.InvariantCulture);
             ExpiredLegend.Text=state.Expired.ToString("N0",CultureInfo.InvariantCulture);
+            ActiveHeadline.Text=ActiveLegend.Text;
+            ExpiredHeadline.Text=ExpiredLegend.Text;
             DisabledLegend.Text=state.Valid.ToString("N0",CultureInfo.InvariantCulture);
 
             static string Pct(int value,int total)=>

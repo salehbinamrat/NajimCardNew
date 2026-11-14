@@ -6,11 +6,11 @@
     <SolidColorBrush x:Key="DashboardCream" Color="#FFF3DF"/>
     <SolidColorBrush x:Key="DashboardMaroon" Color="#72203A"/>
     <Style x:Key="DashboardPanel" TargetType="Border" BasedOn="{StaticResource CardPanel}">
-      <Setter Property="Padding" Value="12"/>
-      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="11"/>
+      <Setter Property="CornerRadius" Value="13"/>
       <Setter Property="Margin" Value="0"/>
       <Setter Property="Background" Value="{StaticResource DashboardCream}"/>
-      <Setter Property="BorderBrush" Value="{StaticResource DashboardMaroon}"/>
+      <Setter Property="BorderBrush" Value="#D2A99A"/>
       <Setter Property="Tag" Value="DashboardPanel"/>
     </Style>
     <Style x:Key="StatNumber" TargetType="TextBlock">
@@ -24,9 +24,9 @@
     </Style>
     <Style x:Key="HeaderLabel" TargetType="TextBlock">
       <Setter Property="FontSize" Value="15"/><Setter Property="FontWeight" Value="Bold"/>
-      <Setter Property="Foreground" Value="#FFF5E8"/>
-      <Setter Property="Background" Value="{StaticResource DashboardMaroon}"/>
-      <Setter Property="Padding" Value="7,3"/>
+      <Setter Property="Foreground" Value="#692B43"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Padding" Value="1,4"/>
     </Style>
     <Style x:Key="QuickButton" TargetType="Button" BasedOn="{StaticResource OutlineButton}">
       <Setter Property="Padding" Value="5,6"/><Setter Property="Margin" Value="2"/>
@@ -53,81 +53,83 @@
                     VerticalAlignment="Center" FlowDirection="LeftToRight">
           <Button x:Name="LifecycleButton" Content="◉ تحديث حالة الكروت"
                   Style="{StaticResource QuickButton}"
-                  Padding="12,6" Margin="3,0" Background="#634A94" Foreground="White"
+                  Padding="12,6" Margin="3,0" Background="#86579A" Foreground="White"
                   Click="Lifecycle_Click"/>
           <Button x:Name="RefreshButton" Content="⟳ تحديث مباشر" Style="{StaticResource QuickButton}" Foreground="White" Background="#116A76"
                   Padding="12,6" Margin="3,0" Click="Refresh_Click"/>
           <Border Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
                   CornerRadius="7" Padding="11,6" Margin="7,0">
-            <TextBlock Text="●  متصل" Foreground="#AFFFE0" FontSize="12"
+            <TextBlock Text="●  متصل" Foreground="#18784E" FontSize="12"
                        FontWeight="ExtraBold"/>
           </Border>
         </StackPanel>
-        <TextBlock Grid.Column="1" Text="الرئيسية" HorizontalAlignment="Right"
+        <TextBlock Grid.Column="1" Text="لوحة مراقبة الشبكة" HorizontalAlignment="Right"
                    FlowDirection="RightToLeft" TextAlignment="Right"
                    Style="{StaticResource WorkspaceTitleText}"/>
       </Grid>
     </Border>
-    <!-- Row 1: total, live connections and compact CPU/RAM, not duplicated lifecycle cards. -->
-    <Grid Grid.Row="1" Margin="0,0,0,8">
+    <!-- Row 1: four true counters. No sample figures or quick links. -->
+    <Grid Grid.Row="1" Margin="0,0,0,9">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/><ColumnDefinition Width="8"/>
-        <ColumnDefinition Width="*"/><ColumnDefinition Width="8"/>
+        <ColumnDefinition Width="*"/><ColumnDefinition Width="9"/>
+        <ColumnDefinition Width="*"/><ColumnDefinition Width="9"/>
+        <ColumnDefinition Width="*"/><ColumnDefinition Width="9"/>
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
-      <Border Grid.Column="0" Style="{StaticResource DashboardPanel}">
-        <StackPanel>
-          <Grid Background="{StaticResource DashboardMaroon}" Height="30">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="30"/></Grid.ColumnDefinitions>
-            <TextBlock Text="إجمالي الكروت" Style="{StaticResource HeaderLabel}" VerticalAlignment="Center"/>
-            <Path Grid.Column="1" Data="{StaticResource IconCard}" Stroke="{StaticResource GoldBrightBrush}"
-                  StrokeThickness="1.8" Width="18" Height="18" Stretch="Uniform"
-                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-          </Grid>
+      <Border Grid.Column="0" Style="{StaticResource DashboardPanel}" BorderBrush="#DBB676">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="42"/></Grid.ColumnDefinitions>
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="إجمالي الكروت" Style="{StaticResource HeaderLabel}"/>
             <TextBlock x:Name="AllUsers" Text="—" Style="{StaticResource StatNumber}"/>
             <TextBlock Text="User Manager v6" Style="{StaticResource Tiny}"/>
           </StackPanel>
+          <Border Grid.Column="1" Background="#F3E0BD" Width="42" Height="42" CornerRadius="11" VerticalAlignment="Top">
+            <Path Data="{StaticResource IconCard}" Stroke="#8C6024" StrokeThickness="1.9"
+                  Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+        </Grid>
       </Border>
-      <Border Grid.Column="2" Style="{StaticResource DashboardPanel}">
-        <StackPanel>
-          <Grid Background="{StaticResource DashboardMaroon}" Height="30">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="30"/></Grid.ColumnDefinitions>
-            <TextBlock Text="المتصلون الآن" Style="{StaticResource HeaderLabel}" VerticalAlignment="Center"/>
-            <Path Grid.Column="1" Data="{StaticResource IconPeople}" Stroke="{StaticResource GoldBrightBrush}"
-                  StrokeThickness="1.8" Width="18" Height="18" Stretch="Uniform"
-                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-          </Grid>
+      <Border Grid.Column="2" Style="{StaticResource DashboardPanel}" BorderBrush="#9BBFCB">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="42"/></Grid.ColumnDefinitions>
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="المتصلون الآن" Style="{StaticResource HeaderLabel}"/>
             <TextBlock x:Name="Online" Text="—" Style="{StaticResource StatNumber}"/>
             <TextBlock x:Name="OnlineBreakdown" Text="Hotspot + PPPoE" Style="{StaticResource Tiny}"/>
           </StackPanel>
+          <Border Grid.Column="1" Background="#DCEFF5" Width="42" Height="42" CornerRadius="11" VerticalAlignment="Top">
+            <Path Data="{StaticResource IconPeople}" Stroke="#277A94" StrokeThickness="1.9"
+                  Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+        </Grid>
       </Border>
-      <Border Grid.Column="4" Style="{StaticResource DashboardPanel}">
+      <Border Grid.Column="4" Style="{StaticResource DashboardPanel}" BorderBrush="#A6D1B3">
         <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-          <TextBlock Grid.ColumnSpan="2" Text="أداء الراوتر" Style="{StaticResource HeaderLabel}"/>
-          <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,7,8,0">
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <TextBlock Text="المعالج" Style="{StaticResource Tiny}"/>
-              <TextBlock Grid.Column="1" x:Name="Cpu" Text="—" Style="{StaticResource Tiny}" FontWeight="Bold"/>
-            </Grid>
-            <ProgressBar x:Name="CpuProgress" Height="7" Minimum="0" Maximum="100"
-                         Foreground="#E0B56D" Background="#4A3645" BorderThickness="0" Margin="0,3,0,4"/>
-            <TextBlock Text="مدة التشغيل" Style="{StaticResource Tiny}"/>
-            <TextBlock x:Name="Uptime" Text="—" Style="{StaticResource Tiny}" FontWeight="Bold"/>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="42"/></Grid.ColumnDefinitions>
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="الكروت النشطة" Style="{StaticResource HeaderLabel}"/>
+            <TextBlock x:Name="ActiveHeadline" Text="—" Style="{StaticResource StatNumber}"/>
+            <TextBlock Text="حالة مؤكدة بعد القراءة" Style="{StaticResource Tiny}"/>
           </StackPanel>
-          <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,7,0,0">
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <TextBlock Text="الذاكرة" Style="{StaticResource Tiny}"/>
-              <TextBlock Grid.Column="1" x:Name="MemoryUsePercent" Text="—" Style="{StaticResource Tiny}" FontWeight="Bold"/>
-            </Grid>
-            <ProgressBar x:Name="MemoryProgress" Height="7" Minimum="0" Maximum="100"
-                         Foreground="#E0B56D" Background="#4A3645" BorderThickness="0" Margin="0,3,0,4"/>
-            <TextBlock Text="الذاكرة الحرة" Style="{StaticResource Tiny}"/>
-            <TextBlock x:Name="MemoryFree" Text="—" Style="{StaticResource Tiny}" FontWeight="Bold"/>
+          <Border Grid.Column="1" Background="#DFF3E5" Width="42" Height="42" CornerRadius="11" VerticalAlignment="Top">
+            <Path Data="{StaticResource IconShield}" Stroke="#197A54" StrokeThickness="1.9"
+                  Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+        </Grid>
+      </Border>
+      <Border Grid.Column="6" Style="{StaticResource DashboardPanel}" BorderBrush="#E3B0B8">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="42"/></Grid.ColumnDefinitions>
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="الكروت المنتهية" Style="{StaticResource HeaderLabel}"/>
+            <TextBlock x:Name="ExpiredHeadline" Text="—" Style="{StaticResource StatNumber}"/>
+            <TextBlock Text="استنفاد Transfer Limit فقط" Style="{StaticResource Tiny}"/>
           </StackPanel>
+          <Border Grid.Column="1" Background="#F8E0E3" Width="42" Height="42" CornerRadius="11" VerticalAlignment="Top">
+            <Path Data="{StaticResource IconActivity}" Stroke="#B34F64" StrokeThickness="1.9"
+                  Width="23" Height="23" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
         </Grid>
       </Border>
     </Grid>
@@ -147,7 +149,7 @@
             <TextBlock Text="حالة الكروت" Style="{StaticResource HeaderLabel}"/>
             <TextBlock Grid.Column="1" Text="User Manager v6" Style="{StaticResource Tiny}" VerticalAlignment="Center"/>
           </Grid>
-          <!-- Hadramout-inspired geometric 3-column lifecycle table; no radial chart. -->
+          <!-- Truthful lifecycle table retains independent live totals and percentages. -->
            <Grid Grid.Row="1" VerticalAlignment="Top">
              <Grid.ColumnDefinitions>
                <ColumnDefinition Width="1.3*"/>
@@ -228,7 +230,7 @@
       <Border Grid.Column="4" Style="{StaticResource DashboardPanel}">
         <DockPanel>
           <TextBlock DockPanel.Dock="Top" Text="آخر النشاط — سجل العمليات"
-                     Style="{StaticResource HeaderLabel}" Margin="0,0,0,8"/>
+                     Style="{StaticResource HeaderLabel}" Margin="0,0,0,6"/>
           <StackPanel x:Name="ActivityRows">
             <TextBlock Text="بانتظار قراءة سجل العمليات" Style="{StaticResource Tiny}"/>
           </StackPanel>
@@ -236,56 +238,84 @@
       </Border>
     </Grid>
 
-    <!-- Row 3: two balanced cards; do not duplicate sidebar navigation. -->
-    <Grid Grid.Row="3" Margin="0,0,0,6" MinHeight="170">
+    <!-- Row 3: performance, the original three router safety actions, and router identity. -->
+    <Grid Grid.Row="3" Margin="0,0,0,6" MinHeight="168">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/><ColumnDefinition Width="8"/>
-        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="1*"/><ColumnDefinition Width="8"/>
+        <ColumnDefinition Width="1.5*"/><ColumnDefinition Width="8"/>
+        <ColumnDefinition Width="1*"/>
       </Grid.ColumnDefinitions>
+      <Border Grid.Column="0" Style="{StaticResource DashboardPanel}">
+        <StackPanel>
+          <TextBlock Text="أداء الراوتر" Style="{StaticResource HeaderLabel}" Margin="0,0,0,5"/>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="المعالج CPU" Style="{StaticResource Tiny}"/>
+            <TextBlock x:Name="Cpu" Grid.Column="1" Text="—" Style="{StaticResource Tiny}" FontWeight="Bold"/>
+          </Grid>
+          <ProgressBar x:Name="CpuProgress" Height="8" Minimum="0" Maximum="100"
+                       Foreground="#B96D83" Background="#EFE2DA" BorderThickness="0" Margin="0,5,0,10"/>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="الذاكرة RAM" Style="{StaticResource Tiny}"/>
+            <TextBlock x:Name="MemoryUsePercent" Grid.Column="1" Text="—" Style="{StaticResource Tiny}" FontWeight="Bold"/>
+          </Grid>
+          <ProgressBar x:Name="MemoryProgress" Height="8" Minimum="0" Maximum="100"
+                       Foreground="#C99C4E" Background="#EFE2DA" BorderThickness="0" Margin="0,5,0,7"/>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <TextBlock Text="مدة التشغيل" Style="{StaticResource Tiny}"/>
+            <TextBlock Grid.Column="1" x:Name="Uptime" Text="—" Style="{StaticResource Tiny}" TextAlignment="Left"/>
+          </Grid>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <TextBlock Text="الذاكرة الحرة" Style="{StaticResource Tiny}"/>
+            <TextBlock Grid.Column="1" x:Name="MemoryFree" Text="—" Style="{StaticResource Tiny}" TextAlignment="Left"/>
+          </Grid>
+        </StackPanel>
+      </Border>
       <Border Grid.Column="2" Style="{StaticResource DashboardPanel}">
+        <StackPanel>
+          <TextBlock Text="التحكم بالشبكة والصيانة" Style="{StaticResource HeaderLabel}" Margin="0,0,0,7"/>
+          <UniformGrid Columns="3" Rows="1" Margin="0,0,0,8">
+            <Button Content="تعطيل Hotspot" Click="DisableHotspot_Click"
+                    Style="{StaticResource QuickButton}" Foreground="White" Background="#B75265"
+                    ToolTip="فتح سيرفرات Hotspot وتحديد السيرفرات المطلوب تعطيلها"/>
+            <Button Content="تفعيل Hotspot" Click="RestoreHotspot_Click"
+                    Style="{StaticResource QuickButton}" Foreground="White" Background="#197A54"
+                    ToolTip="فتح سيرفرات Hotspot لتحديد السيرفرات وإعادة تفعيلها"/>
+            <Button Content="إعادة تشغيل الراوتر" Click="RebootRouter_Click"
+                    Style="{StaticResource QuickButton}" Foreground="White" Background="#A66B27"
+                    ToolTip="تتطلب تأكيدين وتؤدي إلى انقطاع الخدمة"/>
+          </UniformGrid>
+          <TextBlock x:Name="RefreshHistory" Text="لم يجر تحديث بعد"
+                     Style="{StaticResource Tiny}" Margin="1,1,0,3"/>
+          <TextBlock x:Name="RouterEndpointInfo" Text="" Style="{StaticResource Tiny}" Margin="1,1,0,2"/>
+          <TextBlock x:Name="LifecycleStatus" Text="لم تُقرأ حالة الكروت بعد."
+                     Style="{StaticResource Tiny}" TextWrapping="Wrap" Margin="1,2,0,0" MaxHeight="33"/>
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="4" Style="{StaticResource DashboardPanel}">
         <StackPanel>
           <TextBlock Text="بيانات الراوتر" Style="{StaticResource HeaderLabel}" Margin="0,0,0,7"/>
           <TextBlock x:Name="RouterName" Text="—" FontSize="16" FontWeight="Bold"
                      Foreground="#65223D" TextTrimming="CharacterEllipsis"/>
-          <Grid Margin="0,5,0,0">
+          <Grid Margin="0,6,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <TextBlock Text="اللوحة" Style="{StaticResource Tiny}" Margin="0,0,8,0"/>
             <TextBlock Grid.Column="1" x:Name="RouterBoard" Text="—" Style="{StaticResource Tiny}" TextAlignment="Left"/>
           </Grid>
-          <Grid Margin="0,4,0,0">
+          <Grid Margin="0,5,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <TextBlock Text="الإصدار" Style="{StaticResource Tiny}" Margin="0,0,8,0"/>
             <TextBlock Grid.Column="1" x:Name="RouterVersion" Text="—" Style="{StaticResource Tiny}" TextAlignment="Left"/>
           </Grid>
         </StackPanel>
       </Border>
-      <Border Grid.Column="0" Style="{StaticResource DashboardPanel}">
-         <StackPanel>
-           <TextBlock Text="التحكم بالشبكة والصيانة" Style="{StaticResource HeaderLabel}" Margin="0,0,0,8"/>
-           <UniformGrid Columns="3" Rows="1" Margin="0,0,0,6">
-              <Button Content="⏻ تعطيل الهوتسبوت" Click="DisableHotspot_Click"
-                      Style="{StaticResource QuickButton}"
-                      Foreground="White" Background="#96243F" ToolTip="فتح صفحة سيرفرات Hotspot لتحديد سيرفر أو عدة سيرفرات وتعطيلها"/>
-              <Button Content="✓ استعادة الهوتسبوت" Click="RestoreHotspot_Click"
-                      Style="{StaticResource QuickButton}"
-                      Foreground="White" Background="#197A54" ToolTip="فتح صفحة سيرفرات Hotspot لتحديد السيرفرات وإعادة تفعيلها"/>
-              <Button Content="↻ إعادة تشغيل الراوتر" Click="RebootRouter_Click"
-                      Style="{StaticResource QuickButton}"
-                      Foreground="White" Background="#A16618" ToolTip="تتطلب تأكيدين وتؤدي لانقطاع الخدمة"/>
-            </UniformGrid>
-           <TextBlock Text="سجل تحديث لوحة التحكم" Style="{StaticResource HeaderLabel}"
-                      FontSize="13" Margin="0,2,0,5"/>
-           <TextBlock x:Name="RefreshHistory" Text="لم يجر تحديث بعد"
-                      Style="{StaticResource Tiny}"/>
-           <TextBlock x:Name="RouterEndpointInfo" Text="" Style="{StaticResource Tiny}"
-                      Margin="0,3,0,0"/>
-           <TextBlock x:Name="LifecycleStatus" Text="لم تُقرأ حالة الكروت بعد."
-                      Style="{StaticResource Tiny}" Margin="0,4,0,0"/>
-         </StackPanel>
-       </Border>
     </Grid>
+
     <TextBlock x:Name="ErrorStatus" Grid.Row="4" Text=""
-               FontSize="11" Foreground="#FFEAD3" TextTrimming="CharacterEllipsis"
+               FontSize="11" Foreground="#7D3B55" TextTrimming="CharacterEllipsis"
                Margin="3,0,0,0"/>
   </Grid>
 </UserControl>
