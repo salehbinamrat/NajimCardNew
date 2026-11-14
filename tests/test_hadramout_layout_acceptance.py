@@ -12,7 +12,8 @@ class HadramoutLayoutAcceptance(unittest.TestCase):
         cls.layout=(R/"Views/GeneratorView.ReferenceLayout.cs").read_text(encoding="utf-8")
         cls.creator=(R/"Views/VoucherWorkspaceView.cs").read_text(encoding="utf-8")
         cls.design=(R/"Views/GeneratorView.CardDesign.cs").read_text(encoding="utf-8")
-        cls.editor=(R/"Views/GeneratorView.DesignerPanel.cs").read_text(encoding="utf-8")
+        cls.editor=(R/"Views/GeneratorView.DesignerPanel.cs").read_text(encoding="utf-8")+\
+            (R/"Views/GeneratorView.AdvancedEditor.cs").read_text(encoding="utf-8")
         cls.dash=(R/"Views/DashboardView.xaml").read_text(encoding="utf-8")
         cls.dashcode=(R/"Views/DashboardView.xaml.cs").read_text(encoding="utf-8")
         cls.theme=(R/"Themes/BurgundyGold.xaml").read_text(encoding="utf-8")

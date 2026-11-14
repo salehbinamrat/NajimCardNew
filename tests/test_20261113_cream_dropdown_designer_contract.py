@@ -55,7 +55,7 @@ class CreamDropdownAndDesignerTests(unittest.TestCase):
         self.assertIn('new System.Windows.Data.Binding(nameof(CardPaletteEntry.Swatch))', block)
 
     def test_preview_card_option_frames_have_equal_dimensions(self):
-        designer = read(VIEWS / "GeneratorView.AdvancedEditor.cs")
+        designer = read(VIEWS / "GeneratorView.DesignerPanel.cs")
         self.assertIn('new GridLength(1,GridUnitType.Star)', designer)
         self.assertIn('field.Height=30', designer)
         self.assertIn('field.MinHeight=30', designer)

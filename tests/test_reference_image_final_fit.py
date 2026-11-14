@@ -13,7 +13,8 @@ class ReferenceImageFinalFit(unittest.TestCase):
     def setUpClass(cls):
         cls.main=(ROOT/"MainWindow.xaml.cs").read_text(encoding="utf-8")
         cls.layout=(VIEW/"GeneratorView.ReferenceLayout.cs").read_text(encoding="utf-8")
-        cls.design=(VIEW/"GeneratorView.DesignerPanel.cs").read_text(encoding="utf-8")
+        cls.design=(VIEW/"GeneratorView.DesignerPanel.cs").read_text(encoding="utf-8")+\
+            (VIEW/"GeneratorView.AdvancedEditor.cs").read_text(encoding="utf-8")
         cls.creator=(VIEW/"GeneratorView.cs").read_text(encoding="utf-8")
         cls.card=(VIEW/"GeneratorView.CardDesign.cs").read_text(encoding="utf-8")
         cls.printing=(VIEW/"PrintingView.cs").read_text(encoding="utf-8")
