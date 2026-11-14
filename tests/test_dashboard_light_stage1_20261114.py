@@ -26,7 +26,7 @@ class DashboardLightStageOne(unittest.TestCase):
             self.assertIn('Click="' + handler + '"', src)
 
     def test_critical_router_actions_keep_their_existing_logic(self):
-        src = (VIEWS / "DashboardView.xaml.cs").read_text(encoding="utf-8")
+        src = (VIEWS / "DashboardView.xaml.cs").read_text(encoding="utf-8") + "\n" + (VIEWS / "DashboardView.RouterActions.cs").read_text(encoding="utf-8")
         for handler in ("DisableHotspot_Click", "RestoreHotspot_Click", "RebootRouter_Click"):
             self.assertIn(" " + handler + "(", src)
         self.assertIn("ActiveHeadline.Text", src)

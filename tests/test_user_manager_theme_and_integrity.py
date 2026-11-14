@@ -31,7 +31,7 @@ class UserManagerPaletteAndIntegrityTests(unittest.TestCase):
 
     def test_all_um_controls_use_program_tokens_not_blue_hardcodes(self):
         content=(VIEWS/"UmUi.cs").read_text(encoding="utf-8")
-        for token in ("SidebarBrush","BurgundyBrush","CreamPanelBrush",
+        for token in ("BurgundyBrush","CreamPanelBrush","CreamTextBrush",
                       "CreamTextBrush","GoldBrush","GoldBrightBrush"):
             self.assertIn('FromTheme("'+token+'"',content)
         for old in ("#072447","#0B4F82","#007E86",

@@ -63,7 +63,7 @@
                        FontWeight="ExtraBold"/>
           </Border>
         </StackPanel>
-        <TextBlock Grid.Column="1" Text="لوحة مراقبة الشبكة" HorizontalAlignment="Right"
+        <TextBlock Grid.Column="1" Text="الرئيسية" HorizontalAlignment="Right"
                    FlowDirection="RightToLeft" TextAlignment="Right"
                    Style="{StaticResource WorkspaceTitleText}"/>
       </Grid>
@@ -278,10 +278,10 @@
         <StackPanel>
           <TextBlock Text="التحكم بالشبكة والصيانة" Style="{StaticResource HeaderLabel}" Margin="0,0,0,7"/>
           <UniformGrid Columns="3" Rows="1" Margin="0,0,0,8">
-            <Button Content="تعطيل Hotspot" Click="DisableHotspot_Click"
+            <Button Content="تعطيل الهوتسبوت" Click="DisableHotspot_Click"
                     Style="{StaticResource QuickButton}" Foreground="White" Background="#B75265"
                     ToolTip="فتح سيرفرات Hotspot وتحديد السيرفرات المطلوب تعطيلها"/>
-            <Button Content="تفعيل Hotspot" Click="RestoreHotspot_Click"
+            <Button Content="استعادة الهوتسبوت" Click="RestoreHotspot_Click"
                     Style="{StaticResource QuickButton}" Foreground="White" Background="#197A54"
                     ToolTip="فتح سيرفرات Hotspot لتحديد السيرفرات وإعادة تفعيلها"/>
             <Button Content="إعادة تشغيل الراوتر" Click="RebootRouter_Click"

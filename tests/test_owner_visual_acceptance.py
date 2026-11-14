@@ -46,12 +46,12 @@ class OwnerVisualAcceptance(unittest.TestCase):
         layout = tree.find("w:Grid", ns)
         tiers = layout.findall("w:Grid", ns)
         self.assertEqual(3, len(tiers))
-        # The first two tiers retain three balanced data cards. Only the
-        # final tier shrinks to two after removing duplicated quick actions.
+        # Stage one replaces the first trio with four live counters, while
+        # lifecycle and management panels remain independent and scroll-free.
         expected_columns = [
+            ["*", "9", "*", "9", "*", "9", "*"],
             ["*", "8", "*", "8", "*"],
-            ["*", "8", "*", "8", "*"],
-            ["*", "8", "*"],
+            ["1*", "8", "1.5*", "8", "1*"],
         ]
         for tier, expected in zip(tiers, expected_columns):
             columns = tier.findall("w:Grid.ColumnDefinitions/w:ColumnDefinition", ns)

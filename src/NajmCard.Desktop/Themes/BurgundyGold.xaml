@@ -215,8 +215,9 @@
                             <Setter TargetName="TabSurface" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="TabSurface" Property="Background" Value="#EFCFBE"/>
+                            <Setter TargetName="TabSurface" Property="Background" Value="{StaticResource BurgundyBrush}"/>
                             <Setter TargetName="TabSurface" Property="BorderBrush" Value="{StaticResource GoldBrightBrush}"/>
+                            <Setter Property="Foreground" Value="White"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
