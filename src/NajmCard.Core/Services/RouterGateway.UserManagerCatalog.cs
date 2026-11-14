@@ -28,7 +28,7 @@ public sealed partial class RouterGateway
     {
         if(!Enum.IsDefined(section))
             throw new ArgumentOutOfRangeException(nameof(section));
-        var generation=await ReadRouterOsGenerationAsync(ct);
+        var generation=await ReadCachedRouterOsGenerationAsync(ct:ct);
         bool v7=generation==RouterOsGeneration.V7;
         var prefix=v7?"/user-manager":"/tool/user-manager";
         var (menu,properties)=section switch

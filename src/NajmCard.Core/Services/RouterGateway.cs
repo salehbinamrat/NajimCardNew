@@ -396,10 +396,17 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     /// <summary>Read-only RouterOS 6 User Manager customer logins.</summary>
     private static bool HasLifecycleFields(IReadOnlyDictionary<string,string> row)
     {
-        string[] keys = ["actual-profile","money-used","uptime-used",
-            "total-download-used","total-upload-used","download-used","upload-used",
-            "transfer-limit","uptime-limit","time-left","total-time-left"];
-        return keys.Any(row.ContainsKey);
+        // Profile/time metadata alone do not establish correct usage totals.
+        // Every row needs an identity and BOTH transfer counters before any
+        // aggregate is marked complete (including deletion preflight).
+        bool identified=!string.IsNullOrWhiteSpace(Get(row,".id")) &&
+            (!string.IsNullOrWhiteSpace(Get(row,"username")) ||
+             !string.IsNullOrWhiteSpace(Get(row,"name")));
+        bool hasTotal=row.ContainsKey("total-download-used") &&
+            row.ContainsKey("total-upload-used");
+        bool hasLegacy=row.ContainsKey("download-used") &&
+            row.ContainsKey("upload-used");
+        return identified && (hasTotal || hasLegacy);
     }
 
     private async Task<IReadOnlyDictionary<string,long>> UserManagerV6ProfileTransferLimitsAsync(
@@ -476,10 +483,12 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             rows=await client.CommandAsync(path,cancellationToken:ct).ConfigureAwait(false);
         }
 
-        if(rows.Count>0&&!rows.Any(HasLifecycleFields))
+        if(rows.Count>0&&!rows.All(HasLifecycleFields))
             rows=await client.CommandAsync(path,cancellationToken:ct).ConfigureAwait(false);
 
-        var observed=rows.Any(HasLifecycleFields);
+        var observed=rows.All(HasLifecycleFields) &&
+            rows.Select(row=>Get(row,".id"))
+                .Distinct(StringComparer.Ordinal).Count()==rows.Count;
         IReadOnlyDictionary<string,long> limitMap=new Dictionary<string,long>();
         string warning="";
         try { limitMap=await UserManagerV6ProfileTransferLimitsAsync(ct).ConfigureAwait(false); }

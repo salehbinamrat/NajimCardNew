@@ -60,6 +60,23 @@ public sealed class SessionsView : UserControl
         int selectedMode=0;
         bool busy=false,hasSnapshot=false;
         CancellationTokenSource? pending=null;
+        int totalCount,umCount,hotspotCount,unknownCount;
+
+        void CountConnections()
+        {
+            totalCount=connections.Count;
+            umCount=hotspotCount=unknownCount=0;
+            foreach(var connection in connections)
+                switch(connection.Origin)
+                {
+                    case HotspotConnectionOrigin.UserManagerRadius: umCount++;break;
+                    case HotspotConnectionOrigin.LocalHotspot: hotspotCount++;break;
+                    default: unknownCount++;break;
+                }
+            totals.Text=$"الكل: {totalCount:N0} | "+
+                $"يوزرمنجر (RADIUS): {umCount:N0} | هوتسبوت محلي: {hotspotCount:N0}"+
+                (unknownCount>0?$" | مصدر غير محدد: {unknownCount:N0}":"");
+        }
 
         void Draw()
         {
@@ -85,15 +102,6 @@ public sealed class SessionsView : UserControl
                     row.Server.Contains(term,StringComparison.OrdinalIgnoreCase)))
                 .ToArray();
             grid.ItemsSource=results;
-            var um=connections.Count(row=>
-                row.Origin==HotspotConnectionOrigin.UserManagerRadius);
-            var hotspot=connections.Count(row=>
-                row.Origin==HotspotConnectionOrigin.LocalHotspot);
-            var unknown=connections.Count(row=>
-                row.Origin==HotspotConnectionOrigin.Unknown);
-            totals.Text=$"الكل: {connections.Count:N0} | "+
-                $"يوزرمنجر (RADIUS): {um:N0} | هوتسبوت محلي: {hotspot:N0}"+
-                (unknown>0?$" | مصدر غير محدد: {unknown:N0}":"");
             status.Text=$"المعروض: {results.Length:N0} اتصال فعلي | "+
                 "مصدر اليوزرمنجر يعتمد علامة RADIUS من Hotspot Active؛ "+
                 "إذا كان للراوتر خادم RADIUS آخر فقد يشمل القسم اتصالاته أيضا.";
@@ -102,7 +110,7 @@ public sealed class SessionsView : UserControl
         allButton.Click+=(_,_)=>{selectedMode=0;Draw();};
         umButton.Click+=(_,_)=>{selectedMode=1;Draw();};
         hotspotButton.Click+=(_,_)=>{selectedMode=2;Draw();};
-        search.TextChanged+=(_,_)=>Draw();
+        UmUi.Debounce(search,grid,Draw,180);
 
         async Task Load()
         {
@@ -120,6 +128,7 @@ public sealed class SessionsView : UserControl
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 connections=live;
                 hasSnapshot=true;
+                CountConnections();
                 Draw();
             }
             catch(OperationCanceledException) when(request.IsCancellationRequested)

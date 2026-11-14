@@ -62,7 +62,7 @@ public sealed partial class RouterGateway
     public async Task<UmDataSnapshot<UmAccountRow>> ReadUmAccountsAsync(
         CancellationToken ct=default)
     {
-        var version=await ReadRouterOsGenerationAsync(ct);
+        var version=await ReadCachedRouterOsGenerationAsync(ct:ct);
         if(version==RouterOsGeneration.V6)
         {
             // Reuse the existing transfer-limit-only lifecycle classifier.
@@ -70,7 +70,7 @@ public sealed partial class RouterGateway
             var inventory=await ReadUserManagerV6InventoryAsync(ct);
             var accounts=inventory.Users.Select(item=>new UmAccountRow(
                 item.Id,item.Username,item.Profile.Length==0?"غير متاح":item.Profile,
-                item.Status switch
+                !inventory.IsComplete?"غير مؤكد":item.Status switch
                 {
                     "active"=>"استخدم",
                     "valid"=>"صالح",
@@ -87,7 +87,11 @@ public sealed partial class RouterGateway
                 inventory.IsComplete?item.ActiveSessions:null,
                 string.IsNullOrWhiteSpace(item.LastSeen)?"غير متاح":item.LastSeen,
                 inventory.Diagnostic.Length>0?inventory.Diagnostic:item.Reason)).ToArray();
-            return new UmDataSnapshot<UmAccountRow>(version,accounts);
+            return new UmDataSnapshot<UmAccountRow>(version,accounts)
+            {
+                IsComplete=inventory.IsComplete,
+                Diagnostic=inventory.Diagnostic
+            };
         }
 
         // v7 profiles are stored in a SEPARATE user-profile table. One projected
@@ -150,7 +154,7 @@ public sealed partial class RouterGateway
     public async Task<UmDataSnapshot<UmPlanRow>> ReadUmPlansAsync(
         CancellationToken ct=default)
     {
-        var version=await ReadRouterOsGenerationAsync(ct);
+        var version=await ReadCachedRouterOsGenerationAsync(ct:ct);
         var v7=version==RouterOsGeneration.V7;
         var profiles=await client.CommandAsync(v7?"/user-manager/profile/print":
             "/tool/user-manager/profile/print",
@@ -202,6 +206,19 @@ public sealed partial class RouterGateway
             set.Add(limitation);
         }
 
+        // The reverse map is built once, rather than scanning every profile
+        // and all its limitations for each limitation row (quadratic on big UM).
+        var linkedProfiles=new Dictionary<string,HashSet<string>>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach(var (profile,limitNames) in grouped)
+            foreach(var limitName in limitNames)
+            {
+                if(!linkedProfiles.TryGetValue(limitName,out var owners))
+                    linkedProfiles[limitName]=owners=new HashSet<string>(
+                        StringComparer.OrdinalIgnoreCase);
+                owners.Add(profile);
+            }
+
         var rows=new List<UmPlanRow>(profiles.Count+limitations.Count);
         foreach(var row in profiles)
         {
@@ -224,8 +241,9 @@ public sealed partial class RouterGateway
                 UmKnown(row,"transfer-limit"),UmKnown(row,"download-limit"),
                 UmKnown(row,"upload-limit"),UmKnown(row,"uptime-limit"),
                 UmKnown(row,"rate-limit-rx"),UmKnown(row,"rate-limit-tx"),
-                string.Join("، ",grouped.Where(x=>x.Value.Contains(UmValue(row,"name")))
-                    .Select(x=>x.Key).OrderBy(x=>x,StringComparer.OrdinalIgnoreCase)))
+                linkedProfiles.TryGetValue(UmValue(row,"name"),out var owners)
+                    ?string.Join("، ",owners.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase))
+                    :"")
             { Owner=v7?"":UmValue(row,"owner") });
         }
         return new UmDataSnapshot<UmPlanRow>(version,rows)
@@ -292,7 +310,7 @@ public sealed partial class RouterGateway
     public async Task<UmDataSnapshot<UmSessionRow>> ReadUmSessionsAsync(
         CancellationToken ct=default)
     {
-        var version=await ReadRouterOsGenerationAsync(ct);
+        var version=await ReadCachedRouterOsGenerationAsync(ct:ct);
         var v7=version==RouterOsGeneration.V7;
         var menu=v7?"/user-manager/session/print":"/tool/user-manager/session/print";
         var properties=v7
