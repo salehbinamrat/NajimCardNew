@@ -23,14 +23,14 @@ public sealed class UserManagerV6ProfileLimitSummaryTests
             {
                 "/tool/user-manager/profile/print" =>
                 [
-                    new Dictionary<string,string>{{".id","*A"},{"name","gold"}},
-                    new Dictionary<string,string>{{".id","*B"},{"name","silver"}}
+                    new Dictionary<string,string>{{".id","*A"},{"name","gold"},{"owner","admin"}},
+                    new Dictionary<string,string>{{".id","*B"},{"name","silver"},{"owner","admin"}}
                 ],
                 "/tool/user-manager/profile/limitation/print" =>
                 [
-                    new Dictionary<string,string>{{".id","*11"},{"name","limit-2M"},{"transfer-limit","2MiB"}},
-                    new Dictionary<string,string>{{".id","*12"},{"name","limit-1M"},{"transfer-limit","1MiB"}},
-                    new Dictionary<string,string>{{".id","*13"},{"name","unlimited"},{"transfer-limit","0"}}
+                    new Dictionary<string,string>{{".id","*11"},{"name","limit-2M"},{"owner","admin"},{"transfer-limit","2MiB"}},
+                    new Dictionary<string,string>{{".id","*12"},{"name","limit-1M"},{"owner","admin"},{"transfer-limit","1MiB"}},
+                    new Dictionary<string,string>{{".id","*13"},{"name","unlimited"},{"owner","admin"},{"transfer-limit","0"}}
                 ],
                 "/tool/user-manager/profile/profile-limitation/print" =>
                 [

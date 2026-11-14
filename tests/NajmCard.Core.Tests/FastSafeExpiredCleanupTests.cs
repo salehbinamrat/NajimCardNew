@@ -11,20 +11,35 @@ public sealed class FastSafeExpiredCleanupTests
     private static Dictionary<string,string> Row(string id,string user,long used,long limit=100)
         =>new()
         {
-            [".id"]=id,["username"]=user,["actual-profile"]="gold",
+            [".id"]=id,["username"]=user,["actual-profile"]="gold",["customer"]="admin",
             ["disabled"]="no",["incomplete"]="no",["total-download-used"]=used.ToString(
                 System.Globalization.CultureInfo.InvariantCulture),
             ["total-upload-used"]="0",["transfer-limit"]=limit.ToString(
                 System.Globalization.CultureInfo.InvariantCulture),
             ["total-time-left"]="0s"
         };
-    private sealed class Router : IRouterCommandClient
+    private static UserManagerV6Voucher Snapshot(string id,string user,long used)=>
+        UserManagerV6Usage.Classify(Row(id,user,used),0) with
+        {
+            Status="expired",ExpirySource="transfer-limit",Customer="admin",ProfileId="*B",
+            UsageVerified=true,AdministrativeStateVerified=true,QuotaVerified=true
+        };
+    private sealed class Router : IRouterCommandClient,IRouterQueryClient
     {
         public List<IReadOnlyDictionary<string,string>> Users=[];
         public int UserReads;
         public int Removes;
         public bool Disconnected;
         public readonly List<string> Removed=[];
+        public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByIdAsync(
+            string command,string id,IReadOnlyDictionary<string,string>? attributes=null,
+            CancellationToken cancellationToken=default)
+        {
+            Assert.Equal("/tool/user-manager/user/print",command);
+            return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>(
+                Users.Where(x=>x[".id"]==id).ToArray());
+        }
+
         public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> CommandAsync(
             string command,IReadOnlyDictionary<string,string>? attributes=null,
             CancellationToken cancellationToken=default)
@@ -38,7 +53,7 @@ public sealed class FastSafeExpiredCleanupTests
                         Users.ToArray());
                 case "/tool/user-manager/profile/print":
                     return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>(
-                        [new Dictionary<string,string>{{".id","*B"},{"name","gold"}}]);
+                        [new Dictionary<string,string>{{".id","*B"},{"name","gold"},{"owner","admin"}}]);
                 case "/tool/user-manager/profile/limitation/print":
                 case "/tool/user-manager/profile/profile-limitation/print":
                     return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>([]);
@@ -61,8 +76,8 @@ public sealed class FastSafeExpiredCleanupTests
         };
         var outdated=new[]
         {
-            UserManagerV6Usage.Classify(Row("*A","exhausted",140),0),
-            UserManagerV6Usage.Classify(Row("*B","renewed",130),0)
+            Snapshot("*A","exhausted",140),
+            Snapshot("*B","renewed",130)
         };
         var observed=new List<ExpiredTransferDeletionProgress>();
         var progress=new ProgressSpy(observed);
@@ -84,7 +99,7 @@ public sealed class FastSafeExpiredCleanupTests
     {
         var fake=new Router{Users=[Row("*A","one",110)],Disconnected=true};
         var result=await new RouterGateway(fake).DeleteExpiredUserManagerV6Async(
-            [UserManagerV6Usage.Classify(Row("*A","one",110),0)]);
+            [Snapshot("*A","one",110)]);
         Assert.True(result.UncertainOutcome);
         Assert.Null(result.RemainingUserManager);
         Assert.Equal(1,fake.UserReads);

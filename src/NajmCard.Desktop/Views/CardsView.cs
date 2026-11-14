@@ -26,7 +26,7 @@ public class CardsView : UserControl
     private readonly TextBlock _status = PageUi.Status();
     private readonly DataGrid _umGrid = PageUi.Table(
         ("الكرت", "Username"), ("الباقة الفعلية", "Profile"), ("الحالة", "Status"),
-        ("المستهلك", "ConsumedBytes"), ("Transfer Limit", "TransferLimit"),
+        ("المستهلك", "ConsumedBytesLabel"), ("Transfer Limit", "TransferLimitLabel"),
         ("السبب", "Reason"));
     private readonly TextBlock _umStatus = PageUi.Status();
     private readonly Button _deleteExpiredButton = PageUi.Button("حذف المنتهية بالاستهلاك", false);

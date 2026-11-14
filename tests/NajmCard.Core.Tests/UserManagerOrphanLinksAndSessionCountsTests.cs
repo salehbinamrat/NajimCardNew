@@ -23,11 +23,11 @@ public sealed class UserManagerOrphanLinksAndSessionCountsTests
                     [new Dictionary<string,string>{{"version","6.49.19"}}],
                 "/tool/user-manager/profile/print" =>
                     [
-                        new Dictionary<string,string>{{".id","*A"},{"name","200RY"},{"price","200"}},
-                        new Dictionary<string,string>{{".id","*B"},{"name","6000RY"},{"price","6000"}}
+                        new Dictionary<string,string>{{".id","*A"},{"name","200RY"},{"owner","admin"},{"price","200"}},
+                        new Dictionary<string,string>{{".id","*B"},{"name","6000RY"},{"owner","admin"},{"price","6000"}}
                     ],
                 "/tool/user-manager/profile/limitation/print" =>
-                    [new Dictionary<string,string>{{".id","*C"},{"name","2GB"},
+                    [new Dictionary<string,string>{{".id","*C"},{"name","2GB"},{"owner","admin"},
                         {"transfer-limit","2147483648"}}],
                 "/tool/user-manager/profile/profile-limitation/print" =>
                     [

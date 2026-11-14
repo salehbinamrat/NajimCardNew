@@ -14,7 +14,8 @@ public sealed class HadramoutLifecycleDetailsTests
             ["last-seen"]="nov/07/2026 10:00:00",["active-sessions"]="1",
             ["total-time-left"]="0s"
         },0);
-        Assert.Equal("active",v.Status);
+        Assert.Equal("unclassified",v.Status); // Raw details alone cannot prove ownership.
+        Assert.False(v.CanDeleteAsTransferExpired);
         Assert.Equal(370,v.RemainingBytes);
         Assert.Equal("4h5m",v.UptimeUsed);
         Assert.Equal("nov/07/2026 10:00:00",v.LastSeen);

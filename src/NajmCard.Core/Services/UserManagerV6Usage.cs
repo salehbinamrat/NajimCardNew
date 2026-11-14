@@ -42,6 +42,60 @@ public static class UserManagerV6Usage
         || value.Equals("yes",StringComparison.OrdinalIgnoreCase)
         || value=="1";
 
+    internal static bool TryBoolean(string value,out bool result)
+    {
+        var text=value.Trim().ToLowerInvariant();
+        result=text is "true" or "yes" or "1";
+        return result||text is "false" or "no" or "0";
+    }
+
+    // One strict parser is shared by validation and the actual calculation.
+    // Decimal avoids rounding the Int64 boundary through a double conversion.
+    internal static bool TryBytes(string value,out long bytes)
+    {
+        bytes=0;
+        var raw=value.Trim().Replace(" ","").ToLowerInvariant();
+        if(raw.Length is 0 or >128)return false;
+        var match=Regex.Match(raw,@"^([0-9]+(?:\.[0-9]+)?)([kmgt]?i?b?)$",
+            RegexOptions.CultureInvariant);
+        if(!match.Success||!decimal.TryParse(match.Groups[1].Value,
+            NumberStyles.AllowDecimalPoint,CultureInfo.InvariantCulture,out var amount))return false;
+        var unit=match.Groups[2].Value;
+        var power=unit.Length==0?0:unit[0] switch
+        {'k'=>1,'m'=>2,'g'=>3,'t'=>4,'b'=>0,_=>-1};
+        if(power<0)return false;
+        decimal factor=1;for(int i=0;i<power;i++)factor*=1024;
+        if(amount>long.MaxValue/factor)return false;
+        bytes=(long)(amount*factor);
+        return true;
+    }
+
+    internal static bool TryParseQuota(string value,out long bytes)
+    {
+        bytes=0;
+        return value.Trim().ToLowerInvariant() is "unlimited" or "none"||TryBytes(value,out bytes);
+    }
+
+    internal static bool TryCounters(IReadOnlyDictionary<string,string> row,
+        out long download,out long upload)
+    {
+        // Real v6 legacy counters remain authoritative when BOTH are valid.
+        // Otherwise use a complete validated total-* pair, never mixed fields.
+        if(TryBytes(Get(row,"download-used"),out download)&&
+            TryBytes(Get(row,"upload-used"),out upload))return true;
+        if(TryBytes(Get(row,"total-download-used"),out download)&&
+            TryBytes(Get(row,"total-upload-used"),out upload))return true;
+        download=upload=0;return false;
+    }
+
+    internal static bool TryAdministrativeState(IReadOnlyDictionary<string,string> row,
+        out bool disabled,out bool incomplete)
+    {
+        bool disabledKnown=TryBoolean(Get(row,"disabled"),out disabled);
+        bool incompleteKnown=TryBoolean(Get(row,"incomplete"),out incomplete);
+        return disabledKnown&&incompleteKnown;
+    }
+
     private static bool HasPositiveNumber(string value)
     {
         if (value.Length>128) return false;
@@ -54,23 +108,25 @@ public static class UserManagerV6Usage
 
     public static UserManagerV6Voucher Classify(
         IReadOnlyDictionary<string,string> row, long profileTransferLimit)
+        // A bare number is not evidence of profile ownership or resolved links.
+        // Keep this API for callers that inspect raw details, never deletion.
+        =>Classify(row,new UserManagerV6ResolvedQuota("","",Math.Max(0,profileTransferLimit),
+            false,"لم تُتحقق ملكية الباقة وحدودها من تعريفات RouterOS."));
+
+    internal static UserManagerV6Voucher Classify(
+        IReadOnlyDictionary<string,string> row,UserManagerV6ResolvedQuota quota)
     {
         ArgumentNullException.ThrowIfNull(row);
         var id=Get(row,".id");
         var username=Get(row,"username");
         if (string.IsNullOrEmpty(username)) username=Get(row,"name");
         var profile=Get(row,"actual-profile");
-        // RouterOS v6's real counters take precedence when older/newer
-        // aliases coexist: a projected total-* zero must not hide bytes used.
-        long down=ParseBytes(Get(row,row.ContainsKey("download-used")
-            ?"download-used":"total-download-used"));
-        long up=ParseBytes(Get(row,row.ContainsKey("upload-used")
-            ?"upload-used":"total-upload-used"));
+        bool usageVerified=TryCounters(row,out long down,out long up);
         long directLimit=ParseBytes(Get(row,"transfer-limit"));
-        long transfer=directLimit>0 ? directLimit : Math.Max(0,profileTransferLimit);
+        long transfer=quota.IsVerified?quota.Bytes:
+            directLimit>0?directLimit:quota.Bytes;
         var consumed=down>long.MaxValue-up?long.MaxValue:down+up;
-        var disabled=Truth(Get(row,"disabled"));
-        var incomplete=Truth(Get(row,"incomplete"));
+        bool administrativeVerified=TryAdministrativeState(row,out var disabled,out var incomplete);
         var lastSeen=Get(row,"last-seen").Trim();
         var started=consumed>0 || HasPositiveNumber(Get(row,"money-used"))
             || HasPositiveNumber(Get(row,"uptime-used"))
@@ -81,7 +137,13 @@ public static class UserManagerV6Usage
             || (lastSeen.Length>0 && !lastSeen.Equals("never",StringComparison.OrdinalIgnoreCase)
                 && !lastSeen.Equals("unknown",StringComparison.OrdinalIgnoreCase));
         string status,reason,source="";
-        if (disabled) { status="disabled";reason="معطل إدارياً"; }
+        if(string.IsNullOrWhiteSpace(id)||string.IsNullOrWhiteSpace(username)
+            ||!usageVerified||!administrativeVerified||!quota.IsVerified)
+        {
+            status="unclassified";
+            reason="بيانات غير مؤكدة؛ لا يُعتمد التصنيف أو الحذف. "+quota.Diagnostic;
+        }
+        else if (disabled) { status="disabled";reason="معطل إدارياً"; }
         else if (incomplete) { status="incomplete";reason="حساب غير مكتمل"; }
         else if (started && transfer>0 && consumed>=transfer)
         {
@@ -100,6 +162,11 @@ public static class UserManagerV6Usage
         return new UserManagerV6Voucher(id,username,profile,status,reason,source,
             down,up,transfer,started,disabled,incomplete,
             Get(row,"uptime-used"),Get(row,"last-seen"),
-            Math.Clamp(sessions,0,1000000),verifiedSessions);
+            Math.Clamp(sessions,0,1000000),verifiedSessions)
+        {
+            Customer=quota.Owner,ProfileId=quota.ProfileId,
+            UsageVerified=usageVerified,AdministrativeStateVerified=administrativeVerified,
+            QuotaVerified=quota.IsVerified
+        };
     }
 }

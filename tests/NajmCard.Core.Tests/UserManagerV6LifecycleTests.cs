@@ -23,7 +23,7 @@ public sealed class UserManagerV6LifecycleTests
             string timeLeft="") =>
             new Dictionary<string,string>
             {
-                [".id"]=id,["username"]=name,["actual-profile"]=profile,
+                [".id"]=id,["username"]=name,["actual-profile"]=profile,["customer"]="admin",
                 ["total-download-used"]=down,["total-upload-used"]=up,
                 ["disabled"]=disabled,["incomplete"]=incomplete,
                 ["transfer-limit"]=limit,["total-time-left"]=timeLeft
@@ -52,9 +52,9 @@ public sealed class UserManagerV6LifecycleTests
                         Row("*1B","no-profile-expired","","2","0",limit:"1")
                     ],
                 "/tool/user-manager/profile/print" =>
-                    [new Dictionary<string,string> { [".id"]="*P",["name"]="gold" }],
+                    [new Dictionary<string,string> { [".id"]="*P",["name"]="gold",["owner"]="admin" }],
                 "/tool/user-manager/profile/limitation/print" =>
-                    [new Dictionary<string,string> { [".id"]="*L",["name"]="data100",["transfer-limit"]="100" }],
+                    [new Dictionary<string,string> { [".id"]="*L",["name"]="data100",["owner"]="admin",["transfer-limit"]="100" }],
                 "/tool/user-manager/profile/profile-limitation/print" =>
                     [new Dictionary<string,string> { ["profile"]="*P",["limitation"]="*L" }],
                 _ => throw new InvalidOperationException("Unexpected RouterOS menu: "+command)
@@ -68,21 +68,21 @@ public sealed class UserManagerV6LifecycleTests
     {
         var fake = new FakeRouter();
         var report = await new RouterGateway(fake).ReadUserManagerV6InventoryAsync();
-        Assert.True(report.IsComplete);
+        Assert.False(report.IsComplete); // Two rows have no verifiable profile ownership.
         Assert.Equal(8, report.Total);
         Assert.Equal(2, report.Valid);
         Assert.Equal(1, report.Active);
-        Assert.Equal(2, report.Expired);
+        Assert.Equal(1, report.Expired);
         Assert.Equal(1, report.Disabled);
         Assert.Equal(1, report.Incomplete);
-        Assert.Equal(1, report.Unclassified);
+        Assert.Equal(2, report.Unclassified);
         var expired = Assert.Single(report.Users.Where(x=>x.Username=="expired"));
         Assert.Equal("expired", expired.Status);
         Assert.Equal("transfer-limit",expired.ExpirySource);
         Assert.Equal(105,expired.ConsumedBytes);
         Assert.Equal(100,expired.TransferLimit);
         Assert.Equal("valid",Assert.Single(report.Users.Where(x=>x.Username=="time-zero")).Status);
-        Assert.Equal("expired",
+        Assert.Equal("unclassified",
             Assert.Single(report.Users.Where(x=>x.Username=="no-profile-expired")).Status);
         Assert.Equal(1, fake.Calls.Count(x=>x.StartsWith("/tool/user-manager/user/print")));
     }
@@ -92,7 +92,7 @@ public sealed class UserManagerV6LifecycleTests
     {
         var fake=new FakeRouter{BrokenProjection=true};
         var report=await new RouterGateway(fake).ReadUserManagerV6InventoryAsync();
-        Assert.True(report.IsComplete);
+        Assert.False(report.IsComplete); // Two rows have no verifiable profile ownership.
         Assert.Contains("/tool/user-manager/user/print (projected)",fake.Calls);
         Assert.Contains("/tool/user-manager/user/print (full)",fake.Calls);
     }
