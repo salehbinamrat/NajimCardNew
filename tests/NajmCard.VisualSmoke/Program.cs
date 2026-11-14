@@ -187,9 +187,9 @@ internal static class Program
                     "Settings desktop shortcut button is clipped at 1260x730.");
             if(!VisualChildren<Border>(settings).Any(panel=>
                 panel.Background is SolidColorBrush brush &&
-                brush.Color==Color.FromRgb(255,243,223)))
+                brush.Color==Color.FromRgb(0xE8,0xED,0xF5)))
                 throw new InvalidDataException(
-                    "Settings view must use the shared cream card background.");
+                    "Settings view must use the shared silver card background.");
             Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,
                 "settings-1260x730.png"));
             return 0;
