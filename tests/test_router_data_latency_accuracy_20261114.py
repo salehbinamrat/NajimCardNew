@@ -22,6 +22,14 @@ class ConnectionsUiLatencyTests(unittest.TestCase):
         self.assertNotIn("search.TextChanged+=(_,_)=>{page=0;FilterHotspot();};",src)
         self.assertNotIn("umSearch.TextChanged+=(_,_)=>{umPage=0;FilterUm();};",src)
 
+    def test_um_screens_do_not_present_incomplete_data_as_verified(self):
+        accounts=(VIEWS/"UserManagerAccountsScreen.cs").read_text(encoding="utf-8")
+        reports=(VIEWS/"UserManagerReportsView.cs").read_text(encoding="utf-8")
+        self.assertIn("if(!snap.IsComplete)",accounts)
+        self.assertIn("totalCard.Text=usedCard.Text=disabledCard.Text=expiredCard.Text",accounts)
+        self.assertIn("if(!users.IsComplete)",reports)
+        self.assertIn("users.Diagnostic",reports)
+
     def test_incomplete_snapshot_never_treated_as_complete(self):
         code=(ROOT/"src/NajmCard.Core/Services/RouterGateway.UserManagerLiveRows.cs").read_text(
             encoding="utf-8")
