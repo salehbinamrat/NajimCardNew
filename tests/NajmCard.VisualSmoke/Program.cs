@@ -194,15 +194,14 @@ internal static class Program
 
     private static void VerifyDashboardPanels(DashboardView dashboard)
     {
-        // The first two tiers each have three equal cards; the lower tier
-        // intentionally has two wider cards after removing duplicate sidebar
-        // shortcuts. Check clipping and alignment *within* each tier, not
-        // across unrelated columns of different widths.
+        // Stage one has four equal live counters, three equal middle panels,
+        // and a wider lower control panel between two balanced side panels.
+        // Each panel must remain fully visible at the owner's 1260x730 window.
         var layout=(Grid)dashboard.Content;
         var tiers=layout.Children.OfType<Grid>()
             .Where(grid=>Grid.GetRow(grid) is 1 or 2 or 3)
             .OrderBy(Grid.GetRow).ToArray();
-        var expected=new[]{3,3,2};
+        var expected=new[]{4,3,3};
         if(tiers.Length!=expected.Length)
             throw new InvalidDataException("Dashboard tier layout is incomplete.");
         for(int i=0;i<tiers.Length;i++)
@@ -216,8 +215,11 @@ internal static class Program
             if(bounds.Any(card=>card.Width<=0 || card.Height<=0 || card.Left<0 ||
                 card.Right>dashboard.ActualWidth+1 || card.Bottom>dashboard.ActualHeight+1))
                 throw new InvalidDataException("A dashboard card is clipped.");
-            if(bounds.Max(card=>card.Width)-bounds.Min(card=>card.Width)>2)
+            if(i<2 && bounds.Max(card=>card.Width)-bounds.Min(card=>card.Width)>2)
                 throw new InvalidDataException("Dashboard cards are misaligned in tier "+(i+1)+".");
+            if(i==2 && (Math.Abs(bounds[0].Width-bounds[2].Width)>2 ||
+                        bounds[1].Width<=bounds[0].Width))
+                throw new InvalidDataException("Dashboard lower control panel lost its intended width.");
         }
     }
 
