@@ -240,7 +240,7 @@
     <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}"><Setter Property="Background" Value="#9E4050"/><Setter Property="Foreground" Value="White"/></Style>
     <Style x:Key="CardPanel" TargetType="Border"><Setter Property="Background" Value="{StaticResource CreamPanelBrush}"/><Setter Property="BorderBrush" Value="{StaticResource MaroonLineBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="10"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
     <Style x:Key="WorkspaceTitleFrame" TargetType="Border" BasedOn="{StaticResource CardPanel}">
-        <Setter Property="Background" Value="#A45C75"/>
+        <Setter Property="Background" Value="#F3D8C6"/>
         <Setter Property="Height" Value="54"/>
         <Setter Property="Padding" Value="12,5"/>
         <Setter Property="Margin" Value="0,0,0,8"/>
