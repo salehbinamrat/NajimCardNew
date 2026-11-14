@@ -106,7 +106,7 @@ public class CardsView : UserControl
                 profiles.Items.Add(name);
             profiles.SelectedIndex=0;page=0;FilterHotspot();
         };
-        search.TextChanged+=(_,_)=>{page=0;FilterHotspot();};
+        UmUi.Debounce(search,_table,()=>{page=0;FilterHotspot();},180);
         profiles.SelectionChanged+=(_,_)=>{page=0;FilterHotspot();};
         previous.Click+=(_,_)=>{page--;FilterHotspot();};
         next.Click+=(_,_)=>{page++;FilterHotspot();};
@@ -172,7 +172,7 @@ public class CardsView : UserControl
                 .OrderBy(x=>x,StringComparer.OrdinalIgnoreCase))umProfiles.Items.Add(name);
             umProfiles.SelectedIndex=0;umPage=0;FilterUm();
         };
-        umSearch.TextChanged+=(_,_)=>{umPage=0;FilterUm();};
+        UmUi.Debounce(umSearch,_umGrid,()=>{umPage=0;FilterUm();},180);
         umProfiles.SelectionChanged+=(_,_)=>{umPage=0;FilterUm();};
         umPrev.Click+=(_,_)=>{umPage--;FilterUm();};
         umNext.Click+=(_,_)=>{umPage++;FilterUm();};
