@@ -20,7 +20,7 @@ public class SettingsView : UserControl
         backupHeading.FontSize=17;
         backupPanel.Children.Add(backupHeading);
         backupPanel.Children.Add(PageUi.Hint(
-            "مسار حفظ بيانات نجم كارد المستقلة:"));
+            "مسار حفظ بيانات تريم كارد المستقلة:"));
         backupPanel.Children.Add(PageUi.Hint(store.DirectoryPath));
         backupPanel.Children.Add(PageUi.Hint(
             "كلمات مرور الكروت محمية بميزة Windows DPAPI لحساب المستخدم المحلي. "+
@@ -48,7 +48,7 @@ public class SettingsView : UserControl
         root.Children.Add(PageUi.Surface(shortcutPanel));
 
         Content=PageUi.Wrap("الإعدادات والنسخ الاحتياطي",
-            "إعدادات نجم كارد مستقلة ولا تشارك برنامج حضرموت أو نجم القديم قواعد بياناته.",
+            "إعدادات تريم كارد مستقلة ولا تشارك برنامج حضرموت أو نجم القديم قواعد بياناته.",
             root);
 
         backup.Click+=(_,_)=>
@@ -67,7 +67,7 @@ public class SettingsView : UserControl
             try
             {
                 string created=DesktopShortcutService.CreateOrUpdateShortcut();
-                shortcutStatus.Text="تم إنشاء أو تحديث اختصار نجم كارد على سطح المكتب: "+
+                shortcutStatus.Text="تم إنشاء أو تحديث اختصار تريم كارد على سطح المكتب: "+
                     created;
             }
             catch(Exception ex)
