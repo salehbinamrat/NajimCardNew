@@ -36,8 +36,8 @@ class CompactScreenLayoutContract(unittest.TestCase):
                      "ProfileBars","ActivityRows","RefreshHistory",
                      "LifecycleButton","OnlineBreakdown","CpuProgress"):
             self.assertIn('x:Name="'+name+'"',body)
-        self.assertEqual(body.count('Text="الكروت النشطة"'),0)
-        self.assertEqual(body.count('Text="الكروت المنتهية"'),0)
+        self.assertEqual(body.count('Text="الكروت النشطة"'),1)
+        self.assertEqual(body.count('Text="الكروت المنتهية"'),1)
         self.assertIn('Text="الرئيسية"',body)
         self.assertIn('Text="آخر النشاط',body)
         code=(UI/"Views"/"DashboardView.xaml.cs").read_text(encoding="utf-8")

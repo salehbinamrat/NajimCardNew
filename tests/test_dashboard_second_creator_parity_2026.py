@@ -35,7 +35,7 @@ class NewDashboardAndCreatorContract(unittest.TestCase):
         self.assertIn('x:Name="SidebarLicense"',ui)
         self.assertNotIn('x:Name="SidebarRouter"',ui)
         self.assertIn('Content="تسجيل الخروج"',ui)
-        self.assertIn('Background="#790D20"',ui)
+        self.assertIn('Background="#B45167"',ui)
         self.assertIn("RemainingSeconds",logic)
         self.assertIn("UpdateLicenseCountdown",logic)
 

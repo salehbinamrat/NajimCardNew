@@ -52,9 +52,14 @@ class UserManagerPagesRegression(unittest.TestCase):
         self.assertIn(".OrderByDescending(g=>g.Used)",src)
         self.assertIn(".Take(4).ToArray()",src)
         package_view=read(VIEWS,"DashboardView.PackageStatistics.cs")
-        self.assertIn("private void AllPackages_Click(",package_view)
-        self.assertIn("inventory.Users",package_view)
-        self.assertIn("g.Count(x=>x.Started)",package_view)
+        # The existing click handler became asynchronous when lazy loading
+        # was introduced; support both in-view and isolated pure calculation.
+        self.assertIn("private async void AllPackages_Click(",package_view)
+        self.assertIn("await RefreshLifecycleAsync(force:true)",package_view)
+        self.assertTrue("inventory.Users" in package_view or
+                        "UserManagerV6PackageUsage.CountUsed(inventory)" in package_view)
+        self.assertTrue("g.Count(x=>x.Started)" in package_view or
+                        "UserManagerV6PackageUsage.CountUsed(inventory)" in package_view)
         self.assertIn("Used=g.Count(u=>u.Started)",src)
         self.assertIn('Label($"عدد الكروت المستخدمة: {p.Used:N0}"',src)
         self.assertIn('ToolTip=$"الباقة: {p.Name} | عدد الكروت المستخدمة: {p.Used:N0}',src)

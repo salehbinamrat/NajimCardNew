@@ -13,17 +13,17 @@
                 <ColumnDefinition Width="0.98*"/>
             </Grid.ColumnDefinitions>
             <!-- Right navigation: faithfully grouped like Hadramout, but distinct Najm identity. -->
-            <Border Grid.Column="0" Background="#1D122B" BorderBrush="#90643F" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="#A25A72" BorderBrush="#90643F" BorderThickness="0,0,1,0">
                 <DockPanel Margin="13,20">
                     <StackPanel DockPanel.Dock="Top">
                         <TextBlock Text="✦" Foreground="#FFE0A1" FontSize="38" HorizontalAlignment="Center"/>
                         <TextBlock Text="نجم كارد" FontSize="25" FontWeight="Bold" Foreground="#FFE0A1" HorizontalAlignment="Center"/>
                         <TextBlock Text="NETWORK STUDIO" Foreground="#91A9C7" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,24"/>
                         <Border Height="2" Background="#C8A06D" Margin="0,0,0,15"/>
-                        <Border Background="#6E2849" CornerRadius="10" Padding="12,13" Margin="0,0,0,8">
+                        <Border Background="#B86981" CornerRadius="10" Padding="12,13" Margin="0,0,0,8">
                             <TextBlock Text="◉  تسجيل الدخول" FontSize="14" FontWeight="SemiBold" Foreground="#FFE2A9"/>
                         </Border>
-                        <Border Background="#31233C" CornerRadius="10" Padding="12,13" Margin="0,0,0,8">
+                        <Border Background="#B5778B" CornerRadius="10" Padding="12,13" Margin="0,0,0,8">
                             <TextBlock Text="✧  الترخيص والتجربة المجانية" FontSize="12" Foreground="#BFBDD0" TextWrapping="Wrap"/>
                         </Border>
                         <Button Content="حول نجم كارد" Style="{StaticResource OutlineButton}" Margin="0,3,0,10" Click="About_Click"/>
@@ -35,7 +35,7 @@
             <!-- RouterOS login, independent 20-day local trial and signed shared paid licensing. -->
             <DockPanel Grid.Column="1" LastChildFill="True">
                 <!-- Connect always stays visible at the bottom of the fixed-height login. -->
-                <Border DockPanel.Dock="Bottom" Background="#27121F" Padding="18,6,18,7">
+                <Border DockPanel.Dock="Bottom" Background="#99576D" Padding="18,6,18,7">
                     <StackPanel>
                         <Button x:Name="ConnectButton" Content="✦  اتصال بالراوتر"
                                 Height="43" Style="{StaticResource PrimaryButton}" Click="Connect_Click"/>
@@ -46,18 +46,18 @@
                 </Border>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel MaxWidth="630" Margin="18,12,15,12" HorizontalAlignment="Stretch">
-                    <Border Background="#302033" BorderBrush="#B48C56" BorderThickness="1" CornerRadius="14" Padding="15,13" Margin="0,0,0,14">
+                    <Border Background="#AA647D" BorderBrush="#B48C56" BorderThickness="1" CornerRadius="14" Padding="15,13" Margin="0,0,0,14">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Right" Text="✦" Foreground="#FFDDA1" FontSize="22" Margin="0,0,12,0"/>
                             <TextBlock Text="تسجيل الدخول إلى MikroTik" Foreground="#FFF0D7" FontWeight="Bold" FontSize="21"/>
                         </DockPanel>
                     </Border>
-                    <Border Style="{StaticResource CardPanel}" Background="#341527" BorderBrush="#A38356">
+                    <Border Style="{StaticResource CardPanel}" Background="#A75C76" BorderBrush="#A38356">
                         <StackPanel>
                             <TextBlock Text="نوع الاتصال" Foreground="{StaticResource GoldBrightBrush}" FontWeight="SemiBold" FontSize="16"/>
                             <StackPanel Orientation="Horizontal" Margin="0,11,0,10">
-                                <RadioButton x:Name="LocalModeInput" GroupName="RouterMode" IsChecked="True" Content="محلي" Checked="ConnectionMode_Checked" Margin="0,0,17,0"/>
-                                <RadioButton x:Name="RemoteModeInput" GroupName="RouterMode" Content="VPN عن بعد" Checked="ConnectionMode_Checked"/>
+                                <RadioButton x:Name="LocalModeInput" Foreground="White" GroupName="RouterMode" IsChecked="True" Content="محلي" Checked="ConnectionMode_Checked" Margin="0,0,17,0"/>
+                                <RadioButton x:Name="RemoteModeInput" Foreground="White" GroupName="RouterMode" Content="VPN عن بعد" Checked="ConnectionMode_Checked"/>
                             </StackPanel>
                             <TextBlock x:Name="ConnectionModeHint" Text="محلي: اتصال مباشر على شبكة الراوتر." Foreground="#A8C4DF" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,13"/>
                             <!-- Saved connections and maintenance controls share one compact expandable surface. -->
@@ -67,7 +67,7 @@
                                     <TextBlock Text="عرض سجل محفوظات الاتصال" Width="330" TextAlignment="Center"
                                                Foreground="#FFE3A2" FontWeight="Bold" FontSize="13"/>
                                 </Expander.Header>
-                                <Border Background="#45253A" BorderBrush="#B48C56"
+                                <Border Background="#AF6D82" BorderBrush="#B48C56"
                                         BorderThickness="1" CornerRadius="9" Padding="7" Margin="0,4,0,5">
                                     <StackPanel>
                                         <DockPanel Margin="0,0,0,6">
@@ -156,14 +156,14 @@
                                                      MinHeight="36" Padding="8,6,44,6"/>
                                         <TextBox x:Name="VisiblePasswordInput" FlowDirection="LeftToRight"
                                                  Visibility="Collapsed" MinHeight="36"
-                                                 Padding="8,6,44,6" Background="#270D1D" Foreground="#FFF5E8"/>
+                                                 Padding="8,6,44,6" Background="#FFFAF0" Foreground="#532A3E"/>
                                         <ToggleButton x:Name="ShowPasswordInput" Width="35" Height="30"
                                                       HorizontalAlignment="Right" VerticalAlignment="Center"
                                                       Margin="0,0,4,0" ToolTip="إظهار أو إخفاء كلمة المرور"
                                                       Checked="RevealPassword_Changed" Unchecked="RevealPassword_Changed">
                                             <ToggleButton.Template>
                                                 <ControlTemplate TargetType="ToggleButton">
-                                                    <Border x:Name="EyeBorder" Background="#45253A"
+                                                    <Border x:Name="EyeBorder" Background="#AF6D82"
                                                             BorderBrush="#B48C56" BorderThickness="1"
                                                             CornerRadius="6">
                                                         <Viewbox Width="22" Height="16">
@@ -202,7 +202,7 @@
                                     </CheckBox>
                                 </StackPanel>
                             </Grid>
-                            <Border Background="#35233B" CornerRadius="12"
+                            <Border Background="#A8667E" CornerRadius="12"
                                     BorderBrush="#C49A66" BorderThickness="1"
                                     Padding="13,11" Margin="0,6,0,12">
                               <StackPanel>
@@ -272,7 +272,7 @@
                     <StackPanel DockPanel.Dock="Top" Margin="12,17,12,10">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <TextBlock Text="✦" FontSize="31" Foreground="{StaticResource GoldBrush}" Margin="0,0,12,0"/>
-                            <StackPanel><TextBlock Text="نجم كارد" FontSize="25" FontWeight="Bold" Foreground="{StaticResource GoldBrightBrush}"/><TextBlock Text="NETWORK STUDIO" FontSize="10" Foreground="{StaticResource MutedBrush}" FlowDirection="LeftToRight"/></StackPanel>
+                            <StackPanel><TextBlock Text="نجم كارد" FontSize="25" FontWeight="Bold" Foreground="#76324E"/><TextBlock Text="NETWORK STUDIO" FontSize="10" Foreground="{StaticResource MutedBrush}" FlowDirection="LeftToRight"/></StackPanel>
                         </StackPanel>
                         <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,12,0,0"/>
                     </StackPanel>
@@ -313,23 +313,23 @@
                                            VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
-                        <Button Content="تسجيل الخروج" Background="#790D20" Foreground="White"
+                        <Button Content="تسجيل الخروج" Background="#B45167" Foreground="White"
                                 Height="46" Style="{StaticResource OutlineButton}" Click="Logout_Click"/>
                     </StackPanel>
                     <ListBox x:Name="NavList" SelectionChanged="NavList_SelectionChanged" Background="Transparent" BorderThickness="0" Padding="7" ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Foreground" Value="{StaticResource TextBrush}"/><Setter Property="Margin" Value="0,1"/><Setter Property="Padding" Value="12,3"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Selection" CornerRadius="9" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Selection" Property="Background" Value="#77432F"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Selection" Property="Background" Value="#4F2933"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+                                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Selection" CornerRadius="9" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Selection" Property="Background" Value="#E5BD9F"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Selection" Property="Background" Value="#F0D9C8"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
                             </Style>
                         </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate><DataTemplate><DockPanel LastChildFill="True"><Border DockPanel.Dock="Left" Width="27" Height="27" CornerRadius="10" Background="{Binding IconBackground}" Margin="0,0,10,0"><Path Data="{Binding Glyph}" Stroke="{Binding Accent}" StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Text="{Binding Title}" ToolTip="{Binding Title}" FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></DockPanel></DataTemplate></ListBox.ItemTemplate>
+                        <ListBox.ItemTemplate><DataTemplate><DockPanel LastChildFill="True"><Border DockPanel.Dock="Left" Width="27" Height="27" CornerRadius="10" Background="{Binding IconBackground}" Margin="0,0,10,0"><Path Data="{Binding Glyph}" Stroke="{Binding Accent}" StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Text="{Binding Title}" ToolTip="{Binding Title}" Foreground="{StaticResource CreamTextBrush}" FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/></DockPanel></DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
                 </DockPanel>
             </Border>
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions><RowDefinition x:Name="WorkspaceHeaderRow" Height="88"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                <Border Grid.Row="0" Background="#27101C" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="28,15">
+                <Border Grid.Row="0" Background="#F4E4D5" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="28,15">
                     <Grid VerticalAlignment="Center" FlowDirection="LeftToRight">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -338,8 +338,8 @@
                         <StackPanel Grid.Column="0" Orientation="Horizontal"
                                     HorizontalAlignment="Left" VerticalAlignment="Center"
                                     FlowDirection="LeftToRight">
-                            <Border BorderBrush="#80734C" BorderThickness="1" CornerRadius="9" Padding="12,5" Margin="5,0"><TextBlock Text="RouterOS v6" Foreground="{StaticResource GoldBrush}" FontSize="12"/></Border>
-                            <Border BorderBrush="#427858" BorderThickness="1" CornerRadius="9" Padding="12,5"><TextBlock Text="● متصل" Foreground="#92DBAE" FontSize="12"/></Border>
+                            <Border BorderBrush="#80734C" BorderThickness="1" CornerRadius="9" Padding="12,5" Margin="5,0"><TextBlock Text="RouterOS v6" Foreground="{StaticResource CreamTextBrush}" FontSize="12"/></Border>
+                            <Border BorderBrush="#427858" BorderThickness="1" CornerRadius="9" Padding="12,5"><TextBlock Text="● متصل" Foreground="#177449" FontSize="12"/></Border>
                         </StackPanel>
                         <StackPanel Grid.Column="1" HorizontalAlignment="Right"
                                     FlowDirection="RightToLeft" TextBlock.TextAlignment="Right">
@@ -352,7 +352,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <ContentControl x:Name="PageHost" Grid.Row="1" Margin="26,24,26,12"/>
+                <ContentControl x:Name="PageHost" Grid.Row="1" Margin="12,10,12,10"/>
             </Grid>
         </Grid>
     </Grid>

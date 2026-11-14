@@ -16,15 +16,15 @@ internal static class UmUi
 {
     // Semantic aliases retained for existing User Manager call sites.
     // Brushes originate from the SAME app resource dictionary as all pages.
-    internal static readonly Brush Navy=FromTheme("SidebarBrush","#270C19");
-    internal static readonly Brush Blue=FromTheme("BurgundyBrush","#621B37");
+    internal static readonly Brush Navy=FromTheme("BurgundyBrush","#A5526C");
+    internal static readonly Brush Blue=FromTheme("BurgundyBrush","#A5526C");
     internal static readonly Brush Cyan=FromTheme("BurgundyBrush","#621B37");
-    internal static readonly Brush Ink=FromTheme("CreamTextBrush","#4B1B32");
+    internal static readonly Brush Ink=FromTheme("CreamTextBrush","#532A3E");
     internal static readonly Brush Light=FromTheme("CreamPanelBrush","#FFF3DF");
-    internal static readonly Brush Gray=FromTheme("LineBrush","#76513E");
+    internal static readonly Brush Gray=FromTheme("LineBrush","#BD9A8C");
     internal static readonly Brush Gold=FromTheme("GoldBrush","#DCB86E");
     internal static readonly Brush GoldBright=FromTheme("GoldBrightBrush","#FFE3A2");
-    internal static readonly Brush Cream=FromTheme("TextBrush","#FFF5E8");
+    internal static readonly Brush Cream=Solid("#FFFFFF");
     internal static readonly Brush InputSurface=FromTheme("CreamPanelBrush","#FFF3DF");
 
     internal static Brush FromTheme(string key,string fallback) =>
