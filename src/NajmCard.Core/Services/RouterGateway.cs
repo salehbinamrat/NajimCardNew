@@ -834,7 +834,11 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
                 string? lastVerificationError = null;
                 for (int attempt=0;attempt<3;attempt++)
                 {
-                    if(attempt>0)await Task.Delay(attempt==1?150:300,ct);
+                    // RouterOS v6 may apply a profile just after its !done ACK.
+                    // A shorter first retry recognizes ready cards sooner,
+                    // while the last attempt is still at the original 450ms.
+                    // No extra router requests and no ambiguous writes retried.
+                    if(attempt>0)await Task.Delay(attempt==1?60:390,ct);
                     var mode=System.Threading.Volatile.Read(ref _umV6ReadProjectionMode);
                     var found=mode==2
                         ?await lookup.QueryByIdAsync(verifyPath,id,cancellationToken:ct)
