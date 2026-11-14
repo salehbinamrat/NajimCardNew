@@ -96,6 +96,26 @@ internal static class Program
             workspaceLayer.Visibility=Visibility.Visible;
             root.UpdateLayout();
 
+            // Verify the production creator's actual first rendered state,
+            // not only its source-code ordering or later tab transitions.
+            var generator=VisualChildren<GeneratorView>(creator).Single();
+            if(generator.CurrentService!="userman")
+                throw new InvalidDataException("User Manager must be selected at first paint.");
+            var serviceTabs=VisualChildren<UniformGrid>(creator)
+                .FirstOrDefault(grid=>grid.Columns==3 &&
+                    grid.Children.OfType<Button>().Any(button=>
+                        button.Content is TextBlock caption && caption.Text=="يوزمنجر v6"));
+            if(serviceTabs is null)
+                throw new InvalidDataException("The three card-creation services are missing.");
+            var serviceButtons=serviceTabs.Children.OfType<Button>().ToArray();
+            var serviceNames=serviceButtons.Select(button=>
+                (button.Content as TextBlock)?.Text??"").ToArray();
+            if(!serviceNames.SequenceEqual(new[]{"يوزمنجر v6","هوتسبوت","برودباند PPPoE"}))
+                throw new InvalidDataException("Creator tabs are not User Manager, Hotspot, Broadband.");
+            if(serviceButtons[0].Background is not SolidColorBrush activeColor ||
+                activeColor.Color!=Color.FromRgb(0xEA,0xC7,0x7C))
+                throw new InvalidDataException("User Manager is not visually active at first paint.");
+
             var workspace=(DockPanel)creator.Content;
             var footer=(StackPanel)workspace.Children[0];
             var footerBounds=footer.TransformToAncestor(root).TransformBounds(new Rect(footer.RenderSize));
