@@ -34,6 +34,7 @@ internal static class Program
             {
                 Source=new Uri("pack://application:,,,/NajmCard;component/Themes/VectorIcons.xaml")
             });
+            VerifyTooltipTheme(application);
             var testData=Path.Combine(Path.GetTempPath(),
                 "najmcard-ui-screenshot-"+Guid.NewGuid().ToString("N"));
             using var store=new VoucherStore(testData);
@@ -446,6 +447,32 @@ internal static class Program
         mode.SelectedIndex=0;
         if(password.Visibility!=Visibility.Collapsed || password.Text.Length!=0)
             throw new InvalidDataException("The preview retained the previous password.");
+    }
+
+    private static void VerifyTooltipTheme(Application application)
+    {
+        if(application.TryFindResource(typeof(ToolTip)) is not Style tooltipStyle)
+            throw new InvalidDataException("A global WPF ToolTip style is required.");
+        var tooltip=new ToolTip
+        {
+            Content="تحديث الباقات من الراوتر",
+            Style=tooltipStyle
+        };
+        tooltip.ApplyTemplate();
+        if(tooltip.Background is not SolidColorBrush background ||
+           background.Color!=Color.FromRgb(0xFF,0xF3,0xDF))
+            throw new InvalidDataException("Tooltip background is not the light cream palette.");
+        if(tooltip.Foreground is not SolidColorBrush foreground ||
+           foreground.Color!=Color.FromRgb(0x53,0x2A,0x3E))
+            throw new InvalidDataException("Tooltip text must have dark readable contrast.");
+        if(tooltip.BorderBrush is not SolidColorBrush border ||
+           border.Color!=Color.FromRgb(0xA4,0x5C,0x75))
+            throw new InvalidDataException("Tooltip is missing the maroon outline.");
+        if(tooltip.Template?.FindName("TooltipFrame",tooltip) is not Border frame ||
+           frame.CornerRadius.TopLeft<6)
+            throw new InvalidDataException("Tooltip did not apply the rounded popup template.");
+        if(!Equals(tooltip.Content,"تحديث الباقات من الراوتر"))
+            throw new InvalidDataException("Tooltip text was changed by the theme.");
     }
 
     private static IEnumerable<T> VisualChildren<T>(DependencyObject parent) where T:DependencyObject
