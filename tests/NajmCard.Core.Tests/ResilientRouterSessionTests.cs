@@ -5,10 +5,11 @@ namespace NajmCard.Core.Tests;
 
 public sealed class ResilientRouterSessionTests
 {
-    private sealed class Fake : IRouterCommandClient, IAsyncDisposable
+    private sealed class Fake : IRouterCommandClient, IRouterQueryClient, IAsyncDisposable
     {
         public int Calls;
         public int Disposals;
+        public int ExactIdReads;
         public bool Break;
         public TaskCompletionSource? Block;
         public async Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> CommandAsync(
@@ -20,6 +21,17 @@ public sealed class ResilientRouterSessionTests
             if(Block is not null)await Block.Task.WaitAsync(cancellationToken);
             return new IReadOnlyDictionary<string,string>[]
                 {new Dictionary<string,string>{{"ok","yes"}}};
+        }
+        public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByIdAsync(
+            string command,string id,IReadOnlyDictionary<string,string>? attributes=null,
+            CancellationToken cancellationToken=default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ExactIdReads++;
+            IReadOnlyList<IReadOnlyDictionary<string,string>> rows=
+                [new Dictionary<string,string>{{".id",id},{"username","card"},
+                    {"actual-profile","gold"}}];
+            return Task.FromResult(rows);
         }
         public ValueTask DisposeAsync(){Disposals++;return ValueTask.CompletedTask;}
     }
@@ -79,6 +91,27 @@ public sealed class ResilientRouterSessionTests
         Assert.Equal(1,current.Calls);
         inventory.Block!.SetResult();
         await scan.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task ExactIdReadForIssuing_UsesFastLaneWhileFullUserManagerScanBlocksInventory()
+    {
+        var fast=new Fake();
+        var inventory=new Fake{Block=new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously)};
+        await using var session=new ResilientRouterSession(fast,_=>
+            Task.FromResult<IRouterCommandClient>(inventory));
+        var inventoryScan=session.CommandAsync("/tool/user-manager/user/print");
+        // The ordinary inventory still uses the dedicated lane. The
+        // receipt verification for a NEW card must not queue behind it.
+        var verified=await session.QueryByIdAsync(
+            "/tool/user-manager/user/print","*A").WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Single(verified);
+        Assert.Equal("*A",verified[0][".id"]);
+        Assert.Equal(1,fast.ExactIdReads);
+        Assert.Equal(0,inventory.ExactIdReads);
+        inventory.Block!.SetResult();
+        await inventoryScan.WaitAsync(TimeSpan.FromSeconds(2));
     }
 
     [Fact]
