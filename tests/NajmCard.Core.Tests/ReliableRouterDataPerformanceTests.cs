@@ -22,7 +22,8 @@ public sealed class ReliableRouterDataPerformanceTests
                 "/system/resource/print" =>
                     [new Dictionary<string,string> {["version"]="6.49.19"}],
                 "/tool/user-manager/user/print" => ReadUsers(),
-                "/tool/user-manager/profile/print" or
+                "/tool/user-manager/profile/print" =>
+                    [new Dictionary<string,string>{{".id","*F"},{"name","gold"},{"owner","admin"}}],
                 "/tool/user-manager/profile/limitation/print" or
                 "/tool/user-manager/profile/profile-limitation/print" => [],
                 _=>throw new InvalidOperationException("Unexpected command: "+command)
@@ -36,12 +37,12 @@ public sealed class ReliableRouterDataPerformanceTests
             {
                 [".id"]="*1",["username"]="card-1",["actual-profile"]="gold",
                 ["total-download-used"]="400",["total-upload-used"]="100",
-                ["disabled"]="false"
+                ["disabled"]="false",["incomplete"]="false",["customer"]="admin"
             };
             var second=new Dictionary<string,string>
             {
                 [".id"]="*2",["username"]="card-2",["actual-profile"]="gold",
-                ["disabled"]="false"
+                ["disabled"]="false",["incomplete"]="false",["customer"]="admin"
             };
             if(!MissingUsageOnSecondRow)
             {

@@ -13,7 +13,7 @@ public sealed class UserManagerV6ExpiredCleanupTests
         bool disabled=false, string timeLeft="0s") =>
         new Dictionary<string,string>
         {
-            [".id"]=id, ["username"]=name, ["actual-profile"]=profile,
+            [".id"]=id, ["username"]=name, ["actual-profile"]=profile,["customer"]="admin",
             ["disabled"]=disabled?"yes":"no", ["incomplete"]="no",
             ["total-download-used"]=consumed.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["total-upload-used"]="0",
@@ -23,9 +23,14 @@ public sealed class UserManagerV6ExpiredCleanupTests
 
     private static UserManagerV6Voucher Snapshot(
         string id, string name, int used, int limit=100, string profile="gold") =>
-        UserManagerV6Usage.Classify(Row(id,name,used,limit,profile),0);
+        UserManagerV6Usage.Classify(Row(id,name,used,limit,profile),0) with
+        {
+            Status=used>0&&limit>0&&used>=limit?"expired":"active",
+            ExpirySource="transfer-limit",Customer="admin",ProfileId="*F",
+            UsageVerified=true,AdministrativeStateVerified=true,QuotaVerified=true
+        };
 
-    private sealed class Fake : IRouterCommandClient
+    private sealed class Fake : IRouterCommandClient,IRouterQueryClient
     {
         public IReadOnlyList<IReadOnlyDictionary<string,string>> Users { get; set; }=[];
         public readonly List<string> Removed=[];
@@ -34,6 +39,15 @@ public sealed class UserManagerV6ExpiredCleanupTests
         public string? RejectId { get; set; }
         public string? DropId { get; set; }
         public bool NoLifecycle { get; set; }
+
+        public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByIdAsync(
+            string command,string id,IReadOnlyDictionary<string,string>? attributes=null,
+            CancellationToken cancellationToken=default)
+        {
+            Assert.Equal("/tool/user-manager/user/print",command);
+            return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>(
+                Users.Where(x=>x[".id"]==id).ToArray());
+        }
 
         public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> CommandAsync(
             string command, IReadOnlyDictionary<string,string>? attributes = null,
@@ -50,10 +64,11 @@ public sealed class UserManagerV6ExpiredCleanupTests
                         : Users;
                     break;
                 case "/tool/user-manager/profile/print":
-                    rows=[new Dictionary<string,string>{[".id"]="*F",["name"]="gold"}];break;
+                    rows=[new Dictionary<string,string>{[".id"]="*F",["name"]="gold",["owner"]="admin"},
+                          new Dictionary<string,string>{[".id"]="*FA",["name"]="platinum",["owner"]="admin"}];break;
                 case "/tool/user-manager/profile/limitation/print":
                     LimitationScans++;
-                    rows=[new Dictionary<string,string>{[".id"]="*E",["name"]="limit100",["transfer-limit"]="100"}];break;
+                    rows=[new Dictionary<string,string>{[".id"]="*E",["name"]="limit100",["owner"]="admin",["transfer-limit"]="100"}];break;
                 case "/tool/user-manager/profile/profile-limitation/print":
                     rows=[new Dictionary<string,string>{["profile"]="*F",["limitation"]="*E"}];break;
                 case "/tool/user-manager/user/remove":
@@ -97,7 +112,7 @@ public sealed class UserManagerV6ExpiredCleanupTests
         Assert.False(result.UncertainOutcome);
         Assert.Equal(["*1"],fake.Removed);
         Assert.Equal(1,fake.ScanCount);
-        Assert.Equal(1,fake.LimitationScans);
+        Assert.Equal(2,fake.LimitationScans); // Initial validation plus fresh pre-remove definitions.
     }
 
     [Fact]

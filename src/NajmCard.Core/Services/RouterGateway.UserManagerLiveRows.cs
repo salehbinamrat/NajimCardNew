@@ -79,12 +79,12 @@ public sealed partial class RouterGateway
                     "incomplete"=>"غير مكتمل",
                     _=>"غير مصنف"
                 },
-                item.Disabled,
+                item.AdministrativeStateVerified?item.Disabled:null,
                 "غير متاح",
                 inventory.IsComplete?item.DownloadBytes:null,
                 inventory.IsComplete?item.UploadBytes:null,
-                item.TransferLimit>0?item.TransferLimit:null,
-                inventory.IsComplete?item.ActiveSessions:null,
+                item.QuotaVerified&&item.TransferLimit>0?item.TransferLimit:null,
+                inventory.IsComplete&&item.ActiveSessionsVerified?item.ActiveSessions:null,
                 string.IsNullOrWhiteSpace(item.LastSeen)?"غير متاح":item.LastSeen,
                 inventory.Diagnostic.Length>0?inventory.Diagnostic:item.Reason)).ToArray();
             return new UmDataSnapshot<UmAccountRow>(version,accounts)
@@ -160,19 +160,48 @@ public sealed partial class RouterGateway
             "/tool/user-manager/profile/print",
             new Dictionary<string,string> { [".proplist"]=v7
                 ?".id,name,price,validity,starts-when"
-                :".id,name,owner,price,validity,starts-at" },ct);
+                :".id,name,owner,customer,price,validity,starts-at" },ct);
         var limitations=await client.CommandAsync(v7?"/user-manager/limitation/print":
             "/tool/user-manager/profile/limitation/print",
             new Dictionary<string,string> { [".proplist"]=v7
                 ?".id,name,transfer-limit,download-limit,upload-limit,uptime-limit,rate-limit-rx,rate-limit-tx"
-                :".id,name,owner,transfer-limit,download-limit,upload-limit,uptime-limit,rate-limit-rx,rate-limit-tx" },ct);
+                :".id,name,owner,customer,transfer-limit,download-limit,upload-limit,uptime-limit,rate-limit-rx,rate-limit-tx" },ct);
         var relations=await client.CommandAsync(v7?"/user-manager/profile-limitation/print":
             "/tool/user-manager/profile/profile-limitation/print",
-            new Dictionary<string,string> { [".proplist"]="profile,limitation" },ct);
+            new Dictionary<string,string> { [".proplist"]=v7?"profile,limitation":
+                "profile,limitation,owner,customer" },ct);
         if(profiles.Any(row=>!row.ContainsKey(".id")||!row.ContainsKey("name")) ||
            limitations.Any(row=>!row.ContainsKey(".id")||!row.ContainsKey("name")))
             throw new InvalidDataException(
                 "تفتقد بعض الباقات أو القيود معرفات صحيحة؛ لا يمكن عرض قائمة مكتملة.");
+        if(!v7)
+        {
+            var catalog=new UserManagerV6QuotaCatalog(profiles,limitations,relations);
+            var v6Rows=new List<UmPlanRow>(profiles.Count+limitations.Count);
+            foreach(var row in profiles)
+            {
+                UserManagerV6QuotaCatalog.TryOwner(row,out var owner);
+                v6Rows.Add(new UmPlanRow(UmValue(row,".id"),"Profile",UmValue(row,"name"),
+                    UmKnown(row,"price"),UmKnown(row,"validity"),UmKnown(row,"starts-at"),
+                    "غير متاح","غير متاح","غير متاح","غير متاح","غير متاح","غير متاح",
+                    catalog.LimitationNamesFor(UmValue(row,".id"))) {Owner=owner});
+            }
+            foreach(var row in limitations)
+            {
+                UserManagerV6QuotaCatalog.TryOwner(row,out var owner);
+                v6Rows.Add(new UmPlanRow(UmValue(row,".id"),"Limitation",UmValue(row,"name"),
+                    "غير متاح","غير متاح","غير متاح",
+                    UmKnown(row,"transfer-limit"),UmKnown(row,"download-limit"),
+                    UmKnown(row,"upload-limit"),UmKnown(row,"uptime-limit"),
+                    UmKnown(row,"rate-limit-rx"),UmKnown(row,"rate-limit-tx"),
+                    catalog.ProfileNamesFor(UmValue(row,".id"))) {Owner=owner});
+            }
+            return new UmDataSnapshot<UmPlanRow>(version,v6Rows)
+            {
+                IsComplete=catalog.IsComplete,
+                Diagnostic=catalog.IsComplete?"":"تعذر تأكيد روابط وحدود الباقات: "+catalog.Diagnostic
+            };
+        }
         // Real v6 routers can retain orphaned profile-limitation links after
         // a profile/limitation was removed. Keep all verified profile rows
         // visible while clearly flagging these unresolved associations.

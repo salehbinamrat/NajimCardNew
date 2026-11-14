@@ -11,11 +11,27 @@ public sealed record UserManagerV6Voucher(
     string UptimeUsed="",string LastSeen="",int ActiveSessions=0,
     bool ActiveSessionsVerified=false)
 {
+    public string Customer { get; init; }="";
+    public string ProfileId { get; init; }="";
+    public bool UsageVerified { get; init; }
+    public bool AdministrativeStateVerified { get; init; }
+    public bool QuotaVerified { get; init; }
+    public bool IsVerified=>UsageVerified&&AdministrativeStateVerified&&QuotaVerified
+        &&Id.Length>0&&Username.Length>0&&Customer.Length>0&&ProfileId.Length>0;
+    public bool CanDeleteAsTransferExpired=>IsVerified&&Status=="expired"
+        &&ExpirySource=="transfer-limit"&&Started&&!Disabled&&!Incomplete
+        &&TransferLimit>0&&ConsumedBytes>=TransferLimit;
     public long ConsumedBytes => DownloadBytes > long.MaxValue - UploadBytes
         ? long.MaxValue : DownloadBytes + UploadBytes;
     public long RemainingBytes => TransferLimit<=0 ? 0 :
         Math.Max(0,TransferLimit-ConsumedBytes);
-    public string RemainingLabel => TransferLimit<=0 ? "غير محدد" : RemainingBytes.ToString();
+    public string RemainingLabel => !QuotaVerified||!UsageVerified ? "غير مؤكد" :
+        TransferLimit<=0 ? "غير محدد" : RemainingBytes.ToString();
+    public string TransferLimitLabel=>QuotaVerified?TransferLimit.ToString():"غير مؤكد";
+    public string ConsumedBytesLabel=>UsageVerified?ConsumedBytes.ToString():"غير متاح";
+    public string DownloadBytesLabel=>UsageVerified?DownloadBytes.ToString():"غير متاح";
+    public string UploadBytesLabel=>UsageVerified?UploadBytes.ToString():"غير متاح";
+    public string ActiveSessionsLabel=>ActiveSessionsVerified?ActiveSessions.ToString():"غير متاح";
 }
 
 public sealed record UserManagerV6Inventory(

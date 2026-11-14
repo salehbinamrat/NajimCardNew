@@ -6,4 +6,7 @@ namespace NajmCard.Core.Models;
 /// </summary>
 public sealed record UserManagerV6ProfileLimitSummary(
     string ProfileId, string ProfileName, long EffectiveTransferLimitBytes,
-    int LinkedLimitationCount, string LimitationNames);
+    int LinkedLimitationCount, string LimitationNames)
+{
+    public string Owner { get; init; }="";
+}

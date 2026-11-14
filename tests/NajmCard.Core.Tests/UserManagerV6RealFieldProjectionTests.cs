@@ -41,6 +41,7 @@ public sealed class UserManagerV6RealFieldProjectionTests
                     var source=new Dictionary<string,string>{
                         [".id"]=id,["username"]=name,
                         ["actual-profile"]="silver",["disabled"]="false",
+                        ["customer"]="admin",["incomplete"]="false",
                         ["download-used"]=MalformedCounters?"bad":
                             DecimalZeroCounters && name=="card-unused"?"0.0":download,
                         ["upload-used"]=upload,["uptime-used"]=name=="card-unused"?"0s":"2m"
@@ -60,9 +61,9 @@ public sealed class UserManagerV6RealFieldProjectionTests
                 throw new RouterOsTrapException("not enough permissions");
             IReadOnlyList<IReadOnlyDictionary<string,string>> rows=path switch{
                 "/tool/user-manager/profile/print" =>
-                    [new Dictionary<string,string>{{".id","*P"},{"name","silver"}}],
+                    [new Dictionary<string,string>{{".id","*P"},{"name","silver"},{"owner","admin"}}],
                 "/tool/user-manager/profile/limitation/print" =>
-                    [new Dictionary<string,string>{{".id","*L"},{"name","silver-limit"},{"transfer-limit","100"}}],
+                    [new Dictionary<string,string>{{".id","*L"},{"name","silver-limit"},{"owner","admin"},{"transfer-limit","100"}}],
                 "/tool/user-manager/profile/profile-limitation/print" =>
                     [new Dictionary<string,string>{{"profile","*P"},{"limitation","*L"}}],
                 _=>throw new InvalidOperationException(path)

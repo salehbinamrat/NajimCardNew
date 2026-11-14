@@ -396,74 +396,24 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     /// <summary>Read-only RouterOS 6 User Manager customer logins.</summary>
     private static bool HasLifecycleFields(IReadOnlyDictionary<string,string> row)
     {
-        // RouterOS v6 exposes download-used/upload-used, not the v7 monitor
-        // totals. Validate both counters before declaring the row trusted:
-        // absent or malformed counters must NEVER be silently read as zero.
-        static bool VerifiedCounter(IReadOnlyDictionary<string,string> source,string key)
-        {
-            if(!source.TryGetValue(key,out var text) ||
-               string.IsNullOrWhiteSpace(text))return false;
-            var value=UserManagerV6Usage.ParseBytes(text);
-            if(value>0)return true;
-            var zero=text.Trim().ToLowerInvariant().Replace(" ","");
-            return System.Text.RegularExpressions.Regex.IsMatch(zero,
-                @"^0(?:\.0+)?(?:[kmgt]?i?b?)?$",
-                System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-        }
         bool identified=!string.IsNullOrWhiteSpace(Get(row,".id")) &&
             (!string.IsNullOrWhiteSpace(Get(row,"username")) ||
              !string.IsNullOrWhiteSpace(Get(row,"name")));
-        bool hasTotal=VerifiedCounter(row,"total-download-used") &&
-            VerifiedCounter(row,"total-upload-used");
-        bool hasLegacy=VerifiedCounter(row,"download-used") &&
-            VerifiedCounter(row,"upload-used");
-        return identified && (hasTotal || hasLegacy);
+        return identified&&UserManagerV6Usage.TryCounters(row,out _,out _)
+            &&UserManagerV6Usage.TryAdministrativeState(row,out _,out _)
+            &&UserManagerV6QuotaCatalog.TryOwner(row,out _);
     }
 
-    private async Task<IReadOnlyDictionary<string,long>> UserManagerV6ProfileTransferLimitsAsync(
+    private async Task<UserManagerV6QuotaCatalog> ReadUserManagerV6QuotaCatalogAsync(
         CancellationToken ct)
     {
-        // All three small definition tables are read once. Links may refer to
-        // either the profile/limitation name or the internal RouterOS ID.
         var profiles=await client.CommandAsync(
-            "/tool/user-manager/profile/print", cancellationToken:ct);
+            "/tool/user-manager/profile/print",cancellationToken:ct);
         var limits=await client.CommandAsync(
-            "/tool/user-manager/profile/limitation/print", cancellationToken:ct);
+            "/tool/user-manager/profile/limitation/print",cancellationToken:ct);
         var links=await client.CommandAsync(
-            "/tool/user-manager/profile/profile-limitation/print", cancellationToken:ct);
-
-        var limitAliases=new Dictionary<string,long>(StringComparer.OrdinalIgnoreCase);
-        foreach(var row in limits)
-        {
-            var value=UserManagerV6Usage.ParseBytes(Get(row,"transfer-limit"));
-            foreach(var alias in new[] { Get(row,".id"),Get(row,"name") })
-                if(alias.Length>0) limitAliases[alias]=value;
-        }
-
-        var profileAliases=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
-        foreach(var row in profiles)
-        {
-            var canonical=Get(row,"name");
-            if(canonical.Length==0) canonical=Get(row,".id");
-            if(canonical.Length==0) continue;
-            profileAliases[canonical]=canonical;
-            var id=Get(row,".id");
-            if(id.Length>0) profileAliases[id]=canonical;
-        }
-        var totals=new Dictionary<string,long>(StringComparer.OrdinalIgnoreCase);
-        foreach(var link in links)
-        {
-            if (!profileAliases.TryGetValue(Get(link,"profile"),out var canonical)
-                || !limitAliases.TryGetValue(Get(link,"limitation"),out var limit)
-                || limit<=0) continue;
-            if(!totals.TryGetValue(canonical,out var old) || limit<old)
-                totals[canonical]=limit;
-        }
-        var expanded=new Dictionary<string,long>(StringComparer.OrdinalIgnoreCase);
-        foreach(var pair in profileAliases)
-            if(totals.TryGetValue(pair.Value,out var value))
-                expanded[pair.Key]=value;
-        return expanded;
+            "/tool/user-manager/profile/profile-limitation/print",cancellationToken:ct);
+        return new UserManagerV6QuotaCatalog(profiles,limits,links);
     }
 
     /// <summary>
@@ -473,10 +423,14 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     /// </summary>
     public async Task<UserManagerV6Inventory> ReadUserManagerV6InventoryAsync(
         CancellationToken ct = default)
+        =>(await ReadUserManagerV6InventoryContextAsync(ct).ConfigureAwait(false)).Inventory;
+
+    private async Task<(UserManagerV6Inventory Inventory,UserManagerV6QuotaCatalog? Quotas)>
+        ReadUserManagerV6InventoryContextAsync(CancellationToken ct)
     {
         const string path="/tool/user-manager/user/print";
         const string projection=
-            ".id,username,name,disabled,incomplete,actual-profile,money-used,uptime-used,"+
+            ".id,username,name,customer,owner,disabled,incomplete,actual-profile,money-used,uptime-used,"+
             "download-used,upload-used,total-download-used,total-upload-used,"+
             "transfer-limit,last-used-ip,last-used-mac,"+
             "active,active-sessions,last-seen";
@@ -505,31 +459,33 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         var observed=rows.All(HasLifecycleFields) &&
             rows.Select(row=>Get(row,".id"))
                 .Distinct(StringComparer.Ordinal).Count()==rows.Count;
-        IReadOnlyDictionary<string,long> limitMap=new Dictionary<string,long>();
+        UserManagerV6QuotaCatalog? quotas=null;
         string warning="";
-        bool limitsVerified=true;
-        try { limitMap=await UserManagerV6ProfileTransferLimitsAsync(ct).ConfigureAwait(false); }
+        try
+        {
+            quotas=await ReadUserManagerV6QuotaCatalogAsync(ct).ConfigureAwait(false);
+            warning=quotas.Diagnostic;
+        }
         catch (RouterOsTrapException ex)
         {
-            limitsVerified=false;
             warning="تعذرت قراءة تعريفات حدود الباقات: "+ex.Message;
         }
 
         var users=new List<UserManagerV6Voucher>(rows.Count);
         foreach(var row in rows)
         {
-            var profile=Get(row,"actual-profile");
-            limitMap.TryGetValue(profile,out var profileLimit);
-            users.Add(UserManagerV6Usage.Classify(row,profileLimit));
+            var quota=quotas?.ForUser(row)??UserManagerV6ResolvedQuota.Unknown(warning);
+            users.Add(UserManagerV6Usage.Classify(row,quota));
         }
 
         // The number of users alone cannot certify active/expired classes
         // when the quota definitions were inaccessible.
-        bool complete=(rows.Count==0 || observed) && limitsVerified;
+        bool complete=observed&&quotas is {IsComplete:true}&&users.All(x=>x.IsVerified);
         if (rows.Count>0 && !complete)
             warning="بيانات دورة حياة User Manager غير مكتملة؛ تحقق من حقول الاستهلاك وحدود الباقات. "
-                +warning;
-        return new UserManagerV6Inventory(users,complete,warning);
+                +warning+" "+string.Join(" ",users.Where(x=>!x.IsVerified)
+                    .Select(x=>x.Reason).Distinct().Take(3));
+        return (new UserManagerV6Inventory(users,complete,warning.Trim()),quotas);
     }
 
     public async Task<IReadOnlyList<UserManagerV6Customer>> ReadUserManagerV6CustomersAsync(
@@ -651,20 +607,19 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         IProgress<ExpiredTransferDeletionProgress>? progress=null)
     {
         ArgumentNullException.ThrowIfNull(confirmedSnapshot);
-        static bool IsExhausted(UserManagerV6Voucher item) =>
-            item.Status=="expired" && item.ExpirySource=="transfer-limit"
-            && item.Started && !item.Disabled && !item.Incomplete
-            && item.TransferLimit>0 && item.ConsumedBytes>=item.TransferLimit;
+        static bool IsExhausted(UserManagerV6Voucher item)=>item.CanDeleteAsTransferExpired;
 
         var requested=confirmedSnapshot.Where(IsExhausted).ToArray();
         if(requested.Length==0)
             return new ExpiredTransferDeletionResult(0,0,0,[],false);
 
         // Fail closed: never delete based on an incomplete RouterOS 6 projection.
-        var live=await ReadUserManagerV6InventoryAsync(ct);
-        if(!live.IsComplete)
+        var (live,quotas)=await ReadUserManagerV6InventoryContextAsync(ct);
+        if(!live.IsComplete||quotas is not {IsComplete:true})
             throw new InvalidOperationException(
                 "قراءة حالات User Manager غير مكتملة؛ لم يُحذف أي كرت.");
+        if(client is not IRouterQueryClient targeted)
+            throw new NotSupportedException("الحذف الآمن يتطلب قراءة مستقلة لكل حساب بمعرفه.");
 
         var byId=live.Users.GroupBy(x=>x.Id,StringComparer.Ordinal)
             .ToDictionary(g=>g.Key,g=>g.ToArray(),StringComparer.Ordinal);
@@ -685,6 +640,8 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             var fresh=matches[0];
             if(fresh.Username!=old.Username
                 || fresh.Profile!=old.Profile
+                || fresh.Customer!=old.Customer
+                || fresh.ProfileId!=old.ProfileId
                 || fresh.TransferLimit!=old.TransferLimit
                 || !IsExhausted(fresh))
             {
@@ -698,28 +655,59 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         var failed=new List<string>();
         var deletedIds=new HashSet<string>(StringComparer.Ordinal);
         int processed=0;
+        bool remainingVerified=true;
+        var remainingById=live.Users.ToDictionary(x=>x.Id,StringComparer.Ordinal);
         progress?.Report(new ExpiredTransferDeletionProgress(0,verified.Count,0,skipped,0));
         foreach(var voucher in verified)
         {
             ct.ThrowIfCancellationRequested();
+            bool removeAttempted=false;
             try
             {
-                await client.CommandAsync(
-                    "/tool/user-manager/user/remove",
-                    new Dictionary<string,string> { [".id"]=voucher.Id },ct);
-                deleted++;
-                deletedIds.Add(voucher.Id);
+                // Fresh raw exact-ID evidence, independent of UI status strings.
+                // No per-card full user-table downloads and no mutation retries.
+                var target=await targeted.QueryByIdAsync(
+                    "/tool/user-manager/user/print",voucher.Id,cancellationToken:ct);
+                // A long cleanup batch must not retain quota definitions from
+                // its start. Refresh the small definition tables as well; never
+                // use the dashboard cache to authorize a destructive operation.
+                var currentQuotas=await ReadUserManagerV6QuotaCatalogAsync(ct);
+                var current=target.Count==1&&Get(target[0],".id")==voucher.Id
+                    ?UserManagerV6Usage.Classify(target[0],currentQuotas.ForUser(target[0])):null;
+                if(current is {IsVerified:true})remainingById[voucher.Id]=current;
+                else remainingVerified=false;
+                if(current is null||!HasLifecycleFields(target[0])||!IsExhausted(current)
+                    ||current.Username!=voucher.Username||current.Customer!=voucher.Customer
+                    ||current.ProfileId!=voucher.ProfileId||current.Profile!=voucher.Profile
+                    ||current.TransferLimit!=voucher.TransferLimit)
+                {
+                    skipped++;
+                }
+                else
+                {
+                    removeAttempted=true;
+                    await client.CommandAsync(
+                        "/tool/user-manager/user/remove",
+                        new Dictionary<string,string> { [".id"]=voucher.Id },ct);
+                    deleted++;
+                    deletedIds.Add(voucher.Id);
+                    InvalidateUserManagerV6LifecycleCache();
+                }
             }
             catch(RouterOsTrapException)
             {
                 failed.Add(voucher.Username);
+                if(!removeAttempted)remainingVerified=false;
             }
             catch(Exception ex) when(ex is IOException or TimeoutException
                 or OperationCanceledException or ObjectDisposedException)
             {
-                // The last remove may have happened even without an acknowledgement.
+                // Only a sent remove can have an uncertain write outcome.
+                // A failed read must not return a stale "verified" remainder.
+                if(removeAttempted)InvalidateUserManagerV6LifecycleCache();
+                else failed.Add(voucher.Username);
                 return new ExpiredTransferDeletionResult(
-                    requested.Length,deleted,skipped,failed,true);
+                    requested.Length,deleted,skipped,failed,removeAttempted);
             }
             processed++;
             // Throttle UI progress updates while retaining per-ID acknowledgement.
@@ -730,8 +718,8 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         return new ExpiredTransferDeletionResult(
             requested.Length,deleted,skipped,failed,false)
         {
-            RemainingUserManager=live.Users
-                .Where(x=>!deletedIds.Contains(x.Id)).ToArray()
+            RemainingUserManager=remainingVerified?remainingById.Values
+                .Where(x=>!deletedIds.Contains(x.Id)).ToArray():null
         };
     }
 

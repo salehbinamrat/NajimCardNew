@@ -304,9 +304,9 @@ public sealed class ProfilesView : UserControl
                                 var limits=await gateway.ReadUserManagerV6ProfileLimitSummaryAsync();
                                 limitGrid.ItemsSource=limits;
                                 var byId=limits.ToLookup(x=>x.ProfileId,StringComparer.OrdinalIgnoreCase);
-                                var names=profiles.ToLookup(x=>x.Name,StringComparer.OrdinalIgnoreCase);
                                 all=profiles.Select(x=>ToRow(x,
-                                    names[x.Name].Count()==1 && byId[x.Id].FirstOrDefault() is { } data
+                                    byId[x.Id].SingleOrDefault() is { } data &&
+                                    string.Equals(data.Owner,x.Owner,StringComparison.Ordinal)
                                         ?Bytes(data.EffectiveTransferLimitBytes):"غير معروف")).ToArray();
                             }
                             catch(Exception ex)
