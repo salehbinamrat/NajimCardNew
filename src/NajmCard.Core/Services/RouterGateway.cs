@@ -407,7 +407,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             if(value>0)return true;
             var zero=text.Trim().ToLowerInvariant().Replace(" ","");
             return System.Text.RegularExpressions.Regex.IsMatch(zero,
-                @"^0(?:\\.0+)?(?:[kmgt]?i?b?)?$",
+                @"^0(?:\.0+)?(?:[kmgt]?i?b?)?$",
                 System.Text.RegularExpressions.RegexOptions.CultureInvariant);
         }
         bool identified=!string.IsNullOrWhiteSpace(Get(row,".id")) &&
