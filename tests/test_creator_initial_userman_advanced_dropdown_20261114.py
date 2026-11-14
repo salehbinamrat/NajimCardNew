@@ -43,8 +43,8 @@ class CreatorDefaultAndAdvancedEditorTests(unittest.TestCase):
         self.assertIn('panel.VerticalAlignment=VerticalAlignment.Stretch;',read("GeneratorView.ReferenceLayout.cs"))
 
     def test_advanced_colors_are_real_dropdowns_with_names_and_swatch(self):
-        source=read("GeneratorView.DesignerPanel.cs")
-        section=source[source.index('TextBox ColorChoice('):source.index('var name=Editable(',source.index('TextBox ColorChoice('))]
+        source=read("GeneratorView.AdvancedEditor.cs")
+        section=source[source.index('TextBox ColorChoice('):source.index('Group("بيانات الكرت"',source.index('TextBox ColorChoice('))]
         self.assertIn('new ComboBox',section)
         self.assertIn('new DataTemplate(typeof(CardPaletteEntry))',section)
         self.assertIn('ColorChoice',source)
@@ -59,7 +59,7 @@ class CreatorDefaultAndAdvancedEditorTests(unittest.TestCase):
         self.assertIn('Hex',section)
 
     def test_advanced_dialog_has_grouped_equal_sized_fields_and_safe_save(self):
-        source=read("GeneratorView.DesignerPanel.cs")
+        source=read("GeneratorView.AdvancedEditor.cs")
         self.assertIn('Group("بيانات الكرت"',source)
         self.assertIn('Group("ألوان الكرت"',source)
         self.assertIn('Group("الخطوط والمقاسات"',source)

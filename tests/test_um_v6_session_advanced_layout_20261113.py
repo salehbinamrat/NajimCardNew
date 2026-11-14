@@ -9,19 +9,22 @@ def read(base,file): return (base/file).read_text(encoding="utf-8")
 
 class UserManagerV6VisualParity(unittest.TestCase):
     def test_advanced_dropdowns_use_cream_black_and_maroon(self):
-        s=read(VIEW,"GeneratorView.DesignerPanel.cs")
+        s=read(VIEW,"GeneratorView.AdvancedEditor.cs")
         self.assertIn('TextBox Choices(string label,string current,string[] presets)',s)
         self.assertIn('ConvertFrom("#FFF4DF")',s)
         self.assertIn('entry.Foreground=Brushes.Black',s)
-        self.assertIn('Foreground=Brushes.Black,Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!',s)
+        self.assertIn('Foreground=Brushes.Black',s)
+        self.assertIn('Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!',s)
         self.assertIn('popupChoices.IsOpen=!popupChoices.IsOpen',s)
-        self.assertIn('entry.ToolTip="اختر من القائمة أو أدخل قيمة مخصصة."',s)
+        self.assertIn('entry.ToolTip="اختر قيمة من القائمة أو أدخل قيمة مخصصة."',s)
         self.assertNotIn('IsEditable=true,ItemsSource=presets',s)
 
     def test_advanced_colors_use_exact_existing_card_palette(self):
-        s=read(VIEW,"GeneratorView.DesignerPanel.cs")
+        s=read(VIEW,"GeneratorView.AdvancedEditor.cs")
         self.assertIn('TextBox ColorChoice(string label,string current)',s)
-        self.assertIn('foreach(var hex in CardPaletteColors)',s)
+        inline=read(VIEW,"GeneratorView.DesignerPanel.cs")
+        self.assertIn('foreach(var hex in CardPaletteColors)',inline)
+        self.assertIn('new DataTemplate(typeof(CardPaletteEntry))',s)
         self.assertIn('var numberColor=ColorChoice(',s)
         self.assertIn('var background=ColorChoice(',s)
         self.assertIn('var borderColor=ColorChoice(',s)

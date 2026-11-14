@@ -35,9 +35,9 @@ class NajmLoginCreatorFixes(unittest.TestCase):
     def test_userman_initial_service_and_editable_service_tabs(self):
         code = source("Views/GeneratorView.cs")
         workspace = source("Views/VoucherWorkspaceView.cs")
-        self.assertIn("_service.SelectedIndex = 1;", code)
+        self.assertIn("_service.SelectedIndex = 0;", code)
         self.assertIn('_customerPanel.Visibility = SelectedService=="userman"?Visibility.Visible:Visibility.Collapsed;', code)
-        self.assertIn('"userman"=>1', code)
+        self.assertIn('"userman"=>0', code)
         self.assertIn('creator.SelectService(service)', workspace)
         self.assertIn('var background=selected?"#EAC77C":name switch', workspace)
         self.assertIn("btn.BorderThickness=new Thickness(selected?2:1)", workspace)
