@@ -77,7 +77,10 @@ public sealed class DesktopShortcutTests
             string first=DesktopShortcutService.CreateOrUpdateShortcut(app,desktop);
             string second=DesktopShortcutService.CreateOrUpdateShortcut(app,desktop);
             Assert.Equal(first,second);
+            Assert.Equal("تريم كارد.lnk",Path.GetFileName(first));
             Assert.Single(Directory.GetFiles(desktop,"*.lnk"));
+            Assert.DoesNotContain(Directory.GetFiles(desktop,"*.lnk"),
+                path=>Path.GetFileName(path).StartsWith("Tarim Card",StringComparison.OrdinalIgnoreCase));
 
             Type shellType=Type.GetTypeFromProgID("WScript.Shell",throwOnError:true)!;
             object shell=Activator.CreateInstance(shellType)!;
