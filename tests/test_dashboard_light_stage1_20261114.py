@@ -49,6 +49,7 @@ class DashboardLightStageOne(unittest.TestCase):
         self.assertEqual("1260", shell.attrib["Width"])
         self.assertEqual("730", shell.attrib["Height"])
         self.assertIn('#F4E4D5', (DESKTOP / "MainWindow.xaml").read_text(encoding="utf-8"))
+        self.assertNotIn("روابط سريعة", (DESKTOP / "MainWindow.xaml").read_text(encoding="utf-8"))
 
 if __name__ == "__main__":
     unittest.main()
