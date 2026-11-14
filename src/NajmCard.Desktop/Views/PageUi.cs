@@ -11,12 +11,12 @@ using NajmCard.Desktop.Services;
 
 namespace NajmCard.Desktop.Views;
 
-/// <summary>Shared light-cream geometry, softened burgundy accents, and readable RTL grids.</summary>
+/// <summary>Shared silver panel geometry, electric-blue outlines, and readable RTL grids.</summary>
 internal static class PageUi
 {
-    internal static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(88, 37, 58));
-    internal static Brush Gold => new SolidColorBrush(Color.FromRgb(243, 207, 148));
-    internal static Border Surface(UIElement content,string accent="#80593D")
+    internal static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(58, 83, 120));
+    internal static Brush Gold => new SolidColorBrush(Color.FromRgb(207, 219, 238));
+    internal static Border Surface(UIElement content,string accent="#075DFF")
     {
         var surface=new Border
         {
@@ -26,9 +26,9 @@ internal static class PageUi
             // creator and the main WPF theme. Keep exact fallback colors for
             // offscreen tests without a resource dictionary.
             Background=Application.Current?.TryFindResource("CreamPanelBrush") as Brush
-                ?? new SolidColorBrush(Color.FromRgb(255,243,223)),
+                ?? new SolidColorBrush(Color.FromRgb(232,237,245)),
             BorderBrush=Application.Current?.TryFindResource("MaroonLineBrush") as Brush
-                ?? new SolidColorBrush(Color.FromRgb(114,32,58))
+                ?? new SolidColorBrush(Color.FromRgb(7,93,255))
         };
         // Scope dark default labels to cream panels without affecting the
         // burgundy application header, login, sidebar or card print artwork.
@@ -37,18 +37,18 @@ internal static class PageUi
             ?new Style(typeof(TextBlock))
             :new Style(typeof(TextBlock),baseTextStyle);
         ordinaryText.Setters.Add(new Setter(TextBlock.ForegroundProperty,
-            new SolidColorBrush(Color.FromRgb(75,27,50))));
+            new SolidColorBrush(Color.FromRgb(11,44,96))));
         surface.Resources[typeof(TextBlock)]=ordinaryText;
         return surface;
     }
     internal static StackPanel Column() => new() { Orientation = Orientation.Vertical };
     internal static TextBlock Title(string text) => new() { Text = text, FontSize = 23, FontWeight = FontWeights.Bold, FontFamily=new FontFamily("Arial"),
         Foreground = Brushes.White,
-        Background = new SolidColorBrush(Color.FromRgb(165, 82, 108)),
+        Background = new SolidColorBrush(Color.FromRgb(7, 93, 255)),
         Padding = new Thickness(8,5,8,5),Margin = new Thickness(0, 0, 0, 6) };
     internal static TextBlock Hint(string text) => new() { Text = text, Foreground = Muted, FontSize = 14, FontWeight = FontWeights.Medium,
         TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
-    internal static TextBlock Label(string text) => new() { Text = text, Foreground = new SolidColorBrush(Color.FromRgb(74, 25, 46)), FontSize = 15, FontWeight=FontWeights.SemiBold,
+    internal static TextBlock Label(string text) => new() { Text = text, Foreground = new SolidColorBrush(Color.FromRgb(11, 44, 96)), FontSize = 15, FontWeight=FontWeights.SemiBold,
         Margin = new Thickness(0, 3, 0, 2) };
     internal static Button Button(string name,bool primary=true)
     {
@@ -81,11 +81,11 @@ internal static class PageUi
             var n when n.Contains("تحديث",StringComparison.Ordinal) ||
                 n.Contains("قراءة",StringComparison.Ordinal)=>"#216C80",
             var n when n.Contains("إعادة تشغيل",StringComparison.Ordinal)=>"#A16618",
-            _=>primary?"#E6BC64":"#A5526C"
+            _=>primary?"#CDDAE9":"#075DFF"
         };
         button.Background=(Brush)new BrushConverter().ConvertFrom(background)!;
         button.Foreground=(Brush)new BrushConverter().ConvertFrom(
-            background=="#E6BC64"?"#52152F":"#FFF5E8")!;
+            background=="#CDDAE9"?"#0B2C60":"#FFFFFF")!;
         return button;
     }
     internal static StackPanel LabeledCheckBox(CheckBox check)
