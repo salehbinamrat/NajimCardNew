@@ -17,6 +17,8 @@ public sealed class UserManagerV6RealFieldProjectionTests
         public int FullReads;
         public bool MalformedCounters;
         public bool BlockLimits;
+        public bool DecimalZeroCounters;
+        public bool BothLegacyAndTotals;
         public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> CommandAsync(
             string path,IReadOnlyDictionary<string,string>? attributes=null,
             CancellationToken cancellationToken=default)
@@ -39,9 +41,15 @@ public sealed class UserManagerV6RealFieldProjectionTests
                     var source=new Dictionary<string,string>{
                         [".id"]=id,["username"]=name,
                         ["actual-profile"]="silver",["disabled"]="false",
-                        ["download-used"]=MalformedCounters?"bad":download,
+                        ["download-used"]=MalformedCounters?"bad":
+                            DecimalZeroCounters && name=="card-unused"?"0.0":download,
                         ["upload-used"]=upload,["uptime-used"]=name=="card-unused"?"0s":"2m"
                     };
+                    if(BothLegacyAndTotals)
+                    {
+                        source["total-download-used"]="0";
+                        source["total-upload-used"]="0";
+                    }
                     result.Add(projection is null ?source:
                         source.Where(p=>projection.Contains(p.Key))
                               .ToDictionary(p=>p.Key,p=>p.Value));
@@ -87,6 +95,28 @@ public sealed class UserManagerV6RealFieldProjectionTests
         Assert.False(report.IsComplete);
         Assert.Equal(1,router.ProjectedReads);
         Assert.Equal(1,router.FullReads);
+    }
+
+    [Fact]
+    public async Task DecimalZeroCounters_DoNotRequireWholeDatabaseFallback()
+    {
+        var router=new V6Router{DecimalZeroCounters=true};
+        var report=await new RouterGateway(router).ReadUserManagerV6InventoryAsync();
+        Assert.True(report.IsComplete,report.Diagnostic);
+        Assert.Equal(1,router.ProjectedReads);
+        Assert.Equal(0,router.FullReads);
+        Assert.Equal(1,report.Expired);
+    }
+
+    [Fact]
+    public async Task WhenBothFormatsExist_UserManagerV6LegacyUsageIsAuthoritative()
+    {
+        var router=new V6Router{BothLegacyAndTotals=true};
+        var report=await new RouterGateway(router).ReadUserManagerV6InventoryAsync();
+        Assert.True(report.IsComplete,report.Diagnostic);
+        Assert.Equal(1,report.Active);
+        Assert.Equal(1,report.Expired);
+        Assert.Equal(1,report.Valid);
     }
 
     [Fact]
