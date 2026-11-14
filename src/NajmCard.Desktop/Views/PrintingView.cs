@@ -620,7 +620,7 @@ public partial class PrintingView : UserControl
             {
                 var previewWindow=new Window
                 {
-                    Title="نجم كارد — معاينة الدفعة قبل الطباعة",
+                    Title="تريم كارد — معاينة الدفعة قبل الطباعة",
                     Width=1000,Height=750,MinWidth=680,MinHeight=500,
                     WindowStartupLocation=WindowStartupLocation.CenterOwner,
                     Owner=Window.GetWindow(this),FlowDirection=FlowDirection.RightToLeft
