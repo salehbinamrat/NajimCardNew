@@ -135,9 +135,9 @@ public sealed class UserManagerPlansScreen : UserControl
                 editing is null && !busy;
             limitOptions.IsEnabled=link.IsEnabled=isProfile&&writable&&editing is not null;
             profilesTab.Background=isProfile?UmUi.Cyan:UmUi.Light;
-            profilesTab.Foreground=isProfile?System.Windows.Media.Brushes.White:UmUi.Navy;
+            profilesTab.Foreground=isProfile?System.Windows.Media.Brushes.White:UmUi.Ink;
             limitsTab.Background=isProfile?UmUi.Light:UmUi.Cyan;
-            limitsTab.Foreground=isProfile?UmUi.Navy:System.Windows.Media.Brushes.White;
+            limitsTab.Foreground=isProfile?UmUi.Ink:System.Windows.Media.Brushes.White;
         }
         void ResetForm()
         {
