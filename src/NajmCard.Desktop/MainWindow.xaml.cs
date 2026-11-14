@@ -144,7 +144,7 @@ public partial class MainWindow : Window
         HostInput.Text=mode=="local"?_localHostDraft:_remoteHostDraft;
         ConnectionModeHint.Text=mode=="local"
             ? "محلي: اتصال مباشر بالشبكة الخاصة براوتر MikroTik."
-            : "بعيد: شغّل VPN على Windows أولا ثم أدخل عنوان الراوتر الذي يمكن الوصول إليه عبر النفق. نجم كارد لا ينشئ VPN تلقائيا.";
+            : "بعيد: شغّل VPN على Windows أولا ثم أدخل عنوان الراوتر الذي يمكن الوصول إليه عبر النفق. تريم كارد لا ينشئ VPN تلقائيا.";
     }
 
     private void SavedConnections_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -212,8 +212,8 @@ public partial class MainWindow : Window
             LoginStatus.Text="اختر اتصالا محفوظا للحذف أولا.";
             return;
         }
-        if(MessageBox.Show("حذف إعدادات هذا الاتصال من نجم كارد فقط؟",
-            "نجم كارد",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)
+        if(MessageBox.Show("حذف إعدادات هذا الاتصال من تريم كارد فقط؟",
+            "تريم كارد",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)
             return;
         try
         {
@@ -257,18 +257,18 @@ public partial class MainWindow : Window
     private void About_Click(object sender,RoutedEventArgs e)
     {
         MessageBox.Show(
-            "نجم كارد 0.1.0 — C#/.NET 10 WPF\n" +
+            "تريم كارد 0.1.0 — C#/.NET 10 WPF\n" +
             "برنامج مستقل لإدارة MikroTik وإنشاء الكروت، بهوية عنابية ذهبية.\n" +
             "التجربة المجانية المحلية: 20 يوما تبدأ بعد أول اتصال ناجح بـ MikroTik. "+
             "الترخيص المدفوع متوافق مع خدمة الترخيص، ويرتبط بجهاز واحد عبر HTTPS.",
-            "حول نجم كارد",MessageBoxButton.OK,MessageBoxImage.Information);
+            "حول تريم كارد",MessageBoxButton.OK,MessageBoxImage.Information);
     }
 
     private static string TrialNotice(LicenseCheck status)
     {
         if(status.Mode=="expired")return
-            "انتهت التجربة المجانية. شكرا لتجربة نجم كارد لمدة 20 يوما. "+
-            "للاستمرار دون انقطاع، اطلب رمز ترخيص مدفوع من مركز تراخيص نجم كارد.";
+            "انتهت التجربة المجانية. شكرا لتجربة تريم كارد لمدة 20 يوما. "+
+            "للاستمرار دون انقطاع، اطلب رمز ترخيص مدفوع من مركز تراخيص تريم كارد.";
         if(status.Mode=="clock_error")return status.Message;
         if(status.Mode!="trial")return status.Message;
         if(status.RemainingSeconds<=86400)return
@@ -371,7 +371,7 @@ public partial class MainWindow : Window
     private void RenewLicense_Click(object sender,RoutedEventArgs e)
     {
         PaidLicenseEntry.Visibility=Visibility.Visible;
-        LicenseNotice.Text="للتجديد، حدّث صلاحية الرمز في مركز تراخيص نجم كارد "+
+        LicenseNotice.Text="للتجديد، حدّث صلاحية الرمز في مركز تراخيص تريم كارد "+
             "ثم اضغط تحقق وتفعيل؛ أو أدخل رمزا جديدا صادرًا من المنصة.";
         LicenseNotice.Foreground=new SolidColorBrush(Color.FromRgb(255,224,166));
         LicenseCodeInput.Focus();

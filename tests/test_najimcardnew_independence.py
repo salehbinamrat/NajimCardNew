@@ -13,9 +13,9 @@ class IndependentProductContract(unittest.TestCase):
     def test_distinct_windows_installer_identity(self):
         iss = read("installer/NajmCard.iss")
         self.assertIn("AppId={{CF6AAB62-DA00-49AF-B3D2-1DD83FF90143}", iss)
-        self.assertIn("AppName=Najm Card New", iss)
+        self.assertIn("AppName=تريم كارد", iss)
         self.assertIn(r"DefaultDirName={localappdata}\Programs\NajmCardNew", iss)
-        self.assertIn("DefaultGroupName=Najm Card New", iss)
+        self.assertIn("DefaultGroupName=تريم كارد", iss)
         self.assertNotIn("8498D687-CB0C-4984-A140-8432B88394D0", iss)
 
     def test_new_archives_and_installers_for_both_architectures(self):

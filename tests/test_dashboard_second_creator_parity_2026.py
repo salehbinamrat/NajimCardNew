@@ -41,12 +41,12 @@ class NewDashboardAndCreatorContract(unittest.TestCase):
 
     def test_cream_and_burgundy_with_distinct_actions(self):
         ui=read(V/"DashboardView.xaml")
-        self.assertIn('Color="#FFF3DF"',ui)
-        self.assertIn('Color="#72203A"',ui)
+        self.assertIn('Color="#E8EDF5"',ui)
+        self.assertIn('Color="#075DFF"',ui)
         self.assertIn('Content="عرض النشطة"',ui)
         self.assertIn('Content="عرض المنتهية"',ui)
         self.assertIn('#197A54',ui)
-        self.assertIn('#96243F',ui)
+        self.assertIn('#BE3657',ui)
         dashboard=read(V/"DashboardView.xaml.cs")
         self.assertIn('var surfaces=new[]{"#E7F4F0","#FBE9EF"',dashboard)
         self.assertIn('var accents=new[]{"#116F62","#9E2B54"',dashboard)

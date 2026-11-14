@@ -77,23 +77,36 @@ public sealed class DesktopShortcutTests
             string first=DesktopShortcutService.CreateOrUpdateShortcut(app,desktop);
             string second=DesktopShortcutService.CreateOrUpdateShortcut(app,desktop);
             Assert.Equal(first,second);
+            Assert.Equal("تريم كارد.lnk",Path.GetFileName(first));
             Assert.Single(Directory.GetFiles(desktop,"*.lnk"));
+            Assert.DoesNotContain(Directory.GetFiles(desktop,"*.lnk"),
+                path=>Path.GetFileName(path).StartsWith("Tarim Card",StringComparison.OrdinalIgnoreCase));
 
-            Type shellType=Type.GetTypeFromProgID("WScript.Shell",throwOnError:true)!;
-            object shell=Activator.CreateInstance(shellType)!;
+            // WScript.Shell cannot reliably reopen a Unicode-named .lnk
+            // under non-Arabic Windows locales. Verify the actual delivered
+            // file bytes via a temporary ASCII pathname; do not waive the
+            // target test or change the Arabic desktop shortcut.
+            var inspection=Path.Combine(desktop,"inspect-target.lnk");
+            File.Copy(first,inspection);
             try
             {
-                object shortcut=shellType.InvokeMember("CreateShortcut",
-                    BindingFlags.InvokeMethod,null,shell,[first])!;
+                Type shellType=Type.GetTypeFromProgID("WScript.Shell",throwOnError:true)!;
+                object shell=Activator.CreateInstance(shellType)!;
                 try
                 {
-                    var target=shortcut.GetType().InvokeMember("TargetPath",
-                        BindingFlags.GetProperty,null,shortcut,null)?.ToString();
-                    Assert.Equal(launcher,target,StringComparer.OrdinalIgnoreCase);
+                    object shortcut=shellType.InvokeMember("CreateShortcut",
+                        BindingFlags.InvokeMethod,null,shell,[inspection])!;
+                    try
+                    {
+                        var target=shortcut.GetType().InvokeMember("TargetPath",
+                            BindingFlags.GetProperty,null,shortcut,null)?.ToString();
+                        Assert.Equal(launcher,target,StringComparer.OrdinalIgnoreCase);
+                    }
+                    finally{System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);}
                 }
-                finally{System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);}
+                finally{System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);}
             }
-            finally{System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);}
+            finally{File.Delete(inspection);}
         }
         finally{Directory.Delete(root,true);}
     }

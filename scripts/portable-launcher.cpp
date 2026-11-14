@@ -19,7 +19,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR arguments, int) {
     wchar_t self[32768] = {};
     const DWORD count = GetModuleFileNameW(nullptr, self, 32768);
     if (!count || count >= 32768) {
-        MessageBoxW(nullptr, L"Cannot determine launcher folder.", L"Najm Card New",
+        MessageBoxW(nullptr, L"Cannot determine launcher folder.", L"Tarim Card",
             MB_OK | MB_ICONERROR);
         return 2;
     }
@@ -39,7 +39,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR arguments, int) {
         MessageBoxW(nullptr,
             L"App\\NajmCard.exe is missing. Extract the complete Portable ZIP; "
             L"do not copy the launcher alone.",
-            L"Najm Card New", MB_OK | MB_ICONERROR);
+            L"Tarim Card", MB_OK | MB_ICONERROR);
         return 3;
     }
 
@@ -59,7 +59,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR arguments, int) {
         const DWORD error = GetLastError();
         std::wstring msg = L"Cannot start App\\NajmCard.exe. Windows error: "
             + std::to_wstring(error);
-        MessageBoxW(nullptr, msg.c_str(), L"Najm Card New", MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, msg.c_str(), L"Tarim Card", MB_OK | MB_ICONERROR);
         return 4;
     }
     CloseHandle(child.hThread);

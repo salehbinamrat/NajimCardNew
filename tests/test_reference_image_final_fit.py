@@ -88,7 +88,7 @@ class ReferenceImageFinalFit(unittest.TestCase):
         self.assertIn("Padding=new Thickness(12)",self.pageui)
         self.assertIn("Margin=new Thickness(0,0,0,8)",self.pageui)
         self.assertIn('Property="Foreground" Value="{StaticResource TextBrush}"',self.theme)
-        self.assertIn('Property="RowBackground" Value="#FFF8EC"',self.theme)
+        self.assertIn('Property="RowBackground" Value="#F6F8FC"',self.theme)
         self.assertIn('Property="Foreground" Value="{StaticResource CreamTextBrush}"',self.theme)
         self.assertIn('TargetType="DataGridColumnHeader"',self.theme)
 if __name__=="__main__":unittest.main()

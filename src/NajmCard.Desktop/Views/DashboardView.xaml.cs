@@ -21,7 +21,7 @@ public partial class DashboardView : UserControl
     private CancellationTokenSource? _refreshToken;
     private CancellationTokenSource? _initialLifecycleToken;
     private CancellationTokenSource? _lifecycleToken;
-    private readonly DispatcherTimer _telemetryTimer=new() {Interval=TimeSpan.FromSeconds(3)};
+    private readonly DispatcherTimer _telemetryTimer=new() {Interval=TimeSpan.FromSeconds(10)};
     private bool _initialSnapshotLoaded;
     private bool _refreshAfterUnloaded;
     private bool _initialLifecycleAttempted;
@@ -227,6 +227,10 @@ public partial class DashboardView : UserControl
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(1),pending.Token);
+            // First give the lightweight count-only dashboard read time to
+            // complete, so the large v6 inventory cannot starve it on one TCP.
+            while(_refreshing && IsLoaded && !pending.IsCancellationRequested)
+                await Task.Delay(TimeSpan.FromMilliseconds(200),pending.Token);
             if(IsLoaded && !pending.IsCancellationRequested)
             {
                 await RefreshLifecycleAsync();
@@ -259,6 +263,10 @@ public partial class DashboardView : UserControl
             if(!IsLoaded)return;
             if(!state.IsComplete)
             {
+                // An incomplete response was actually received. Do not
+                // download the full inventory again on every page re-entry;
+                // the user can explicitly refresh when RouterOS is ready.
+                _initialLifecycleAttempted=true;
                 _lastLifecycle=null;
                 Enabled.Text="—";
                 Expired.Text="—";

@@ -40,15 +40,15 @@ class DashboardLightStageOne(unittest.TestCase):
         theme = ET.fromstring((DESKTOP / "Themes/BurgundyGold.xaml").read_text(encoding="utf-8"))
         brushes = {item.attrib["{http://schemas.microsoft.com/winfx/2006/xaml}Key"]:
                    item.attrib["Color"] for item in theme.findall(WPF + "SolidColorBrush")}
-        self.assertEqual("#FFF4E6", brushes["CanvasBrush"])
-        self.assertEqual("#F4E4D5", brushes["SidebarBrush"])
-        self.assertEqual("#FFF3DF", brushes["CreamPanelBrush"])
+        self.assertEqual("#EEF3FB", brushes["CanvasBrush"])
+        self.assertEqual("#0761F8", brushes["SidebarBrush"])
+        self.assertEqual("#E8EDF5", brushes["CreamPanelBrush"])
         self.assertEqual("#000000", (VIEWS / "VoucherWorkspaceView.cs").read_text(
             encoding="utf-8").split('var maroon=(Brush)new BrushConverter().ConvertFrom("')[1][:7])
         shell = ET.fromstring((DESKTOP / "MainWindow.xaml").read_text(encoding="utf-8"))
         self.assertEqual("1260", shell.attrib["Width"])
         self.assertEqual("730", shell.attrib["Height"])
-        self.assertIn('#F4E4D5', (DESKTOP / "MainWindow.xaml").read_text(encoding="utf-8"))
+        self.assertIn('Background="{StaticResource SidebarBrush}"', (DESKTOP / "MainWindow.xaml").read_text(encoding="utf-8"))
         self.assertNotIn("روابط سريعة", (DESKTOP / "MainWindow.xaml").read_text(encoding="utf-8"))
 
 if __name__ == "__main__":

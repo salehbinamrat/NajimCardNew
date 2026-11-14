@@ -9,11 +9,11 @@
 #endif
 [Setup]
 AppId={{CF6AAB62-DA00-49AF-B3D2-1DD83FF90143}
-AppName=Najm Card New
+AppName=تريم كارد
 AppVersion={#AppVersion}
-AppPublisher=Najm Card New
+AppPublisher=تريم كارد
 DefaultDirName={localappdata}\Programs\NajmCardNew
-DefaultGroupName=Najm Card New
+DefaultGroupName=تريم كارد
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 WizardStyle=modern
@@ -40,8 +40,8 @@ Name: "desktopicon"; Description: "إنشاء اختصار على سطح الم�
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Najm Card New"; Filename: "{app}\NajmCard.exe"; WorkingDir: "{app}"
-Name: "{autodesktop}\Najm Card New"; Filename: "{app}\NajmCard.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{group}\تريم كارد"; Filename: "{app}\NajmCard.exe"; WorkingDir: "{app}"
+Name: "{autodesktop}\تريم كارد"; Filename: "{app}\NajmCard.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\NajmCard.exe"; Description: "Launch Najm Card New"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\NajmCard.exe"; Description: "Launch تريم كارد"; Flags: nowait postinstall skipifsilent

@@ -113,7 +113,7 @@ class OwnerVisualAcceptance(unittest.TestCase):
         ET.fromstring(theme)
         self.assertIn('TargetType="DataGridColumnHeader"', theme)
         self.assertIn('Property="Foreground" Value="{StaticResource TextBrush}"', theme)
-        self.assertIn('Property="RowBackground" Value="#FFF8EC"', theme)
+        self.assertIn('Property="RowBackground" Value="#F6F8FC"', theme)
         self.assertIn('TargetType="DataGridRow"', theme)
 
 if __name__ == "__main__":

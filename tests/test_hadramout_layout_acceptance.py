@@ -66,7 +66,7 @@ class HadramoutLayoutAcceptance(unittest.TestCase):
         self.assertIn("ActivityRows",self.dash)
     def test_tables_use_readable_dark_headers_and_contrasting_body(self):
         self.assertIn('Property="Foreground" Value="{StaticResource TextBrush}"',self.theme)
-        self.assertIn('Property="RowBackground" Value="#FFF8EC"',self.theme)
+        self.assertIn('Property="RowBackground" Value="#F6F8FC"',self.theme)
         self.assertIn('TargetType="DataGridCell"',self.theme)
     def test_no_extra_workspace_title_or_scrollbar(self):
         self.assertIn('ClipToBounds=true',self.creator)

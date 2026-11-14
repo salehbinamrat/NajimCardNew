@@ -11,7 +11,10 @@ namespace NajmCard.Desktop.Services;
 /// </summary>
 public static class DesktopShortcutService
 {
-    private const string LinkName="Najm Card New.lnk";
+    // Keep the user's Arabic shortcut label. WScript.Shell's CreateShortcut
+    // path is not Unicode-safe in some Windows locales: create an ASCII
+    // staging link via COM and move it with the Unicode-safe .NET file API.
+    private const string LinkName="تريم كارد.lnk";
 
     public static string ResolveExecutablePath(string? applicationDirectory=null)
     {
@@ -19,7 +22,7 @@ public static class DesktopShortcutService
         var app=Path.Combine(directory,"NajmCard.exe");
         if(!File.Exists(app))
             throw new FileNotFoundException(
-                "تعذر العثور على ملف تشغيل نجم كارد في مجلد البرنامج.",app);
+                "تعذر العثور على ملف تشغيل تريم كارد في مجلد البرنامج.",app);
 
         // An organized Portable/Installer keeps all runtime libraries in
         // App/, but the shortcut must launch the icon-bearing ROOT EXE.
@@ -53,6 +56,7 @@ public static class DesktopShortcutService
             throw new DirectoryNotFoundException(
                 "تعذر الوصول إلى مجلد سطح المكتب لهذا المستخدم.");
         string linkPath=Path.Combine(desktop,LinkName);
+        string stagingPath=Path.Combine(desktop,"TarimCard-"+Guid.NewGuid().ToString("N")+".lnk");
 
         Type shellType=Type.GetTypeFromProgID("WScript.Shell",throwOnError:true)
             ??throw new NotSupportedException("خدمة اختصارات Windows غير متاحة.");
@@ -61,7 +65,7 @@ public static class DesktopShortcutService
         try
         {
             object shortcut=shellType.InvokeMember("CreateShortcut",
-                BindingFlags.InvokeMethod,null,shell,[linkPath])
+                BindingFlags.InvokeMethod,null,shell,[stagingPath])
                 ??throw new IOException("تعذر إنشاء اختصار Windows.");
             try
             {
@@ -71,7 +75,7 @@ public static class DesktopShortcutService
                 Set("TargetPath",target);
                 Set("WorkingDirectory",Path.GetDirectoryName(target)!);
                 Set("IconLocation",target+",0");
-                Set("Description","نجم كارد - طباعة الكروت وإدارة الشبكات");
+                Set("Description","تريم كارد - طباعة الكروت وإدارة الشبكات");
                 kind.InvokeMember("Save",BindingFlags.InvokeMethod,
                     null,shortcut,null);
             }
@@ -86,6 +90,9 @@ public static class DesktopShortcutService
             if(Marshal.IsComObject(shell))
                 Marshal.FinalReleaseComObject(shell);
         }
+        // COM has released the file; .NET preserves Arabic in the final name.
+        try { File.Move(stagingPath,linkPath,overwrite:true); }
+        finally { if(File.Exists(stagingPath))File.Delete(stagingPath); }
         if(!File.Exists(linkPath))
             throw new IOException("لم يؤكد Windows إنشاء ملف الاختصار.");
         return linkPath;

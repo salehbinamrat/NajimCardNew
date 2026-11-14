@@ -187,9 +187,9 @@ internal static class Program
                     "Settings desktop shortcut button is clipped at 1260x730.");
             if(!VisualChildren<Border>(settings).Any(panel=>
                 panel.Background is SolidColorBrush brush &&
-                brush.Color==Color.FromRgb(255,243,223)))
+                brush.Color==Color.FromRgb(0xE8,0xED,0xF5)))
                 throw new InvalidDataException(
-                    "Settings view must use the shared cream card background.");
+                    "Settings view must use the shared silver card background.");
             Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,
                 "settings-1260x730.png"));
             return 0;
@@ -460,14 +460,14 @@ internal static class Program
         };
         tooltip.ApplyTemplate();
         if(tooltip.Background is not SolidColorBrush background ||
-           background.Color!=Color.FromRgb(0xFF,0xF3,0xDF))
-            throw new InvalidDataException("Tooltip background is not the light cream palette.");
+           background.Color!=Color.FromRgb(0xE8,0xED,0xF5))
+            throw new InvalidDataException("Tooltip background is not the silver panel palette.");
         if(tooltip.Foreground is not SolidColorBrush foreground ||
-           foreground.Color!=Color.FromRgb(0x53,0x2A,0x3E))
+           foreground.Color!=Color.FromRgb(0x0B,0x2C,0x60))
             throw new InvalidDataException("Tooltip text must have dark readable contrast.");
         if(tooltip.BorderBrush is not SolidColorBrush border ||
-           border.Color!=Color.FromRgb(0xA4,0x5C,0x75))
-            throw new InvalidDataException("Tooltip is missing the maroon outline.");
+           border.Color!=Color.FromRgb(0x07,0x5D,0xFF))
+            throw new InvalidDataException("Tooltip is missing the electric blue outline.");
         if(tooltip.Template?.FindName("TooltipFrame",tooltip) is not Border frame ||
            frame.CornerRadius.TopLeft<6)
             throw new InvalidDataException("Tooltip did not apply the rounded popup template.");

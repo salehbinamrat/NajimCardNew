@@ -120,7 +120,11 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
     public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByIdAsync(
         string command,string id,IReadOnlyDictionary<string,string>? attributes=null,
         CancellationToken cancellationToken=default) =>
-        ExecuteAsync(For(command),(current,ct)=>
+        // Exact-ID readback is a bounded one-record request issued after
+        // add/activate on this SAME fast lane. Large User Manager inventory
+        // scans stay on their separate lane, so confirming a voucher cannot
+        // queue behind thousands of unrelated users.
+        ExecuteAsync(_fast,(current,ct)=>
             current is IRouterQueryClient filtered
                 ?filtered.QueryByIdAsync(command,id,attributes,ct)
                 :throw new InvalidOperationException(

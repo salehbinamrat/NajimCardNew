@@ -4,6 +4,8 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <AssemblyName>NajmCard</AssemblyName>
+    <Product>تريم كارد</Product>
+    <AssemblyTitle>تريم كارد</AssemblyTitle>
     <RootNamespace>NajmCard.Desktop</RootNamespace>
     <ApplicationIcon>Assets\NajmCard.ico</ApplicationIcon>
     <Version>0.1.0</Version>

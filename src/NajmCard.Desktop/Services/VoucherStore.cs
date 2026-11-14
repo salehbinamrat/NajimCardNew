@@ -81,7 +81,7 @@ public sealed partial class VoucherStore : IDisposable
                 primaryKeys[reader.GetString(1)] = reader.GetInt64(5);
         }
         if (!primaryKeys.ContainsKey("username") || !primaryKeys.ContainsKey("password_protected"))
-            throw new InvalidDataException("مخطط قاعدة كروت نجم كارد غير معروف؛ لم تُعدّل البيانات.");
+            throw new InvalidDataException("مخطط قاعدة كروت تريم كارد غير معروف؛ لم تُعدّل البيانات.");
 
         bool currentSchema = primaryKeys.TryGetValue("service", out long sPk) && sPk == 1
             && primaryKeys.TryGetValue("username", out long uPk) && uPk == 2

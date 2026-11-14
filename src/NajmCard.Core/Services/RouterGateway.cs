@@ -396,16 +396,27 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     /// <summary>Read-only RouterOS 6 User Manager customer logins.</summary>
     private static bool HasLifecycleFields(IReadOnlyDictionary<string,string> row)
     {
-        // Profile/time metadata alone do not establish correct usage totals.
-        // Every row needs an identity and BOTH transfer counters before any
-        // aggregate is marked complete (including deletion preflight).
+        // RouterOS v6 exposes download-used/upload-used, not the v7 monitor
+        // totals. Validate both counters before declaring the row trusted:
+        // absent or malformed counters must NEVER be silently read as zero.
+        static bool VerifiedCounter(IReadOnlyDictionary<string,string> source,string key)
+        {
+            if(!source.TryGetValue(key,out var text) ||
+               string.IsNullOrWhiteSpace(text))return false;
+            var value=UserManagerV6Usage.ParseBytes(text);
+            if(value>0)return true;
+            var zero=text.Trim().ToLowerInvariant().Replace(" ","");
+            return System.Text.RegularExpressions.Regex.IsMatch(zero,
+                @"^0(?:\.0+)?(?:[kmgt]?i?b?)?$",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        }
         bool identified=!string.IsNullOrWhiteSpace(Get(row,".id")) &&
             (!string.IsNullOrWhiteSpace(Get(row,"username")) ||
              !string.IsNullOrWhiteSpace(Get(row,"name")));
-        bool hasTotal=row.ContainsKey("total-download-used") &&
-            row.ContainsKey("total-upload-used");
-        bool hasLegacy=row.ContainsKey("download-used") &&
-            row.ContainsKey("upload-used");
+        bool hasTotal=VerifiedCounter(row,"total-download-used") &&
+            VerifiedCounter(row,"total-upload-used");
+        bool hasLegacy=VerifiedCounter(row,"download-used") &&
+            VerifiedCounter(row,"upload-used");
         return identified && (hasTotal || hasLegacy);
     }
 
@@ -466,10 +477,12 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         const string path="/tool/user-manager/user/print";
         const string projection=
             ".id,username,name,disabled,incomplete,actual-profile,money-used,uptime-used,"+
-            "total-download-used,total-upload-used,transfer-limit,last-used-ip,last-used-mac,"+
+            "download-used,upload-used,total-download-used,total-upload-used,"+
+            "transfer-limit,last-used-ip,last-used-mac,"+
             "active,active-sessions,last-seen";
 
         IReadOnlyList<IReadOnlyDictionary<string,string>> rows;
+        bool alreadyFull=false;
         try
         {
             rows=await client.CommandAsync(path,
@@ -481,9 +494,12 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             || ex.Message.Contains("no such argument",StringComparison.OrdinalIgnoreCase))
         {
             rows=await client.CommandAsync(path,cancellationToken:ct).ConfigureAwait(false);
+            alreadyFull=true;
         }
 
-        if(rows.Count>0&&!rows.All(HasLifecycleFields))
+        // Only one fallback on incompatible projections, never two expensive
+        // full user-table downloads when RouterOS rejects .proplist.
+        if(!alreadyFull && rows.Count>0 && !rows.All(HasLifecycleFields))
             rows=await client.CommandAsync(path,cancellationToken:ct).ConfigureAwait(false);
 
         var observed=rows.All(HasLifecycleFields) &&
@@ -491,9 +507,11 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
                 .Distinct(StringComparer.Ordinal).Count()==rows.Count;
         IReadOnlyDictionary<string,long> limitMap=new Dictionary<string,long>();
         string warning="";
+        bool limitsVerified=true;
         try { limitMap=await UserManagerV6ProfileTransferLimitsAsync(ct).ConfigureAwait(false); }
         catch (RouterOsTrapException ex)
         {
+            limitsVerified=false;
             warning="تعذرت قراءة تعريفات حدود الباقات: "+ex.Message;
         }
 
@@ -505,9 +523,11 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             users.Add(UserManagerV6Usage.Classify(row,profileLimit));
         }
 
-        bool complete=rows.Count==0 || observed;
+        // The number of users alone cannot certify active/expired classes
+        // when the quota definitions were inaccessible.
+        bool complete=(rows.Count==0 || observed) && limitsVerified;
         if (rows.Count>0 && !complete)
-            warning="بيانات دورة حياة User Manager غير مكتملة؛ لا تعتمد أعداداً صفرية أو حذفاً تلقائياً. "
+            warning="بيانات دورة حياة User Manager غير مكتملة؛ تحقق من حقول الاستهلاك وحدود الباقات. "
                 +warning;
         return new UserManagerV6Inventory(users,complete,warning);
     }
@@ -814,7 +834,11 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
                 string? lastVerificationError = null;
                 for (int attempt=0;attempt<3;attempt++)
                 {
-                    if(attempt>0)await Task.Delay(attempt==1?150:300,ct);
+                    // RouterOS v6 may apply a profile just after its !done ACK.
+                    // A shorter first retry recognizes ready cards sooner,
+                    // while the last attempt is still at the original 450ms.
+                    // No extra router requests and no ambiguous writes retried.
+                    if(attempt>0)await Task.Delay(attempt==1?60:390,ct);
                     var mode=System.Threading.Volatile.Read(ref _umV6ReadProjectionMode);
                     var found=mode==2
                         ?await lookup.QueryByIdAsync(verifyPath,id,cancellationToken:ct)

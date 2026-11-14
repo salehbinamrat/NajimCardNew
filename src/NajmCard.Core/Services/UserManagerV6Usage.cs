@@ -60,12 +60,12 @@ public static class UserManagerV6Usage
         var username=Get(row,"username");
         if (string.IsNullOrEmpty(username)) username=Get(row,"name");
         var profile=Get(row,"actual-profile");
-        long down=ParseBytes(Get(row,"total-download-used"));
-        long up=ParseBytes(Get(row,"total-upload-used"));
-        if (!row.ContainsKey("total-download-used"))
-            down=ParseBytes(Get(row,"download-used"));
-        if (!row.ContainsKey("total-upload-used"))
-            up=ParseBytes(Get(row,"upload-used"));
+        // RouterOS v6's real counters take precedence when older/newer
+        // aliases coexist: a projected total-* zero must not hide bytes used.
+        long down=ParseBytes(Get(row,row.ContainsKey("download-used")
+            ?"download-used":"total-download-used"));
+        long up=ParseBytes(Get(row,row.ContainsKey("upload-used")
+            ?"upload-used":"total-upload-used"));
         long directLimit=ParseBytes(Get(row,"transfer-limit"));
         long transfer=directLimit>0 ? directLimit : Math.Max(0,profileTransferLimit);
         var consumed=down>long.MaxValue-up?long.MaxValue:down+up;

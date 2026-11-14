@@ -9,23 +9,23 @@ using System.Windows.Threading;
 namespace NajmCard.Desktop.Views;
 
 /// <summary>
-/// User Manager shares the application's burgundy/gold/cream resources.
+/// User Manager shares the application's electric-blue/silver resources.
 /// The scoped controls do not change MainWindow, other pages or card artwork.
 /// </summary>
 internal static class UmUi
 {
     // Semantic aliases retained for existing User Manager call sites.
     // Brushes originate from the SAME app resource dictionary as all pages.
-    internal static readonly Brush Navy=FromTheme("BurgundyBrush","#A5526C");
-    internal static readonly Brush Blue=FromTheme("BurgundyBrush","#A5526C");
-    internal static readonly Brush Cyan=FromTheme("BurgundyBrush","#621B37");
-    internal static readonly Brush Ink=FromTheme("CreamTextBrush","#532A3E");
-    internal static readonly Brush Light=FromTheme("CreamPanelBrush","#FFF3DF");
-    internal static readonly Brush Gray=FromTheme("LineBrush","#BD9A8C");
-    internal static readonly Brush Gold=FromTheme("GoldBrush","#DCB86E");
-    internal static readonly Brush GoldBright=FromTheme("GoldBrightBrush","#FFE3A2");
+    internal static readonly Brush Navy=FromTheme("BurgundyBrush","#075DFF");
+    internal static readonly Brush Blue=FromTheme("BurgundyBrush","#075DFF");
+    internal static readonly Brush Cyan=FromTheme("BurgundyBrush","#075DFF");
+    internal static readonly Brush Ink=FromTheme("CreamTextBrush","#0B2C60");
+    internal static readonly Brush Light=FromTheme("CreamPanelBrush","#E8EDF5");
+    internal static readonly Brush Gray=FromTheme("LineBrush","#A6BCD7");
+    internal static readonly Brush Gold=FromTheme("GoldBrush","#9DB7D8");
+    internal static readonly Brush GoldBright=FromTheme("GoldBrightBrush","#E6F2FF");
     internal static readonly Brush Cream=Solid("#FFFFFF");
-    internal static readonly Brush InputSurface=FromTheme("CreamPanelBrush","#FFF3DF");
+    internal static readonly Brush InputSurface=FromTheme("CreamPanelBrush","#E8EDF5");
 
     internal static Brush FromTheme(string key,string fallback) =>
         Application.Current?.TryFindResource(key) as Brush ?? Solid(fallback);
@@ -54,7 +54,7 @@ internal static class UmUi
         {
             Child=child,Padding=new Thickness(11),
             Margin=margin??new Thickness(4),CornerRadius=new CornerRadius(12),
-            BorderBrush=FromTheme("LineBrush","#76513E"),BorderThickness=new Thickness(1),
+            BorderBrush=FromTheme("LineBrush","#A6BCD7"),BorderThickness=new Thickness(1),
             Background=background??Light
         };
 
@@ -74,7 +74,7 @@ internal static class UmUi
 
     internal static Button Action(string caption,bool main=false,int minWidth=86)
     {
-        var background=main?Cyan:FromTheme("CreamPanelBrush","#FFF3DF");
+        var background=main?Cyan:FromTheme("CreamPanelBrush","#E8EDF5");
         var foreground=main?Cream:Ink;
         var button=new Button
         {
@@ -207,7 +207,7 @@ internal static class UmUi
         var cb=new ComboBox
         {
             Width=width,MinHeight=34,Background=InputSurface,
-            Foreground=Brushes.Black,BorderBrush=FromTheme("MaroonLineBrush","#75203E"),Margin=new Thickness(4),FontSize=12,
+            Foreground=Brushes.Black,BorderBrush=FromTheme("MaroonLineBrush","#075DFF"),Margin=new Thickness(4),FontSize=12,
             FontFamily=new FontFamily("Arial"),IsEditable=false,
             MaxDropDownHeight=280,HorizontalContentAlignment=HorizontalAlignment.Stretch
         };
@@ -240,13 +240,13 @@ internal static class UmUi
         var toggleTemplate=new ControlTemplate(typeof(ToggleButton));
         var toggleBorder=new FrameworkElementFactory(typeof(Border));
         toggleBorder.SetValue(Border.BackgroundProperty,InputSurface);
-        toggleBorder.SetValue(Border.BorderBrushProperty,FromTheme("MaroonLineBrush","#75203E"));
+        toggleBorder.SetValue(Border.BorderBrushProperty,FromTheme("MaroonLineBrush","#075DFF"));
         toggleBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
         toggleBorder.SetValue(Border.CornerRadiusProperty,new CornerRadius(7));
         var arrow=new FrameworkElementFactory(typeof(System.Windows.Shapes.Path));
         arrow.SetValue(System.Windows.Shapes.Path.DataProperty,
             Geometry.Parse("M 0,0 L 4,4 L 8,0"));
-        arrow.SetValue(System.Windows.Shapes.Shape.StrokeProperty,FromTheme("MaroonLineBrush","#75203E"));
+        arrow.SetValue(System.Windows.Shapes.Shape.StrokeProperty,FromTheme("MaroonLineBrush","#075DFF"));
         arrow.SetValue(System.Windows.Shapes.Shape.StrokeThicknessProperty,1.8);
         arrow.SetValue(FrameworkElement.HorizontalAlignmentProperty,HorizontalAlignment.Left);
         arrow.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
@@ -294,7 +294,7 @@ internal static class UmUi
         var popupBorder=new FrameworkElementFactory(typeof(Border));
         popupBorder.SetValue(Border.BackgroundProperty,InputSurface);
         popupBorder.SetValue(TextElement.ForegroundProperty,Ink);
-        popupBorder.SetValue(Border.BorderBrushProperty,FromTheme("MaroonLineBrush","#75203E"));
+        popupBorder.SetValue(Border.BorderBrushProperty,FromTheme("MaroonLineBrush","#075DFF"));
         popupBorder.SetValue(Border.BorderThicknessProperty,new Thickness(1));
         popupBorder.SetBinding(FrameworkElement.MinWidthProperty,new Binding("ActualWidth")
         {
@@ -323,7 +323,7 @@ internal static class UmUi
         style.Setters.Add(new Setter(Control.TemplateProperty,template));
         style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
         style.Setters.Add(new Setter(Control.BackgroundProperty,InputSurface));
-        style.Setters.Add(new Setter(Control.BorderBrushProperty,FromTheme("MaroonLineBrush","#75203E")));
+        style.Setters.Add(new Setter(Control.BorderBrushProperty,FromTheme("MaroonLineBrush","#075DFF")));
         style.Seal();
         cachedComboStyle=style;
         return style;
@@ -387,7 +387,7 @@ internal static class UmUi
             SelectionUnit=DataGridSelectionUnit.FullRow,
             HeadersVisibility=DataGridHeadersVisibility.Column,
             GridLinesVisibility=DataGridGridLinesVisibility.Horizontal,
-            HorizontalGridLinesBrush=FromTheme("LineBrush","#76513E"),
+            HorizontalGridLinesBrush=FromTheme("LineBrush","#A6BCD7"),
             RowBackground=Light,AlternatingRowBackground=Solid("#F4E3D7"),
             AlternationCount=2,RowHeight=35,ColumnHeaderHeight=36,
             EnableRowVirtualization=true,EnableColumnVirtualization=true,
