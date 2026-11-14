@@ -19,7 +19,9 @@ class TarimCardVisualAndPerformanceContract(unittest.TestCase):
         self.assertIn('Text="تريم كارد"',shell)
         self.assertIn('"حول تريم كارد"',code)
         self.assertIn("AppName=تريم كارد",setup)
-        self.assertIn('LinkName="Tarim Card.lnk"',shortcuts)
+        self.assertIn('LinkName="تريم كارد.lnk"',shortcuts)
+        self.assertIn('File.Move(stagingPath,linkPath,overwrite:true)',shortcuts)
+        self.assertIn('Guid.NewGuid().ToString("N")',shortcuts)
         self.assertIn("<Product>تريم كارد</Product>",project)
         # Do not break licensing state, existing data or Windows deployment.
         self.assertIn("<AssemblyName>NajmCard</AssemblyName>",project)
