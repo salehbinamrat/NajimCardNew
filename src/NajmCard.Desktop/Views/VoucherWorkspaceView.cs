@@ -39,7 +39,8 @@ public sealed class VoucherWorkspaceView : UserControl
             Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!};
         // Keep the creator's compact dimensions on the shared dark templates.
         var dropdown=new Style(typeof(ComboBox),(Style)Application.Current.FindResource("DarkComboBox"));
-        dropdown.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,26d));
+        dropdown.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,30d));
+        dropdown.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty,30d));
         dropdown.Setters.Add(new Setter(Control.BackgroundProperty,
             (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
         dropdown.Setters.Add(new Setter(Control.ForegroundProperty,
@@ -97,7 +98,8 @@ public sealed class VoucherWorkspaceView : UserControl
         dropdown.Setters.Add(new Setter(ItemsControl.ItemTemplateProperty,optionTemplate));
         root.Resources[typeof(ComboBox)]=dropdown;
         var input=new Style(typeof(TextBox),(Style)Application.Current.FindResource(typeof(TextBox)));
-        input.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,26d));
+        input.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,30d));
+        input.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty,30d));
         input.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(5,2,5,2)));
         input.Setters.Add(new Setter(Control.BackgroundProperty,
             (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
@@ -113,7 +115,7 @@ public sealed class VoucherWorkspaceView : UserControl
         var tabs=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,2)};
         var tabButtons=new Dictionary<string,Button>(StringComparer.Ordinal);
         foreach(var (id,title) in new[]{
-            ("hotspot","هوتسبوت"),("userman","يوزمنجر v6"),
+            ("userman","يوزمنجر v6"),("hotspot","هوتسبوت"),
             ("pppoe","برودباند PPPoE")
         })
         {
@@ -140,17 +142,17 @@ public sealed class VoucherWorkspaceView : UserControl
                 // even when User Manager was the selected default.
                 var background=selected?"#EAC77C":name switch
                 {
-                    "hotspot"=>"#5A2840",
-                    "userman"=>"#723851",
-                    _=>"#583B68"
+                    "hotspot"=>"#F4E0D3",
+                    "userman"=>"#F2DFCF",
+                    _=>"#EEE0D7"
                 };
                 btn.Background=(Brush)new BrushConverter().ConvertFrom(background)!;
                 btn.Foreground=(Brush)new BrushConverter().ConvertFrom(
-                    selected?"#49142C":"#FFF1DC")!;
+                    selected?"#49142C":"#642E45")!;
                 btn.BorderBrush=(Brush)new BrushConverter().ConvertFrom(
-                    selected?"#F8E1AB":"#76465D")!;
+                    selected?"#C9A45B":"#CCAA9A")!;
                 btn.BorderThickness=new Thickness(selected?2:1);
-                btn.Opacity=selected?1.0:0.88;
+                btn.Opacity=1.0;
                 var label=(TextBlock)btn.Content;
                 label.Foreground=btn.Foreground;
                 label.FontSize=selected?15:14;
