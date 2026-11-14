@@ -51,7 +51,7 @@ public partial class GeneratorView
     private Grid CreateReferenceLayout(Border routeSurface,Border formatSurface,
         Border basicsSurface,Border designSurface)
     {
-        var full=new Grid{FlowDirection=FlowDirection.LeftToRight};
+        var full=new Grid{FlowDirection=FlowDirection.LeftToRight,UseLayoutRounding=true};
         full.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(41,GridUnitType.Star)});
         full.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(59,GridUnitType.Star)});
         full.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
@@ -63,6 +63,7 @@ public partial class GeneratorView
             panel.Margin=new Thickness(1,1,1,3);
             panel.HorizontalAlignment=HorizontalAlignment.Stretch;
             panel.VerticalAlignment=VerticalAlignment.Stretch;
+            panel.UseLayoutRounding=true;
         }
         Grid.SetColumn(routeSurface,1);
         full.Children.Add(formatSurface);

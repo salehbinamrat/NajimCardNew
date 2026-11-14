@@ -59,6 +59,7 @@ class UiDesignContract(unittest.TestCase):
                 expected.update({"GeneratorView.CardDesign.cs",
                     "GeneratorView.ReferenceLayout.cs",
                     "GeneratorView.DesignerPanel.cs",
+                    "GeneratorView.AdvancedEditor.cs",
                     "GeneratorView.ProfileLoading.cs",
                     "GeneratorView.PageCount.cs",
                     "GeneratorView.SaveToast.cs",

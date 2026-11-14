@@ -28,14 +28,17 @@ class UserManagerPerformanceAndAppearance(unittest.TestCase):
         self.assertIn('Label($"عدد الكروت المستخدمة: {p.Used:N0}"',view)
         self.assertNotIn("ReadUmSessionsAsync",view)
 
-    def test_color_squares_are_always_visible_and_share_inline_palette(self):
+    def test_advanced_color_dropdowns_and_inline_palette_stay_functional(self):
         designer=src(D,"Views/GeneratorView.DesignerPanel.cs")
+        advanced=src(D,"Views/GeneratorView.AdvancedEditor.cs")
         self.assertIn("CardPaletteColors",designer)
         self.assertIn("foreach(var hex in CardPaletteColors)",designer)
-        self.assertIn("palette.Children.Add(square)",designer)
-        self.assertIn("entry.Text=key",designer)
-        self.assertIn("currentSwatch.Background",designer)
-        self.assertIn("Foreground=Brushes.White",designer)
+        self.assertIn("popup.IsOpen=!popup.IsOpen",designer)
+        self.assertIn("TextBox ColorChoice(",advanced)
+        self.assertIn("selector.ItemTemplate=itemTemplate",advanced)
+        self.assertIn("new DataTemplate(typeof(CardPaletteEntry))",advanced)
+        self.assertIn("entry.Text=selected.Hex",advanced)
+        self.assertIn("Foreground=Brushes.White",advanced)
         self.assertIn('ShapeCell("حجم خط العناصر",elementSizes,4)',designer)
         self.assertIn('ShapeCell("لون الحدود"',designer)
 

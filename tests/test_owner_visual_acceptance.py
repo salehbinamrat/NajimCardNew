@@ -66,7 +66,7 @@ class OwnerVisualAcceptance(unittest.TestCase):
         self.assertIn("عرض المنتهية", raw)
 
     def test_advanced_editor_edits_real_print_geometry_and_card_style(self):
-        editor = source("GeneratorView.DesignerPanel.cs")
+        editor = source("GeneratorView.AdvancedEditor.cs")
         generator = source("GeneratorView.cs")
         workspace = source("VoucherWorkspaceView.cs")
         for label in ("عرض الكرت (مم)", "ارتفاع الكرت (مم)",
@@ -94,7 +94,7 @@ class OwnerVisualAcceptance(unittest.TestCase):
         self.assertNotIn("Color.FromArgb(230,255,255,255)", preview)
 
     def test_cancelled_advanced_editor_does_not_change_active_card_style(self):
-        editor = source("GeneratorView.DesignerPanel.cs")
+        editor = source("GeneratorView.AdvancedEditor.cs")
         self.assertIn("popup.Closed+=", editor)
         self.assertIn("originalAppearance", editor)
         self.assertIn("savedSuccessfully", editor)

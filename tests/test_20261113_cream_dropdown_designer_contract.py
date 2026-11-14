@@ -34,22 +34,25 @@ class CreamDropdownAndDesignerTests(unittest.TestCase):
         self.assertNotIn('Brushes.White', style)
 
     def test_advanced_window_is_cream_with_maroon_frames_and_black_text(self):
-        designer = read(VIEWS / "GeneratorView.DesignerPanel.cs")
+        designer = read(VIEWS / "GeneratorView.AdvancedEditor.cs")
         self.assertIn('Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!', designer)
         self.assertIn('Foreground=Brushes.Black', designer)
         self.assertIn('BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!', designer)
         self.assertIn('entry.Visibility=Visibility.Collapsed', designer)
-        self.assertIn('palette.Children.Add(square)', designer)
+        self.assertIn('selector.ItemTemplate=itemTemplate', designer)
+        self.assertIn('section.Children.Add(selector)', designer)
 
     def test_color_fields_show_swatch_only_without_hex_input(self):
-        designer = read(VIEWS / "GeneratorView.DesignerPanel.cs")
+        designer = read(VIEWS / "GeneratorView.AdvancedEditor.cs")
         start = designer.index('TextBox ColorChoice(')
-        end = designer.index('var name=Editable(', start)
+        end = designer.index('Group("بيانات الكرت"', start)
         block = designer[start:end]
         self.assertIn('entry.Visibility=Visibility.Collapsed', block)
-        self.assertIn('entry.Text=key', block)
+        self.assertIn('entry.Text=selected.Hex', block)
         self.assertNotIn('row.Children.Add(entry)', block)
-        self.assertIn('palette.Children.Add(square)', block)
+        self.assertIn('new ComboBox', block)
+        self.assertIn('new DataTemplate(typeof(CardPaletteEntry))', block)
+        self.assertIn('new System.Windows.Data.Binding(nameof(CardPaletteEntry.Swatch))', block)
 
     def test_preview_card_option_frames_have_equal_dimensions(self):
         designer = read(VIEWS / "GeneratorView.DesignerPanel.cs")

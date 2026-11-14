@@ -49,7 +49,7 @@ public partial class GeneratorView : UserControl
     public void SelectService(string service)
     {
         if(_sending||_preparing)return;
-        _service.SelectedIndex=service switch {"userman"=>1,"pppoe"=>2,_=>0};
+        _service.SelectedIndex=service switch {"userman"=>0,"hotspot"=>1,"pppoe"=>2,_=>0};
     }
     private readonly ComboBox _service = new() { MinWidth = 200 };
     private readonly ComboBox _server = new() { MinWidth = 100 };
@@ -150,19 +150,22 @@ public partial class GeneratorView : UserControl
 
     private string SelectedService => _service.SelectedIndex switch
     {
-        1 => "userman",
+        0 => "userman",
+        1 => "hotspot",
         2 => "pppoe",
-        _ => "hotspot"
+        _ => "userman" // Uninitialized selection never flashes Hotspot.
     };
     public GeneratorView(RouterGateway gateway, VoucherStore store, string routerKey = "", bool embedded=false)
     {
         _gateway = gateway;
         _store = store;
         _routerKey=string.IsNullOrWhiteSpace(routerKey)?"default:8728":routerKey.Trim();
-        _service.Items.Add("Hotspot");
+        // User Manager is first in both the hidden service model and the
+        // visible creator tabs, so first paint cannot momentarily show Hotspot.
         _service.Items.Add("User Manager v6");
+        _service.Items.Add("Hotspot");
         _service.Items.Add("PPPoE");
-        _service.SelectedIndex = 1; // User Manager v6 is the initial service; users can switch freely.
+        _service.SelectedIndex = 0; // First-paint default; explicit package navigation may override.
         var form = PageUi.Column();
         var servicePanel=PageUi.Column();
         // Keep Hadramout's direct per-package save action visible beside
