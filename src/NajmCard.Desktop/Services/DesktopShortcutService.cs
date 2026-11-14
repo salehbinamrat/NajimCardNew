@@ -11,7 +11,9 @@ namespace NajmCard.Desktop.Services;
 /// </summary>
 public static class DesktopShortcutService
 {
-    private const string LinkName="تريم كارد.lnk";
+    // WScript.Shell on Windows runners can use ANSI filenames; retain an
+    // ASCII path while keeping the Arabic title/description and app branding.
+    private const string LinkName="Tarim Card.lnk";
 
     public static string ResolveExecutablePath(string? applicationDirectory=null)
     {
