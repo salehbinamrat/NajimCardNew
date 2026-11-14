@@ -281,6 +281,10 @@ public sealed class UserManagerReportsView : UserControl
             try
             {
                 var users=await gateway.ReadUmAccountsAsync(request.Token);
+                if(!users.IsComplete)
+                    throw new InvalidDataException(
+                        "حسابات User Manager غير مكتملة؛ لا يمكن إصدار تقرير دقيق. "+
+                        users.Diagnostic);
                 var connections=await gateway.ReadUmSessionsAsync(request.Token);
                 // Package-link failures must NOT discard verified account,
                 // session and payment data. An old v6 router can retain

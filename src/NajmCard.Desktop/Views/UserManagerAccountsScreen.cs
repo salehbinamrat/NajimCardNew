@@ -395,6 +395,17 @@ public sealed class UserManagerAccountsScreen : UserControl
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 all=snap.Rows;version=snap.Generation;
                 SyncFilters();
+                if(!snap.IsComplete)
+                {
+                    // The router returned rows, but not a trustworthy complete
+                    // usage inventory. Show them for inspection without treating
+                    // their count or derived states as verified statistics.
+                    totalCard.Text=usedCard.Text=disabledCard.Text=expiredCard.Text="—";
+                    page=0;Draw();
+                    message.Text="القراءة غير مكتملة؛ تم عرض الصفوف للفحص فقط، "+
+                        "ولم تعتمد أعداد الحسابات أو حالات الاستخدام. "+snap.Diagnostic;
+                    return;
+                }
                 totalCard.Text=all.Count.ToString("N0",CultureInfo.InvariantCulture);
                 usedCard.Text=all.Count(x=>x.Status is "استخدم" or "باقة نشطة")
                     .ToString("N0",CultureInfo.InvariantCulture);
