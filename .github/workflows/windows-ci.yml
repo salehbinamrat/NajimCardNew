@@ -28,6 +28,8 @@ jobs:
         run: python -m unittest discover -s tests -p test_*.py -v
       - name: Execute Core tests
         run: dotnet test tests/NajmCard.Core.Tests/NajmCard.Core.Tests.csproj --configuration Release --no-restore
+      - name: Test router identity, migration and interrupted batch recovery
+        run: dotnet test tests/NajmCard.Delivery.Tests/NajmCard.Delivery.Tests.csproj --configuration Release --no-restore
       - name: Test real SQLite/DPAPI desktop persistence
         run: dotnet test tests/NajmCard.Desktop.Tests/NajmCard.Desktop.Tests.csproj --configuration Release --no-restore
       # A real offscreen WPF render at the owner's 1260x730 desktop dimensions.
@@ -95,6 +97,8 @@ jobs:
         run: python -m unittest discover -s tests -p test_*.py -v
       - name: Tests before packaging
         run: dotnet test tests/NajmCard.Core.Tests/NajmCard.Core.Tests.csproj --configuration Release --no-restore
+      - name: Batch recovery tests before packaging
+        run: dotnet test tests/NajmCard.Delivery.Tests/NajmCard.Delivery.Tests.csproj --configuration Release --no-restore
       - name: Desktop persistence tests before packaging
         run: dotnet test tests/NajmCard.Desktop.Tests/NajmCard.Desktop.Tests.csproj --configuration Release --no-restore
   windows-packages:

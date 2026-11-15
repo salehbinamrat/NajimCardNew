@@ -12,7 +12,8 @@ namespace NajmCard.Desktop.Services;
 /// </summary>
 public sealed record PrintableBatchSummary(string Service,string BatchId,string Profile,int Count)
 {
-    public string DisplayName => $"{BatchId} · {Profile} · {Count} كرت";
+    public string RouterId { get; init; }="";
+    public string DisplayName => $"{BatchId} · {Profile} · {Count} كرت · {(RouterId.Length==0?"راوتر غير معروف":RouterId[..Math.Min(15,RouterId.Length)])}";
 }
 
 /// <summary>Metadata only; no decrypting card passwords for the dropdown.</summary>
@@ -25,10 +26,10 @@ public sealed partial class VoucherStore
         using var db=Open();
         using var cmd=db.CreateCommand();
         cmd.CommandText="""
-            SELECT service,batch_id,MIN(profile),COUNT(*)
+            SELECT service,batch_id,MIN(profile),COUNT(*),router_id
             FROM vouchers
             WHERE sent=1 AND delivery_status='SENT'
-            GROUP BY service,batch_id
+            GROUP BY router_id,service,batch_id
             ORDER BY MAX(created_at) DESC LIMIT $limit
             """;
         cmd.Parameters.AddWithValue("$limit",limit);
@@ -36,24 +37,26 @@ public sealed partial class VoucherStore
         var result=new List<PrintableBatchSummary>();
         while(reader.Read())
             result.Add(new PrintableBatchSummary(reader.GetString(0),reader.GetString(1),
-                reader.GetString(2),checked((int)reader.GetInt64(3))));
+                reader.GetString(2),checked((int)reader.GetInt64(3))) {RouterId=reader.GetString(4)});
         return result;
     }
 
-    public IReadOnlyList<Voucher> GetBatchVouchers(string service,string batchId)
+    public IReadOnlyList<Voucher> GetBatchVouchers(string service,string batchId,string? routerId=null)
     {
         if(service is not ("hotspot" or "userman" or "pppoe"))
             throw new ArgumentException("خدمة الدفعة غير صالحة.",nameof(service));
         if(string.IsNullOrWhiteSpace(batchId) || batchId.Length > 256)
             throw new ArgumentException("معرف الدفعة غير صالح.",nameof(batchId));
         using var db=Open();
+        routerId??=ResolveBatchRouterId(db,service,batchId);
         using var cmd=db.CreateCommand();
         cmd.CommandText="""
             SELECT username,password_protected,profile,batch_id,created_at,
-                sent,service,customer,delivery_status FROM vouchers
-            WHERE service=$service AND batch_id=$batch
+                sent,service,customer,delivery_status,router_id,attempt_id,updated_utc,last_error,router_record_id FROM vouchers
+            WHERE service=$service AND batch_id=$batch AND router_id=$router
             ORDER BY created_at DESC,username
             """;
+        cmd.Parameters.AddWithValue("$router",routerId);
         cmd.Parameters.AddWithValue("$service",service);
         cmd.Parameters.AddWithValue("$batch",batchId);
         return ReadVoucherRows(cmd);
@@ -68,7 +71,7 @@ public sealed partial class VoucherStore
         using var cmd=db.CreateCommand();
         cmd.CommandText="""
             SELECT username,password_protected,profile,batch_id,created_at,
-                sent,service,customer,delivery_status FROM vouchers
+                sent,service,customer,delivery_status,router_id,attempt_id,updated_utc,last_error,router_record_id FROM vouchers
             WHERE delivery_status='SENT' AND sent=1
             ORDER BY created_at DESC,service,username
             LIMIT $limit
@@ -87,7 +90,8 @@ public sealed partial class VoucherStore
                 reader.GetString(2),reader.GetString(3),
                 DateTimeOffset.Parse(reader.GetString(4),CultureInfo.InvariantCulture),
                 reader.GetInt64(5)==1,reader.GetString(6),reader.GetString(7),
-                reader.GetString(8)));
+                reader.GetString(8)) {RouterId=reader.GetString(9),AttemptId=reader.GetString(10),
+                    UpdatedUtc=reader.GetString(11),LastError=reader.GetString(12),RouterRecordId=reader.GetString(13)});
         }
         return rows;
     }

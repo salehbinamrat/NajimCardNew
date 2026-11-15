@@ -160,8 +160,8 @@ public sealed partial class VoucherStore
         cmd.Parameters.AddWithValue("$batch",batchKey);
         cmd.ExecuteNonQuery();
     }
-    private static string ActivityBatchKey(string service,string batch)
-        => service+"\u0001"+batch;
+    private static string ActivityBatchKey(string service,string batch,string routerId="")
+        => routerId.Length==0?service+"\u0001"+batch:routerId+"\u0001"+service+"\u0001"+batch;
 }
 public sealed record VoucherActivityRow(string Timestamp,string Category,string Action,
     string Status,string Detail);

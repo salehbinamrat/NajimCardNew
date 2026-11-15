@@ -27,7 +27,7 @@ public sealed partial class VoucherStore
         using var cmd=db.CreateCommand();
         cmd.CommandText=$"""
             SELECT username,{secret} AS selected_secret,profile,batch_id,
-                created_at,sent,service,customer
+                created_at,sent,service,customer,router_id,delivery_status,updated_utc
             FROM vouchers ORDER BY created_at DESC LIMIT 10000
             """;
         using var reader=cmd.ExecuteReader();
@@ -43,8 +43,8 @@ public sealed partial class VoucherStore
                     bufferSize:8192,leaveOpen:true))
                 {
                     writer.WriteLine(includePasswords
-                        ? "Username,Password,Profile,Batch,CreatedAt,Sent,Service,Customer"
-                        : "Username,Profile,Batch,CreatedAt,Sent,Service,Customer");
+                        ? "Username,Password,Profile,Batch,CreatedAt,Sent,Service,Customer,RouterId,DeliveryStatus,UpdatedUtc"
+                        : "Username,Profile,Batch,CreatedAt,Sent,Service,Customer,RouterId,DeliveryStatus,UpdatedUtc");
                     while(reader.Read())
                     {
                         var fields=new List<string>(includePasswords?8:7)
@@ -59,6 +59,9 @@ public sealed partial class VoucherStore
                         fields.Add(reader.GetInt64(5)==1?"yes":"no");
                         fields.Add(reader.GetString(6));
                         fields.Add(reader.GetString(7));
+                        fields.Add(reader.GetString(8));
+                        fields.Add(reader.GetString(9));
+                        fields.Add(reader.GetString(10));
                         writer.WriteLine(string.Join(",",fields.Select(Csv)));
                     }
                     writer.Flush();

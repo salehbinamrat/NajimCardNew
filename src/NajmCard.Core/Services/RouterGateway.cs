@@ -764,7 +764,8 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
                 {
                     ["username"] = voucher.Username,
                     ["password"] = voucher.Password,
-                    ["customer"] = customer
+                    ["customer"] = customer,
+                    ["comment"] = voucher.DeliveryTag
                 }, ct);
         }
         catch (RouterOsTrapException ex)
@@ -956,7 +957,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         {
             ["name"] = voucher.Username,
             ["profile"] = voucher.Profile,
-            ["comment"] = "NajmCard batch " + voucher.BatchId
+            ["comment"] = voucher.DeliveryTag
         };
         if (voucher.Password.Length > 0)
             args["password"] = voucher.Password;

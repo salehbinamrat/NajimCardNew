@@ -19,7 +19,7 @@ public sealed class VoucherDurableDeliveryTests
     }
     private static Voucher Card() =>
         new("001234", "secret", "gold", "batch-7", DateTimeOffset.UtcNow,
-            Service: "userman", Customer: "admin");
+            Service: "userman", Customer: "admin") {RouterId=VoucherDeliveryFixture.RouterId};
 
     [Fact]
     public void Persisted_Sending_Lease_Remains_Locked_After_Process_Restart()
@@ -31,7 +31,7 @@ public sealed class VoucherDurableDeliveryTests
             using (var store = new VoucherStore(root))
             {
                 store.SaveBatch([card]);
-                store.BeginSend(card);
+                card=store.BeginSend(card);
                 Assert.Equal("SENDING", Assert.Single(store.GetVouchers()).DeliveryStatus);
             }
             using (var reopened = new VoucherStore(root))
@@ -57,10 +57,10 @@ public sealed class VoucherDurableDeliveryTests
             var card = Card();
             using var store = new VoucherStore(root);
             store.SaveBatch([card]);
-            store.BeginSend(card);
+            card=store.BeginSend(card);
             store.FinishSend(card, "FAILED", "profile rejected");
             Assert.Equal("FAILED", Assert.Single(store.GetVouchers()).DeliveryStatus);
-            store.BeginSend(card);
+            card=store.BeginSend(card);
             store.FinishSend(card, "SENT");
             var saved = Assert.Single(store.GetVouchers());
             Assert.Equal("SENT", saved.DeliveryStatus);
@@ -81,7 +81,7 @@ public sealed class VoucherDurableDeliveryTests
             store.SaveBatch([card]);
             Assert.ThrowsAny<InvalidOperationException>(() => store.FinishSend(card, "SENT"));
             Assert.Equal("CREATED", Assert.Single(store.GetVouchers()).DeliveryStatus);
-            store.BeginSend(card);
+            card=store.BeginSend(card);
             Assert.ThrowsAny<ArgumentException>(() =>
                 store.FinishSend(card, "CREATED"));
             Assert.Equal("SENDING", Assert.Single(store.GetVouchers()).DeliveryStatus);
@@ -119,9 +119,9 @@ public sealed class VoucherDurableDeliveryTests
                 store.SaveBatch([first,second]);
                 using(var session=store.OpenSendSession())
                 {
-                    session.BeginSend(first);
+                    first=session.BeginSend(first);
                     session.FinishSend(first,"SENT");
-                    session.BeginSend(second);
+                    second=session.BeginSend(second);
                     // Simulate a crash after submitting the second card:
                     // no definitive reply may be recorded before restart.
                 }

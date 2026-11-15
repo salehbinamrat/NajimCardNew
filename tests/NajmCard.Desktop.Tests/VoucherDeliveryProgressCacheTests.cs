@@ -17,7 +17,7 @@ public sealed class VoucherDeliveryProgressCacheTests
 
     private static Voucher Card(int number)=>
         new("UM"+number.ToString("D6"),"", "plan","batch-perf",
-            DateTimeOffset.UtcNow,Service:"userman",Customer:"admin");
+            DateTimeOffset.UtcNow,Service:"userman",Customer:"admin") {RouterId=VoucherDeliveryFixture.RouterId};
 
     [Fact]
     public void MultiCard_FastSession_PreservesAuditCountsAndDurableReceipts()
@@ -32,8 +32,8 @@ public sealed class VoucherDeliveryProgressCacheTests
             {
                 foreach(var (card,i) in cards.Select((c,i)=>(c,i)))
                 {
-                    session.BeginSend(card);
-                    session.FinishSend(card,i%8==0?"FAILED":"SENT");
+                    var lease=session.BeginSend(card);
+                    session.FinishSend(lease,i%8==0?"FAILED":"SENT");
                 }
             }
             var persisted=store.GetBatchVouchers("userman","batch-perf");
@@ -61,15 +61,15 @@ public sealed class VoucherDeliveryProgressCacheTests
             store.SaveBatch(cards);
             using(var session=store.OpenSendSession())
             {
-                session.BeginSend(cards[0]);
+                cards[0]=session.BeginSend(cards[0]);
                 session.FinishSend(cards[0],"SENT");
                 // Another app connection commits a card in the same batch.
                 using(var other=new VoucherStore(root))
                 {
-                    other.BeginSend(cards[2]);
+                    cards[2]=other.BeginSend(cards[2]);
                     other.FinishSend(cards[2],"SENT");
                 }
-                session.BeginSend(cards[1]);
+                cards[1]=session.BeginSend(cards[1]);
                 session.FinishSend(cards[1],"SENT");
             }
             var audit=Assert.Single(store.ReadRecentActivities(8).Where(x=>
@@ -91,13 +91,13 @@ public sealed class VoucherDeliveryProgressCacheTests
             store.SaveBatch(cards);
             using(var session=store.OpenSendSession())
             {
-                session.BeginSend(cards[0]);
+                cards[0]=session.BeginSend(cards[0]);
                 session.FinishSend(cards[0],"FAILED");
-                session.BeginSend(cards[1]);
+                cards[1]=session.BeginSend(cards[1]);
                 session.FinishSend(cards[1],"SENT");
                 // Router definitively rejected the first attempt. Its
                 // operator-approved retry is legal, without a new card.
-                session.BeginSend(cards[0]);
+                cards[0]=session.BeginSend(cards[0]);
                 session.FinishSend(cards[0],"SENT");
             }
             var rows=store.GetBatchVouchers("userman","batch-perf");
@@ -122,7 +122,7 @@ public sealed class VoucherDeliveryProgressCacheTests
             {
                 store.SaveBatch([card]);
                 using var session=store.OpenSendSession();
-                session.BeginSend(card);
+                card=session.BeginSend(card);
             }
             using(var store=new VoucherStore(root))
             {

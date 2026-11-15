@@ -17,11 +17,12 @@ public sealed partial class VoucherStore
         cmd.Transaction=tx;
         cmd.CommandText="""
             CREATE TABLE IF NOT EXISTS card_batch_print_snapshots(
+                router_id TEXT NOT NULL DEFAULT '',
                 service TEXT NOT NULL COLLATE NOCASE,
                 batch_id TEXT NOT NULL,
                 json TEXT NOT NULL,
                 updated_utc TEXT NOT NULL,
-                PRIMARY KEY(service,batch_id)
+                PRIMARY KEY(router_id,service,batch_id)
             );
             """;
         cmd.ExecuteNonQuery();
@@ -41,11 +42,12 @@ public sealed partial class VoucherStore
         using var cmd=db.CreateCommand();
         cmd.Transaction=tx;
         cmd.CommandText="""
-            INSERT INTO card_batch_print_snapshots(service,batch_id,json,updated_utc)
-            VALUES($service,$batch,$json,$now)
-            ON CONFLICT(service,batch_id) DO UPDATE SET
+            INSERT INTO card_batch_print_snapshots(router_id,service,batch_id,json,updated_utc)
+            VALUES($router,$service,$batch,$json,$now)
+            ON CONFLICT(router_id,service,batch_id) DO UPDATE SET
                 json=excluded.json,updated_utc=excluded.updated_utc
             """;
+        cmd.Parameters.AddWithValue("$router",snapshot.RouterId);
         cmd.Parameters.AddWithValue("$service",snapshot.Service);
         cmd.Parameters.AddWithValue("$batch",snapshot.BatchId);
         cmd.Parameters.AddWithValue("$json",json);
@@ -53,18 +55,20 @@ public sealed partial class VoucherStore
         cmd.ExecuteNonQuery();
     }
 
-    public VoucherBatchPrintSnapshot? LoadBatchPrintSnapshot(string service,string batchId)
+    public VoucherBatchPrintSnapshot? LoadBatchPrintSnapshot(string service,string batchId,string? routerId=null)
     {
         if(service is not ("hotspot" or "userman" or "pppoe") ||
            string.IsNullOrWhiteSpace(batchId) || batchId.Length>256)
             throw new ArgumentException("معرّف دفعة الطباعة غير صالح.");
         using var db=Open();
+        routerId??=ResolveBatchRouterId(db,service,batchId);
         EnsureBatchPrintSchema(db);
         using var cmd=db.CreateCommand();
         cmd.CommandText="""
             SELECT json FROM card_batch_print_snapshots
-            WHERE service=$service AND batch_id=$batch LIMIT 1
+            WHERE service=$service AND batch_id=$batch AND router_id=$router LIMIT 1
             """;
+        cmd.Parameters.AddWithValue("$router",routerId);
         cmd.Parameters.AddWithValue("$service",service);
         cmd.Parameters.AddWithValue("$batch",batchId);
         var raw=cmd.ExecuteScalar() as string;
@@ -75,7 +79,7 @@ public sealed partial class VoucherStore
                 throw new InvalidDataException("حجم قالب الدفعة المحفوظ غير صالح.");
             var snapshot=(JsonSerializer.Deserialize<VoucherBatchPrintSnapshot>(raw)
                 ??throw new InvalidDataException("قالب الدفعة المحفوظ فارغ.")).Validate();
-            if(snapshot.Service!=service || snapshot.BatchId!=batchId)
+            if(snapshot.Service!=service || snapshot.BatchId!=batchId || snapshot.RouterId!=routerId)
                 throw new InvalidDataException("مفتاح قالب الدفعة لا يطابق السجل.");
             return snapshot;
         }
@@ -103,8 +107,9 @@ public sealed partial class VoucherStore
                 SELECT COUNT(*),
                        SUM(CASE WHEN profile=$profile AND customer=$customer
                            THEN 1 ELSE 0 END)
-                FROM vouchers WHERE service=$service AND batch_id=$batch
+                FROM vouchers WHERE service=$service AND batch_id=$batch AND router_id=$router
                 """;
+            check.Parameters.AddWithValue("$router",snapshot.RouterId);
             check.Parameters.AddWithValue("$service",snapshot.Service);
             check.Parameters.AddWithValue("$batch",snapshot.BatchId);
             check.Parameters.AddWithValue("$profile",snapshot.Profile);

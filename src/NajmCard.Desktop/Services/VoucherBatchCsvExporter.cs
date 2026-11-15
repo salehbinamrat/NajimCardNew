@@ -14,6 +14,9 @@ public static class VoucherBatchCsvExporter
         if(vouchers.Count is <1 or >10000 ||
            vouchers.Any(v=>v is null || v.DeliveryStatus!="SENT" || !v.SentToRouter))
             throw new ArgumentException("يجب تحديد دفعة مؤكدة الإرسال فقط.");
+        var first=vouchers[0];
+        if(vouchers.Any(v=>v.RouterId!=first.RouterId||v.Service!=first.Service||v.BatchId!=first.BatchId))
+            throw new ArgumentException("لا يمكن تصدير كروت راوترات أو دفعات مختلفة معا.");
         if(!string.Equals(Path.GetExtension(destination),".csv",StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("امتداد CSV مطلوب.");
         var full=Path.GetFullPath(destination);
@@ -28,11 +31,11 @@ public static class VoucherBatchCsvExporter
                 using(var writer=new StreamWriter(stream,new UTF8Encoding(true),8192,
                     leaveOpen:true))
                 {
-                    writer.WriteLine("Username,Profile,Batch,CreatedAt,Service,Status");
+                    writer.WriteLine("Username,Profile,Batch,CreatedAt,Service,Status,RouterId");
                     foreach(var voucher in vouchers)
                     {
                         var fields=new[]{voucher.Username,voucher.Profile,voucher.BatchId,
-                            voucher.CreatedAt.ToString("O"),voucher.Service,"SENT"};
+                            voucher.CreatedAt.ToString("O"),voucher.Service,"SENT",voucher.RouterId};
                         writer.WriteLine(string.Join(",",fields.Select(Csv)));
                     }
                     writer.Flush();

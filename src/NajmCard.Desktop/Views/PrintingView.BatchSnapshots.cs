@@ -44,7 +44,7 @@ public partial class PrintingView
         _viewingArchive=true;
         try
         {
-            var snapshot=store.LoadBatchPrintSnapshot(selected.Service,selected.BatchId);
+            var snapshot=store.LoadBatchPrintSnapshot(selected.Service,selected.BatchId,selected.RouterId);
             if(snapshot is null)
             {
                 _status.Text="هذه دفعة قديمة دون قالب محفوظ. تحقق من التصميم "+
@@ -76,7 +76,7 @@ public partial class PrintingView
             as PrintableBatchSummary;
         IReadOnlyList<Voucher> requested;
         if(archive is not null)
-            requested=store.GetBatchVouchers(archive.Service,archive.BatchId);
+            requested=store.GetBatchVouchers(archive.Service,archive.BatchId,archive.RouterId);
         else if(currentBatch is not null)
             requested=currentBatch();
         else
@@ -85,7 +85,7 @@ public partial class PrintingView
             // mixed credentials from unrelated services and packages.
             var latest=store.ListPrintableBatches(1).FirstOrDefault();
             requested=latest is null?[]:
-                store.GetBatchVouchers(latest.Service,latest.BatchId)
+                store.GetBatchVouchers(latest.Service,latest.BatchId,latest.RouterId)
                     .Take(maxCount).ToArray();
         }
 
@@ -130,12 +130,12 @@ public partial class PrintingView
             throw new ArgumentException("لا توجد كروت محفوظة لهذه الدفعة.");
         var first=cards[0];
         if(cards.Any(v=>v.Service!=first.Service || v.BatchId!=first.BatchId ||
-            v.Profile!=first.Profile || v.Customer!=first.Customer))
+            v.Profile!=first.Profile || v.Customer!=first.Customer || v.RouterId!=first.RouterId))
             throw new InvalidOperationException(
                 "لا يمكن جمع كروت باقات أو دفعات أو حسابات مدير مختلفة في مهمة طباعة واحدة.");
-        return new VoucherBatchPrintSnapshot(
+        return (new VoucherBatchPrintSnapshot(
             first.Service,first.BatchId,first.Profile,first.Customer,
-            options,appearance,output).Validate();
+            options,appearance,output) {RouterId=first.RouterId}).Validate();
     }
     private static bool VerifyPreparedBatchSnapshot(
         System.Windows.Documents.FixedDocument? preparedDocument,
@@ -156,11 +156,11 @@ public partial class PrintingView
     {
         if((batchSelector.SelectedItem as ComboBoxItem)?.Tag
             is PrintableBatchSummary archive)
-            return store.GetBatchVouchers(archive.Service,archive.BatchId);
+            return store.GetBatchVouchers(archive.Service,archive.BatchId,archive.RouterId);
         if(currentBatch is not null)return currentBatch();
         var latest=store.ListPrintableBatches(1).FirstOrDefault();
         return latest is null?[]:store.GetBatchVouchers(
-            latest.Service,latest.BatchId).Take(maxCount).ToArray();
+            latest.Service,latest.BatchId,latest.RouterId).Take(maxCount).ToArray();
     }
 
     private static bool VerifyVoucherBatchSnapshot(

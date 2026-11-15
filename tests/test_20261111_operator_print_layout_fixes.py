@@ -77,7 +77,7 @@ class OperatorCorrections(unittest.TestCase):
         workspace=read(V/"VoucherWorkspaceView.cs")
         store=read(ROOT/"Services"/"VoucherStore.DeliveryHistory.cs")
         printer=read(V/"PrintingView.cs")+read(V/"PrintingView.BatchSnapshots.cs")
-        self.assertIn("_store.FirstDeliveryError(service,current[0].BatchId)",creator)
+        self.assertIn("_store.FirstDeliveryError(service,current[0].BatchId,current[0].RouterId)",creator)
         self.assertIn("public string? FirstDeliveryError(",store)
         self.assertIn("public string LastOperationMessage => _status.Text",printer)
         self.assertIn("status.Text=printer.LastOperationMessage",workspace)

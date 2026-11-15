@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/NajmCard.Core/NajmCard.Core.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.14" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+  <!-- Exercise the real persistence/dispatch code on every OS without WPF.
+       Empty-password fixtures avoid substituting or weakening Windows DPAPI. -->
+  <ItemGroup>
+    <Compile Include="../../src/NajmCard.Desktop/Services/VoucherStore*.cs" Link="Production/%(Filename)%(Extension)" />
+    <Compile Include="../../src/NajmCard.Desktop/Services/VoucherBatch*.cs" Link="Production/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

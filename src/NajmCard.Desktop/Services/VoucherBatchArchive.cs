@@ -10,7 +10,7 @@ public static class VoucherBatchArchive
         ArgumentException.ThrowIfNullOrWhiteSpace(parent);
         if(cards.Count==0)throw new ArgumentException("الدفعة فارغة.",nameof(cards));
         var first=cards[0];
-        if(cards.Any(c=>c.Profile!=first.Profile||c.Service!=first.Service||c.BatchId!=first.BatchId))
+        if(cards.Any(c=>c.Profile!=first.Profile||c.Service!=first.Service||c.BatchId!=first.BatchId||c.RouterId!=first.RouterId))
             throw new ArgumentException("اختر دفعة واحدة للحفظ.",nameof(cards));
         var type=first.Service switch {"hotspot"=>"Hotspot","userman"=>"UserManager-v6",
             "pppoe"=>"PPPoE",_=>throw new ArgumentException("نوع الكرت غير صالح.")};
