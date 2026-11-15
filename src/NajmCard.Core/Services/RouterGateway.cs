@@ -48,7 +48,11 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
 
     public async Task<IReadOnlyList<HotspotUser>> ReadUsersAsync(CancellationToken ct = default)
     {
-        var rows = await client.CommandAsync("/ip/hotspot/user/print", cancellationToken: ct);
+        using var readLease=await EnterHeavyReadAsync(ct);
+        var rows = await ReadProjectedInventoryAsync("/ip/hotspot/user/print",
+            ".id,name,password,profile,disabled,bytes-in,bytes-out,limit-bytes-total,comment",
+            row=>HasRecordIdentity(row,"name")&&HasDisabledState(row)&&row.ContainsKey("profile")&&
+                ValidCounter(row,"bytes-in")&&ValidCounter(row,"bytes-out")&&ValidCounter(row,"limit-bytes-total"),ct);
         return rows.Select(row => new HotspotUser(
             Get(row, ".id"), Get(row, "name"), Get(row, "password"), Get(row, "profile"),
             Disabled(row), Long(row, "bytes-in"), Long(row, "bytes-out"),
@@ -178,6 +182,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             (Get(current,"disabled") is "yes" or "true" or "1") != selected.Disabled)
             throw new InvalidOperationException("تغيرت هوية الحساب أو باقته أو حالته؛ حدّث القائمة قبل التعديل.");
 
+        using var readInvalidation=TrackUserManagerMutation();
         string command=action=="remove"
             ? "/tool/user-manager/user/remove"
             : "/tool/user-manager/user/set";
@@ -335,9 +340,13 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
 
     public async Task<PppInventory> ReadPppInventoryAsync(CancellationToken ct = default)
     {
-        var secrets = await client.CommandAsync("/ppp/secret/print", cancellationToken: ct);
+        using var readLease=await EnterHeavyReadAsync(ct);
+        var secrets = await ReadProjectedInventoryAsync("/ppp/secret/print",
+            ".id,name,profile,service,disabled,comment",row=>HasRecordIdentity(row,"name")&&
+                HasDisabledState(row)&&row.ContainsKey("profile")&&row.ContainsKey("service"),ct);
         var profiles = await ReadPppProfilesAsync(ct);
-        var activeRows = await client.CommandAsync("/ppp/active/print", cancellationToken: ct);
+        var activeRows = await ReadProjectedInventoryAsync("/ppp/active/print",
+            ".id,name,service,address,caller-id,uptime",row=>HasRecordIdentity(row,"name"),ct);
 
         var active = activeRows.Select(row => new PppActiveSession(
             Get(row, ".id"), Get(row, "name"), Get(row, "service"),
@@ -359,7 +368,8 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
 
     public async Task<IReadOnlyList<PppProfile>> ReadPppProfilesAsync(CancellationToken ct=default)
     {
-        var rows=await client.CommandAsync("/ppp/profile/print",cancellationToken:ct);
+        var rows=await client.CommandAsync("/ppp/profile/print",
+            new Dictionary<string,string>{{".proplist",".id,name,rate-limit,local-address,remote-address"}},ct);
         return rows.Select(row=>new PppProfile(
             Get(row,".id"),Get(row,"name"),Get(row,"rate-limit"),
             Get(row,"local-address"),Get(row,"remote-address"))).ToArray();
@@ -367,14 +377,17 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
 
     public async Task<IReadOnlyList<HotspotSession>> ReadSessionsAsync(CancellationToken ct = default)
     {
-        var rows = await client.CommandAsync("/ip/hotspot/active/print", cancellationToken: ct);
+        using var readLease=await EnterHeavyReadAsync(ct);
+        var rows = await ReadInventoryCommandAsync("/ip/hotspot/active/print",
+            new Dictionary<string,string>{{".proplist",".id,user,address,mac-address,uptime"}},ct);
         return rows.Select(row => new HotspotSession(Get(row, ".id"), Get(row, "user"),
             Get(row, "address"), Get(row, "mac-address"), Get(row, "uptime"))).ToList();
     }
 
     public async Task<IReadOnlyList<RouterCardProfile>> ReadProfilesAsync(CancellationToken ct = default)
     {
-        var rows = await client.CommandAsync("/ip/hotspot/user/profile/print", cancellationToken: ct);
+        var rows = await client.CommandAsync("/ip/hotspot/user/profile/print",
+            new Dictionary<string,string>{{".proplist",".id,name,rate-limit,session-timeout,shared-users"}},ct);
         return rows.Select(row => new RouterCardProfile(Get(row, ".id"), Get(row, "name"), Get(row, "rate-limit"),
             Get(row, "session-timeout"), Get(row, "shared-users"))).ToList();
     }
@@ -386,7 +399,8 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     public async Task<IReadOnlyList<UserManagerV6Profile>> ReadUserManagerV6ProfilesAsync(
         CancellationToken ct = default)
     {
-        var rows = await client.CommandAsync("/tool/user-manager/profile/print", cancellationToken: ct);
+        var rows = await client.CommandAsync("/tool/user-manager/profile/print",
+            new Dictionary<string,string>{{".proplist",".id,name,owner,customer,validity,price,starts-at"}},ct);
         return rows.Select(row => new UserManagerV6Profile(
             Get(row, ".id"), Get(row, "name"),
             Get(row, "owner") is { Length: > 0 } owner ? owner : Get(row, "customer"),
@@ -404,15 +418,17 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             &&UserManagerV6QuotaCatalog.TryOwner(row,out _);
     }
 
+    private bool _lifecycleProjectionUnsupported;
+
     private async Task<UserManagerV6QuotaCatalog> ReadUserManagerV6QuotaCatalogAsync(
         CancellationToken ct)
     {
         var profiles=await client.CommandAsync(
-            "/tool/user-manager/profile/print",cancellationToken:ct);
+            "/tool/user-manager/profile/print",new Dictionary<string,string>{{".proplist",".id,name,owner,customer,validity,price,starts-at"}},ct);
         var limits=await client.CommandAsync(
-            "/tool/user-manager/profile/limitation/print",cancellationToken:ct);
+            "/tool/user-manager/profile/limitation/print",new Dictionary<string,string>{{".proplist",".id,name,owner,customer,transfer-limit"}},ct);
         var links=await client.CommandAsync(
-            "/tool/user-manager/profile/profile-limitation/print",cancellationToken:ct);
+            "/tool/user-manager/profile/profile-limitation/print",new Dictionary<string,string>{{".proplist",".id,profile,limitation,owner,customer"}},ct);
         return new UserManagerV6QuotaCatalog(profiles,limits,links);
     }
 
@@ -428,6 +444,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     private async Task<(UserManagerV6Inventory Inventory,UserManagerV6QuotaCatalog? Quotas)>
         ReadUserManagerV6InventoryContextAsync(CancellationToken ct)
     {
+        using var readLease=await EnterHeavyReadAsync(ct);
         const string path="/tool/user-manager/user/print";
         const string projection=
             ".id,username,name,customer,owner,disabled,incomplete,actual-profile,money-used,uptime-used,"+
@@ -436,25 +453,29 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             "active,active-sessions,last-seen";
 
         IReadOnlyList<IReadOnlyDictionary<string,string>> rows;
-        bool alreadyFull=false;
+        bool alreadyFull=_lifecycleProjectionUnsupported;
         try
         {
             rows=await client.CommandAsync(path,
-                new Dictionary<string,string> { [".proplist"]=projection },ct).ConfigureAwait(false);
+                alreadyFull?null:new Dictionary<string,string> { [".proplist"]=projection },ct).ConfigureAwait(false);
         }
-        catch(RouterOsTrapException ex) when (
+        catch(RouterOsTrapException ex) when (!alreadyFull && (
             ex.Message.Contains("unknown parameter",StringComparison.OrdinalIgnoreCase)
             || ex.Message.Contains("invalid argument",StringComparison.OrdinalIgnoreCase)
-            || ex.Message.Contains("no such argument",StringComparison.OrdinalIgnoreCase))
+            || ex.Message.Contains("no such argument",StringComparison.OrdinalIgnoreCase)))
         {
             rows=await client.CommandAsync(path,cancellationToken:ct).ConfigureAwait(false);
             alreadyFull=true;
+            _lifecycleProjectionUnsupported=true;
         }
 
         // Only one fallback on incompatible projections, never two expensive
         // full user-table downloads when RouterOS rejects .proplist.
         if(!alreadyFull && rows.Count>0 && !rows.All(HasLifecycleFields))
+        {
             rows=await client.CommandAsync(path,cancellationToken:ct).ConfigureAwait(false);
+            if(rows.All(HasLifecycleFields))_lifecycleProjectionUnsupported=true;
+        }
 
         var observed=rows.All(HasLifecycleFields) &&
             rows.Select(row=>Get(row,".id"))
@@ -491,7 +512,8 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     public async Task<IReadOnlyList<UserManagerV6Customer>> ReadUserManagerV6CustomersAsync(
         CancellationToken ct = default)
     {
-        var rows = await client.CommandAsync("/tool/user-manager/customer/print", cancellationToken: ct);
+        var rows = await client.CommandAsync("/tool/user-manager/customer/print",
+            new Dictionary<string,string>{{".proplist",".id,login,name"}},ct);
         return rows.Select(row => new UserManagerV6Customer(
             Get(row, ".id"),
             Get(row, "login") is { Length: > 0 } login ? login : Get(row, "name"),
@@ -500,7 +522,8 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
 
     public async Task<IReadOnlyList<RouterHotspotServer>> ReadServersAsync(CancellationToken ct = default)
     {
-        var rows = await client.CommandAsync("/ip/hotspot/print", cancellationToken: ct);
+        var rows = await client.CommandAsync("/ip/hotspot/print",
+            new Dictionary<string,string>{{".proplist",".id,name,interface,disabled"}},ct);
         return rows.Select(row => new RouterHotspotServer(Get(row, ".id"), Get(row, "name"),
             Get(row, "interface"), Disabled(row))).ToList();
     }
@@ -613,6 +636,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         if(requested.Length==0)
             return new ExpiredTransferDeletionResult(0,0,0,[],false);
 
+        using var readInvalidation=TrackUserManagerMutation();
         // Fail closed: never delete based on an incomplete RouterOS 6 projection.
         var (live,quotas)=await ReadUserManagerV6InventoryContextAsync(ct);
         if(!live.IsComplete||quotas is not {IsComplete:true})
@@ -755,6 +779,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         if (client is not IRouterReceiptClient receiptClient)
             throw new NotSupportedException("RouterOS receipt-aware transport is required for safe UM issuing.");
 
+        using var readInvalidation=TrackUserManagerMutation();
         RouterCommandReply created;
         try
         {

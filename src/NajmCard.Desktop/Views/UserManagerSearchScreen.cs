@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using NajmCard.Core.Models;
@@ -106,13 +107,14 @@ public sealed class UserManagerSearchScreen : UserControl
             {
                 var selected=source.SelectedItem?.ToString();
                 var rows=new List<Hit>();
-                int version;
+                int version;string readLabel;
                 switch(selected)
                 {
                     case "المستخدمون":
                     {
                         var data=await gateway.ReadUmAccountsAsync(request.Token);
-                        version=(int)data.Generation;
+                        version=(int)data.Generation;readLabel=data.ReadLabel;
+                        if(!data.IsComplete)throw new InvalidDataException(data.Diagnostic);
                         foreach(var x in data.Rows)rows.Add(new Hit("مستخدم",x.Name,
                             x.Profile,x.Status,UmUi.Bytes(x.UsedBytes),x.LastSeen,x.EndTime));
                         break;
@@ -121,7 +123,8 @@ public sealed class UserManagerSearchScreen : UserControl
                     case "القيود":
                     {
                         var data=await gateway.ReadUmPlansAsync(request.Token);
-                        version=(int)data.Generation;
+                        version=(int)data.Generation;readLabel=data.ReadLabel;
+                        if(!data.IsComplete)throw new InvalidDataException(data.Diagnostic);
                         foreach(var x in data.Rows.Where(x=>x.Kind==
                             (selected=="الباقات"?"Profile":"Limitation")))
                             rows.Add(new Hit(x.KindLabel,x.Name,x.AssociatedLimits,
@@ -133,7 +136,8 @@ public sealed class UserManagerSearchScreen : UserControl
                     case "الجلسات":
                     {
                         var data=await gateway.ReadUmSessionsAsync(request.Token);
-                        version=(int)data.Generation;
+                        version=(int)data.Generation;readLabel=data.ReadLabel;
+                        if(!data.IsComplete)throw new InvalidDataException(data.Diagnostic);
                         foreach(var x in data.Rows)rows.Add(new Hit("جلسة",x.Name,
                             "—",x.Status,UmUi.Bytes(x.TotalBytes),x.Address,
                             "MAC: "+x.Mac+" | بدأ: "+x.Started));
@@ -143,7 +147,7 @@ public sealed class UserManagerSearchScreen : UserControl
                 }
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 items=rows.ToArray();page=0;SyncStatuses();Draw();
-                message.Text=$"RouterOS {version} | تم جلب {items.Length} سجلا فعليا. "+
+                message.Text=readLabel+" | "+$"RouterOS {version} | تم جلب {items.Length} سجلا فعليا. "+
                     "الفلترة والصفحات محلية، ولا يتم تنفيذ استعلام لكل حرف.";
             }
             catch(OperationCanceledException) when(request.IsCancellationRequested){}

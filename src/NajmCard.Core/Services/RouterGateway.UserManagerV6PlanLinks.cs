@@ -67,6 +67,7 @@ public sealed partial class RouterGateway
             return new UmPlanMutationResult(true,false,
                 "القيد مربوط بالفعل؛ لم يُرسل أمر مكرر.");
 
+        using var readInvalidation=TrackUserManagerMutation(plans:true);
         string? id;
         try
         {

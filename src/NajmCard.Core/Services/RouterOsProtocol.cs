@@ -79,7 +79,12 @@ public static class RouterOsProtocol
             if (length == 0) return words;
             if (length > 8 * 1024 * 1024) throw new InvalidDataException("Oversized RouterOS API response");
             var bytes = await ReadExactAsync(stream, (int)length, token);
-            words.Add(StrictUtf8.GetString(bytes));
+            try { words.Add(StrictUtf8.GetString(bytes)); }
+            catch(DecoderFallbackException ex)
+            {
+                // The unread remainder cannot be reused as another command's reply.
+                throw new InvalidDataException("Malformed UTF-8 in RouterOS response",ex);
+            }
             if (words.Count > 5000) throw new InvalidDataException("Excessive RouterOS API words");
         }
     }

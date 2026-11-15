@@ -66,6 +66,7 @@ public sealed partial class RouterGateway
                     "أعاد الراوتر نتيجة غير متطابقة لاستعلام اسم المستخدم؛ أُوقف الإنشاء.");
         }
 
+        using var readInvalidation=TrackUserManagerMutation();
         RouterCommandReply creation;
         try
         {

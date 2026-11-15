@@ -259,7 +259,7 @@ public sealed class UserManagerReportsView : UserControl
                     .Select(x=>(x.Date!.Value,x.Amount)),revenueCurrency);
             var dateKnownInScope=dated.Count(x=>x.StartedAt.HasValue);
             var undatedInDatabase=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
-            message.Text=$"RouterOS {(int)accounts.Generation} | "+
+            message.Text=accounts.ReadLabel+" | جلسات: "+sessions.ReadLabel+" | "+$"RouterOS {(int)accounts.Generation} | "+
                 $"الحسابات: {users.Length} | سجلات الفترة: {dated.Length} | "+
                 $"المؤرخة منها: {dateKnownInScope} | بلا تاريخ في القاعدة: {undatedInDatabase}. "+
                 "إيرادات البطاقات المباعة خارج User Manager ليست محسوبة. "+
@@ -287,6 +287,7 @@ public sealed class UserManagerReportsView : UserControl
                         "حسابات User Manager غير مكتملة؛ لا يمكن إصدار تقرير دقيق. "+
                         users.Diagnostic);
                 var connections=await gateway.ReadUmSessionsAsync(request.Token);
+                if(!connections.IsComplete)throw new InvalidDataException(connections.Diagnostic);
                 // Package-link failures must NOT discard verified account,
                 // session and payment data. An old v6 router can retain
                 // orphaned links even though all profiles still exist.

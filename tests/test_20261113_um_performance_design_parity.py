@@ -11,11 +11,11 @@ class UserManagerPerformanceAndAppearance(unittest.TestCase):
     def test_profile_catalog_is_reused_on_reentry_and_refresh_bypasses_it(self):
         cache=src(C,"Services/RouterGateway.CachedCreatorCatalog.cs")
         loading=src(D,"Views/GeneratorView.ProfileLoading.cs")
-        self.assertIn("CreatorCatalogTtl=TimeSpan.FromMinutes(2)",cache)
+        self.assertIn("new(TimeSpan.FromMinutes(2))",cache)
         self.assertIn("ReadCachedCreatorProfilesAsync(force)",loading)
         self.assertIn("ReadCachedCreatorCustomersAsync(force)",loading)
-        self.assertIn("ReadUserManagerV6ProfilesAsync(ct)",cache)
-        self.assertIn("ReadUserManagerV6CustomersAsync(ct)",cache)
+        self.assertIn("ReadAsync(ReadUserManagerV6ProfilesAsync",cache)
+        self.assertIn("ReadAsync(ReadUserManagerV6CustomersAsync",cache)
         self.assertIn("DateTimeOffset.UtcNow-_lastCatalogLoadedAt<TimeSpan.FromMinutes(2)",loading)
 
     def test_dashboard_does_not_download_historical_sessions_to_display_zero(self):

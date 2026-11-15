@@ -20,7 +20,7 @@ class UserManagerSixScreensContract(unittest.TestCase):
         self.assertIn("العودة إلى إدارة User Manager",source)
 
     def test_data_readers_have_version_specific_read_only_paths(self):
-        core=(CORE/"RouterGateway.UserManagerLiveRows.cs").read_text(encoding="utf-8")
+        core=(CORE/"RouterGateway.UserManagerLiveRows.cs").read_text(encoding="utf-8")+(CORE/"RouterGateway.UserManagerSessionReads.cs").read_text(encoding="utf-8")
         for path in ("/user-manager/user-profile/print",
                      "/user-manager/session/print",
                      "/tool/user-manager/session/print",
@@ -47,8 +47,8 @@ class UserManagerSixScreensContract(unittest.TestCase):
                 self.assertIn("Take(",ui)
         plans=(VIEWS/"UserManagerPlansScreen.cs").read_text(encoding="utf-8")
         cache=(CORE/"RouterGateway.CachedUmPlans.cs").read_text(encoding="utf-8")
-        self.assertIn("await ReadUmPlansAsync(ct)",cache)
-        self.assertIn("CurrentPlansCache()",cache)
+        self.assertIn("ReadAsync(ReadUmPlansAsync",cache)
+        self.assertIn("_planReads.Invalidate()",cache)
         self.assertIn("ReadCachedUmPlansAsync(force,request.Token)",plans)
         for action in ("ChangeUmPlanAsync","LinkUmProfileLimitationAsync",
                        "Profiles (الباقات)","Limitations (القيود)"):

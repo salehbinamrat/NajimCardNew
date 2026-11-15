@@ -163,6 +163,7 @@ public sealed partial class RouterGateway
             attrs[".id"]=selected.Id;
         }
 
+        using var readInvalidation=TrackUserManagerMutation(plans:true);
         string? createdId=null;
         try
         {

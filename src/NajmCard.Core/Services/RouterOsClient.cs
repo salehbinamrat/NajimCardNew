@@ -27,7 +27,7 @@ public interface IRouterReceiptClient
         CancellationToken cancellationToken = default);
 }
 
-public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRouterCommandClient, IRouterQueryClient, IRouterNameQueryClient
+public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRouterCommandClient, IRouterQueryClient, IRouterNameQueryClient, IRouterSessionQueryClient
 {
     private readonly TcpClient _tcp;
     private readonly Stream _stream;
@@ -98,7 +98,7 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
             if (_disposed) throw new ObjectDisposedException(nameof(RouterOsClient));
             if (words.Count == 0)
                 throw new ArgumentException("RouterOS command cannot be empty.", nameof(words));
-            var policy = RouterOsCommandTimeoutPolicy.For(words[0]);
+            var policy = RouterOsCommandTimeoutPolicy.ForRequest(words);
             using var total = CancellationTokenSource.CreateLinkedTokenSource(token);
             total.CancelAfter(policy.Total);
             using var idle = CancellationTokenSource.CreateLinkedTokenSource(total.Token);
@@ -194,6 +194,8 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
         CancellationToken cancellationToken = default)
     {
         if (command is not ("/tool/user-manager/user/print" or
+            "/tool/user-manager/session/print" or "/user-manager/session/print" or
+            "/ip/hotspot/user/print" or
             "/user-manager/user/print" or "/user-manager/user-profile/print" or
             "/user-manager/profile/print" or "/user-manager/limitation/print" or
             "/user-manager/profile-limitation/print" or
@@ -247,5 +249,32 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
         await _stream.DisposeAsync();
         _tcp.Dispose();
         _lock.Dispose();
+    }
+
+    public async Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QuerySessionsForAccountAsync(
+        string command,string username,string? internalId=null,
+        IReadOnlyDictionary<string,string>? attributes=null,CancellationToken cancellationToken=default)
+    {
+        if(command is not ("/tool/user-manager/session/print" or "/user-manager/session/print"))
+            throw new ArgumentException("Unsupported session menu",nameof(command));
+        if(string.IsNullOrWhiteSpace(username)||username.Length>64||username.Any(char.IsControl))
+            throw new ArgumentException("Invalid account name",nameof(username));
+        if(internalId is not null && (internalId.Length is <2 or >40||internalId[0]!='*'||
+            internalId.Skip(1).Any(c=>!char.IsAsciiHexDigit(c))))
+            throw new ArgumentException("Invalid account ID",nameof(internalId));
+        RouterOsCommandPolicy.Validate(command,attributes);
+        var words=new List<string>{command};
+        if(attributes is not null)foreach(var (key,value) in attributes)words.Add("="+key+"="+value);
+        var fields=command.StartsWith("/tool/",StringComparison.Ordinal)
+            ?new[]{"user","username","user-name","name"}:new[]{"user"};
+        bool first=true;
+        foreach(var field in fields)
+            foreach(var value in internalId is null?new[]{username}:new[]{username,internalId})
+            {
+                words.Add("?"+field+"="+value);
+                if(!first)words.Add("?#|");
+                first=false;
+            }
+        return RouterOsReplyDecoder.Decode(await ExchangeAsync(words,cancellationToken)).Records;
     }
 }

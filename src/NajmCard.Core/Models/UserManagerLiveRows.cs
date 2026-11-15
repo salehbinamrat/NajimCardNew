@@ -4,6 +4,10 @@ namespace NajmCard.Core.Models;
 public sealed record UmDataSnapshot<T>(RouterOsGeneration Generation,
     IReadOnlyList<T> Rows)
 {
+    public DateTimeOffset ReadAt { get; init; }=DateTimeOffset.UtcNow;
+    public bool IsFromCache { get; init; }
+    public string ReadLabel=>(IsFromCache?"بيانات مخزنة؛ وقت القراءة: ":"وقت القراءة من الراوتر: ")+
+        ReadAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
     // Distinguish reliable profile rows from incomplete legacy references.
     // Consumers can still use verified accounts/sessions independently.
     public bool IsComplete { get; init; }=true;

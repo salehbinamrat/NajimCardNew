@@ -174,6 +174,7 @@ public sealed partial class RouterGateway
             }
         }
 
+        using var readInvalidation=TrackUserManagerMutation(plans:true);
         string? createdId=null;
         try
         {

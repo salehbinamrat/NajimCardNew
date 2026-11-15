@@ -78,6 +78,7 @@ public sealed partial class RouterGateway
             return new UserManagerMutationResult(true,false,
                 disabled?"الحساب معطل بالفعل وتم التحقق منه.":"الحساب مفعل بالفعل وتم التحقق منه.");
 
+        using var readInvalidation=TrackUserManagerMutation();
         var writePath=version==RouterOsGeneration.V6?
             "/tool/user-manager/user/set":"/user-manager/user/set";
         try
@@ -166,6 +167,7 @@ public sealed partial class RouterGateway
             throw new NotSupportedException(
                 "الاتصال لا يدعم إثبات معرف الباقة الجديدة من رد RouterOS.");
 
+        using var readInvalidation=TrackUserManagerMutation();
         RouterCommandReply response;
         try
         {

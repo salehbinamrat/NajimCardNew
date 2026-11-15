@@ -1,0 +1,16 @@
+{"scenario":"account-sessions","rows":1,"requests":5,"response_bytes":475,"returned_rows":2,"local_median_ms":0.032,"modeled_network_ms":25.453,"errors":0,"retries":0}
+{"scenario":"account-sessions","rows":100,"requests":5,"response_bytes":475,"returned_rows":2,"local_median_ms":0.05,"modeled_network_ms":25.453,"errors":0,"retries":0}
+{"scenario":"account-sessions","rows":1000,"requests":5,"response_bytes":475,"returned_rows":2,"local_median_ms":0.367,"modeled_network_ms":25.453,"errors":0,"retries":0}
+{"scenario":"account-sessions","rows":10000,"requests":5,"response_bytes":475,"returned_rows":2,"local_median_ms":3.546,"modeled_network_ms":25.453,"errors":0,"retries":0}
+{"scenario":"hotspot-users","rows":1,"requests":1,"response_bytes":149,"returned_rows":1,"local_median_ms":0.006,"modeled_network_ms":5.142,"errors":0,"retries":0}
+{"scenario":"hotspot-users","rows":100,"requests":1,"response_bytes":14976,"returned_rows":100,"local_median_ms":0.259,"modeled_network_ms":19.282,"errors":0,"retries":0}
+{"scenario":"hotspot-users","rows":1000,"requests":1,"response_bytes":151621,"returned_rows":1000,"local_median_ms":5.63,"modeled_network_ms":149.597,"errors":0,"retries":0}
+{"scenario":"hotspot-users","rows":10000,"requests":1,"response_bytes":1534526,"returned_rows":10000,"local_median_ms":47.212,"modeled_network_ms":1468.438,"errors":0,"retries":0}
+{"scenario":"ppp-inventory","rows":1,"requests":3,"response_bytes":214,"returned_rows":1,"local_median_ms":0.007,"modeled_network_ms":15.204,"errors":0,"retries":0}
+{"scenario":"ppp-inventory","rows":100,"requests":3,"response_bytes":16701,"returned_rows":100,"local_median_ms":0.198,"modeled_network_ms":30.927,"errors":0,"retries":0}
+{"scenario":"ppp-inventory","rows":1000,"requests":3,"response_bytes":170291,"returned_rows":1000,"local_median_ms":1.88,"modeled_network_ms":177.402,"errors":0,"retries":0}
+{"scenario":"ppp-inventory","rows":10000,"requests":3,"response_bytes":1739101,"returned_rows":10000,"local_median_ms":51.488,"modeled_network_ms":1673.536,"errors":0,"retries":0}
+{"scenario":"shared-um-inventory","rows":1,"requests":5,"response_bytes":241,"returned_rows":2,"local_median_ms":0.019,"modeled_network_ms":25.23,"errors":0,"retries":0}
+{"scenario":"shared-um-inventory","rows":100,"requests":5,"response_bytes":16247,"returned_rows":200,"local_median_ms":0.643,"modeled_network_ms":40.494,"errors":0,"retries":0}
+{"scenario":"shared-um-inventory","rows":1000,"requests":5,"response_bytes":164592,"returned_rows":2000,"local_median_ms":9.119,"modeled_network_ms":181.967,"errors":0,"retries":0}
+{"scenario":"shared-um-inventory","rows":10000,"requests":5,"response_bytes":1673497,"returned_rows":20000,"local_median_ms":68.623,"modeled_network_ms":1620.971,"errors":0,"retries":0}

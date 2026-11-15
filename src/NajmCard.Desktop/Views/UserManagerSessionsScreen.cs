@@ -1,3 +1,4 @@
+using System.IO;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -114,7 +115,7 @@ public sealed class UserManagerSessionsScreen : UserControl
             selectPage.IsEnabled=grid.Items.Count>0&&!busy;
             SyncSelection();
         }
-        async Task Load()
+        async Task Load(bool force=false)
         {
             if(busy||!IsLoaded)return;
             busy=true;refresh.IsEnabled=false;
@@ -122,8 +123,9 @@ public sealed class UserManagerSessionsScreen : UserControl
             using var request=new CancellationTokenSource();pending=request;
             try
             {
-                var data=await gateway.ReadUmSessionsAsync(request.Token);
+                var data=await gateway.ReadUmSessionsAsync(request.Token,force);
                 if(!IsLoaded || request.IsCancellationRequested)return;
+                if(!data.IsComplete)throw new InvalidDataException(data.Diagnostic);
                 snapshot=data;page=0;
                 var active=UserManagerReportFilters.CountActiveSessions(data.Rows);
                 // If RADIUS returns mixed known and unknown activity flags,
@@ -144,7 +146,7 @@ public sealed class UserManagerSessionsScreen : UserControl
                     (knownUp<data.Rows.Count?" (جزئي)":"");
                 Value(4).Text=knownDown==data.Rows.Count && knownUp==data.Rows.Count
                     ?UmUi.Bytes(AddSaturated(down,up)):"غير متاح";
-                status.Text=$"RouterOS {(int)data.Generation} | جُلب {data.Rows.Count:N0} سجل؛ "+
+                status.Text=data.ReadLabel+" | "+$"RouterOS {(int)data.Generation} | جُلب {data.Rows.Count:N0} سجل؛ "+
                     "البحث والترقيم محليان. عند اختيار تاريخ تُستبعد السجلات بلا تاريخ صالح.";
                 Update();
             }
@@ -196,7 +198,7 @@ public sealed class UserManagerSessionsScreen : UserControl
                 status.Text+=" | استخدم تحديث من الراوتر لجلب الحالة الحالية.";
             }
         };
-        refresh.Click+=async(_,_)=>await Load();
+        refresh.Click+=async(_,_)=>await Load(force:true);
         searchButton.Click+=(_,_)=>{page=0;Update();};
         reset.Click+=(_,_)=>{search.Clear();statusFilter.SelectedIndex=0;
             start.SelectedDate=end.SelectedDate=null;page=0;Update();};
