@@ -59,6 +59,7 @@ public sealed class SessionsView : UserControl
         IReadOnlyList<LiveHotspotConnection> connections=[];
         int selectedMode=0;
         bool busy=false,hasSnapshot=false;
+        DateTimeOffset? readAt=null;
         CancellationTokenSource? pending=null;
         int totalCount,umCount,hotspotCount,unknownCount;
 
@@ -102,7 +103,7 @@ public sealed class SessionsView : UserControl
                     row.Server.Contains(term,StringComparison.OrdinalIgnoreCase)))
                 .ToArray();
             grid.ItemsSource=results;
-            status.Text=$"المعروض: {results.Length:N0} اتصال فعلي | "+
+            status.Text=$"وقت القراءة: {readAt:yyyy-MM-dd HH:mm:ss} | المعروض: {results.Length:N0} اتصال | "+
                 "مصدر اليوزرمنجر يعتمد علامة RADIUS من Hotspot Active؛ "+
                 "إذا كان للراوتر خادم RADIUS آخر فقد يشمل القسم اتصالاته أيضا.";
         }
@@ -126,7 +127,7 @@ public sealed class SessionsView : UserControl
             {
                 var live=await gateway.ReadLiveHotspotConnectionsAsync(request.Token);
                 if(!IsLoaded||request.IsCancellationRequested)return;
-                connections=live;
+                connections=live;readAt=DateTimeOffset.Now;
                 hasSnapshot=true;
                 CountConnections();
                 Draw();

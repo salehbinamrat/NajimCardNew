@@ -237,7 +237,9 @@ public sealed class UserManagerV6PlanMutationTests
         var gateway=new RouterGateway(spy);
         var first=await gateway.ReadCachedUmPlansAsync();
         var again=await gateway.ReadCachedUmPlansAsync();
-        Assert.Same(first,again);
+        Assert.Same(first.Rows,again.Rows);
+        Assert.Equal(first.ReadAt,again.ReadAt);
+        Assert.True(again.IsFromCache);
         Assert.Equal(1,spy.PlanReads);
         await gateway.ReadCachedUmPlansAsync(force:true);
         Assert.Equal(2,spy.PlanReads);

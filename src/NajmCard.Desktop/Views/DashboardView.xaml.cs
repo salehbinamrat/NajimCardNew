@@ -49,6 +49,11 @@ public partial class DashboardView : UserControl
                 if(_refreshing)_refreshAfterUnloaded=true;
                 else _=RefreshAsync();
             }
+            if(_lastLifecycle is {} last && last.Revision!=_gateway.UserManagerDataRevision)
+            {
+                _initialLifecycleAttempted=false;
+                LifecycleStatus.Text="تغيرت بيانات الكروت؛ القراءة المعروضة سابقة للتعديل.";
+            }
             if(!_initialLifecycleAttempted)
                 _=ScheduleInitialLifecycleAsync();
         };
@@ -302,7 +307,7 @@ public partial class DashboardView : UserControl
                 .OrderByDescending(g=>g.Count).ThenBy(g=>g.Name,StringComparer.OrdinalIgnoreCase)
                 .ToArray());
             if(IsLoaded)RenderProfiles(profiles);
-            LifecycleStatus.Text="آخر قراءة موثوقة: "+DateTime.Now.ToString("HH:mm:ss")+
+            LifecycleStatus.Text=state.ReadLabel+
                 " | نشطة "+state.Active+" | منتهية "+state.Expired+
                 " | صالحة غير مستخدمة "+state.Valid+
                 (state.Unclassified>0?" | غير مصنفة "+state.Unclassified:"")+

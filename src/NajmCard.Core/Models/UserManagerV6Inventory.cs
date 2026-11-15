@@ -37,6 +37,11 @@ public sealed record UserManagerV6Voucher(
 public sealed record UserManagerV6Inventory(
     IReadOnlyList<UserManagerV6Voucher> Users, bool IsComplete, string Diagnostic)
 {
+    public DateTimeOffset ReadAt { get; init; }=DateTimeOffset.UtcNow;
+    public bool IsFromCache { get; init; }
+    public long Revision { get; init; }
+    public string ReadLabel=>(IsFromCache?"بيانات مخزنة؛ وقت القراءة: ":"وقت القراءة من الراوتر: ")+
+        ReadAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
     public int Total => Users.Count;
     public int Valid => Users.Count(x=>x.Status=="valid");
     public int Active => Users.Count(x=>x.Status=="active");

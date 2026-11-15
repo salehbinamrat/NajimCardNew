@@ -11,7 +11,7 @@ namespace NajmCard.Core.Services;
 /// No automatic connection is made after explicit logout.
 /// </summary>
 public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceiptClient,
-    IRouterQueryClient, IRouterNameQueryClient, IAsyncDisposable
+    IRouterQueryClient, IRouterNameQueryClient, IRouterSessionQueryClient, IAsyncDisposable
 {
     private sealed class Lane(IRouterCommandClient? current=null)
     {
@@ -59,7 +59,8 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
     private static bool IsReadOnly(string command)=>
         command.EndsWith("/print",StringComparison.Ordinal);
 
-    private Lane For(string command)=>
+    private Lane For(string command,IReadOnlyDictionary<string,string>? attributes=null)=>
+        attributes?.ContainsKey("count-only")==true?_fast:
         command is "/tool/user-manager/user/print" or "/user-manager/user/print"
             or "/tool/user-manager/session/print" or "/user-manager/session/print"
                 ?_inventory:_fast;
@@ -130,9 +131,17 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
         CancellationToken cancellationToken=default)
     {
         RouterOsCommandPolicy.Validate(command,attributes);
-        return ExecuteAsync(For(command),
+        return ExecuteAsync(For(command,attributes),
             (current,ct)=>current.CommandAsync(command,attributes,ct),
             IsReadOnly(command),cancellationToken);
+    }
+
+    public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> ReadInventoryAsync(
+        string command,IReadOnlyDictionary<string,string>? attributes=null,CancellationToken cancellationToken=default)
+    {
+        RouterOsCommandPolicy.Validate(command,attributes);
+        if(!IsReadOnly(command))throw new ArgumentException("Inventory lane accepts reads only",nameof(command));
+        return ExecuteAsync(_inventory,(current,ct)=>current.CommandAsync(command,attributes,ct),true,cancellationToken);
     }
 
     public Task<RouterCommandReply> CommandWithReceiptAsync(
@@ -140,7 +149,7 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
         CancellationToken cancellationToken=default)
     {
         RouterOsCommandPolicy.Validate(command,attributes);
-        return ExecuteAsync(For(command),(current,ct)=>
+        return ExecuteAsync(For(command,attributes),(current,ct)=>
             current is IRouterReceiptClient receipt
                 ?receipt.CommandWithReceiptAsync(command,attributes,ct)
                 :throw new InvalidOperationException(
@@ -167,7 +176,7 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
         CancellationToken cancellationToken=default)
     {
         RouterOsCommandPolicy.Validate(command,attributes);
-        return ExecuteAsync(For(command),(current,ct)=>
+        return ExecuteAsync(_fast,(current,ct)=>
             current is IRouterNameQueryClient query
                 ?query.QueryByNameAsync(command,name,attributes,ct)
                 :throw new NotSupportedException(
@@ -181,6 +190,13 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
         try { await Task.WhenAll(CloseLaneAsync(_fast),CloseLaneAsync(_inventory)); }
         finally { _lifetime.Dispose(); }
     }
+
+    public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QuerySessionsForAccountAsync(
+        string command,string username,string? internalId=null,
+        IReadOnlyDictionary<string,string>? attributes=null,CancellationToken cancellationToken=default)
+        =>ExecuteAsync(_inventory,(current,ct)=>current is IRouterSessionQueryClient query
+            ?query.QuerySessionsForAccountAsync(command,username,internalId,attributes,ct)
+            :throw new NotSupportedException("Filtered session query is unavailable"),true,cancellationToken);
 
     private static async Task CloseLaneAsync(Lane lane)
     {

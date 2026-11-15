@@ -13,9 +13,10 @@ public sealed partial class RouterGateway
     public async Task<IReadOnlyList<LiveHotspotConnection>> ReadLiveHotspotConnectionsAsync(
         CancellationToken ct=default)
     {
+        using var readLease=await EnterHeavyReadAsync(ct);
         // Full read is intentional: some RouterOS 6 builds omit the 'radius'
         // flag from a projected print. No passwords or user secrets are read.
-        var rows=await client.CommandAsync("/ip/hotspot/active/print",
+        var rows=await ReadInventoryCommandAsync("/ip/hotspot/active/print",
             cancellationToken:ct);
         if(rows.Any(row=>string.IsNullOrWhiteSpace(Get(row,"user"))))
             throw new InvalidDataException(

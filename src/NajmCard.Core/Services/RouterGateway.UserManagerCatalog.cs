@@ -26,6 +26,7 @@ public sealed partial class RouterGateway
     public async Task<UserManagerCatalogSnapshot> ReadUserManagerCatalogAsync(
         UserManagerCatalogSection section,CancellationToken ct=default)
     {
+        using var readLease=await EnterHeavyReadAsync(ct);
         if(!Enum.IsDefined(section))
             throw new ArgumentOutOfRangeException(nameof(section));
         var generation=await ReadCachedRouterOsGenerationAsync(ct:ct);
@@ -46,9 +47,7 @@ public sealed partial class RouterGateway
                 v7?".id,name,transfer-limit,download-limit,upload-limit,uptime-limit"
                   :".id,name,transfer-limit,uptime-limit"),
             UserManagerCatalogSection.Sessions=>(
-                prefix+"/session/print",v7
-                    ?".id,user,uptime,download,upload,user-address,calling-station-id,active"
-                    :".id,user,uptime,download,upload"),
+                prefix+"/session/print",SessionProjection),
             _=>throw new ArgumentOutOfRangeException(nameof(section))
         };
         // A projected read is important: some UM user tables contain passwords.
@@ -71,14 +70,15 @@ public sealed partial class RouterGateway
             // Detect an unsupported projection/partial response rather than
             // painting a false empty account name.
             if(!row.ContainsKey(".id") ||
-                !row.ContainsKey(section==UserManagerCatalogSection.Users&&!v7
-                    ?"username":section==UserManagerCatalogSection.Sessions?"user":"name"))
+                (section==UserManagerCatalogSection.Sessions
+                    ?UmSessionField(row,"username","user","user-name","name")=="غير متاح"
+                    :!row.ContainsKey(section==UserManagerCatalogSection.Users&&!v7?"username":"name")))
                 throw new InvalidDataException(
                     "أعاد RouterOS سجلا ناقصا؛ لا يمكن اعتماد نتائج User Manager.");
             var name=section switch
             {
                 UserManagerCatalogSection.Users=>v7?Field("name"):Field("username"),
-                UserManagerCatalogSection.Sessions=>Field("user"),
+                UserManagerCatalogSection.Sessions=>Field("username","user","user-name","name"),
                 _=>Field("name")
             };
             var profile=section==UserManagerCatalogSection.Users&&!v7
@@ -98,7 +98,7 @@ public sealed partial class RouterGateway
                 UserManagerCatalogSection.Profiles=>Field(v7?"starts-when":"starts-at"),
                 UserManagerCatalogSection.Users=>v7?Field("shared-users"):Field("actual-profile"),
                 UserManagerCatalogSection.Limitations=>Field("uptime-limit"),
-                UserManagerCatalogSection.Sessions=>Field("calling-station-id"),
+                UserManagerCatalogSection.Sessions=>Field("calling-station-id","mac-address","caller-id"),
                 _=>"—"
             };
             output.Add(new UserManagerCatalogRow(
@@ -106,12 +106,12 @@ public sealed partial class RouterGateway
                 section==UserManagerCatalogSection.Profiles?Field("validity"):
                 section==UserManagerCatalogSection.Limitations?Field("uptime-limit"):
                 section==UserManagerCatalogSection.Users&&!v7?Field("uptime-used"):
-                Field("uptime"),
+                Field("uptime","session-time"),
                 section==UserManagerCatalogSection.Users&&!v7
                     ?Field("total-download-used"):Field("download"),
                 section==UserManagerCatalogSection.Users&&!v7
                     ?Field("total-upload-used"):Field("upload"),
-                section==UserManagerCatalogSection.Sessions?Field("user-address"):"—",
+                section==UserManagerCatalogSection.Sessions?Field("user-address","user-ip","ip-address","framed-ip-address","address"):"—",
                 extra));
         }
         return new UserManagerCatalogSnapshot(generation,section,output);

@@ -37,10 +37,10 @@ class UserManagerV6VisualParity(unittest.TestCase):
         self.assertNotIn('var editor=UmUi.Stack(UmUi.Label("إضافة / تعديل",17,true)',s)
 
     def test_per_card_session_falls_back_to_verified_account(self):
-        core=read(CORE,"RouterGateway.UserManagerLiveRows.cs")
+        core=read(CORE,"RouterGateway.UserManagerLiveRows.cs")+read(CORE,"RouterGateway.UserManagerSessionReads.cs")
         panel=read(VIEW,"UserManagerAccountsScreen.cs")
         self.assertIn('ReadUmSessionsForAccountAsync(',core)
-        self.assertIn('await client.CommandAsync("/tool/user-manager/session/print",null,ct)',core)
+        self.assertIn('query.QuerySessionsForAccountAsync(menu,username,internalId,attrs,ct)',core)
         self.assertIn('UmSessionField(row,v7?"user-address":"user-ip"',core)
         self.assertIn('ReadUmSessionsForAccountAsync(',panel)
         self.assertIn('("معرف الجهاز / MAC","CallingStation"',panel)

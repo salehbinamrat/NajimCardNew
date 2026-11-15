@@ -198,7 +198,7 @@ public sealed class UserManagerPlansScreen : UserControl
                     limitOptions.Items.Add(plan.Name);
                 limitOptions.SelectedIndex=0;
                 Draw();
-                status.Text=$"RouterOS {(int)result.Generation} | Profiles: "+
+                status.Text=result.ReadLabel+" | "+$"RouterOS {(int)result.Generation} | Profiles: "+
                     result.Rows.Count(x=>x.Kind=="Profile")+
                     " | Limitations: "+result.Rows.Count(x=>x.Kind=="Limitation")+
                     (result.Generation==RouterOsGeneration.V6

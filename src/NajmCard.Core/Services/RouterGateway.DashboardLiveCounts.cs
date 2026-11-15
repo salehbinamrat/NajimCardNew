@@ -48,35 +48,17 @@ public sealed partial class RouterGateway
         return new DashboardLiveCounts(total,hotspot,ppp);
     }
 
-    private readonly SemaphoreSlim _lifeCacheGate=new(1,1);
-    private UserManagerV6Inventory? _lifeCache;
-    private DateTimeOffset _lifeCacheAt;
+    private readonly RouterReadCache<UserManagerV6Inventory> _lifeReads=new(TimeSpan.FromMinutes(5));
+    public long UserManagerDataRevision=>_lifeReads.Revision;
     public async Task<UserManagerV6Inventory> ReadCachedUserManagerV6InventoryAsync(
         bool force=false,CancellationToken ct=default)
     {
-        if(!force&&_lifeCache is {IsComplete:true} existing &&
-            DateTimeOffset.UtcNow-_lifeCacheAt<TimeSpan.FromMinutes(5))
-            return existing;
-        await _lifeCacheGate.WaitAsync(ct);
-        try
-        {
-            if(!force&&_lifeCache is {IsComplete:true} saved &&
-                DateTimeOffset.UtcNow-_lifeCacheAt<TimeSpan.FromMinutes(5))
-                return saved;
-            var current=await ReadUserManagerV6InventoryAsync(ct);
-            if(current.IsComplete)
-            {
-                _lifeCache=current;
-                _lifeCacheAt=DateTimeOffset.UtcNow;
-            }
-            return current;
-        }
-        finally {_lifeCacheGate.Release();}
+        var read=await _lifeReads.ReadAsync(ReadUserManagerV6InventoryAsync,
+            value=>value.IsComplete,force,ct).ConfigureAwait(false);
+        return read.Value with {ReadAt=read.ReadAt,IsFromCache=read.FromCache,Revision=read.Revision,
+            IsComplete=read.Value.IsComplete&&!read.Invalidated,
+            Diagnostic=read.Invalidated?"تغيرت بيانات User Manager أثناء القراءة؛ حدّث القائمة.":read.Value.Diagnostic};
     }
 
-    public void InvalidateUserManagerV6LifecycleCache()
-    {
-        _lifeCache=null;
-        _lifeCacheAt=DateTimeOffset.MinValue;
-    }
+    public void InvalidateUserManagerV6LifecycleCache()=>_lifeReads.Invalidate();
 }

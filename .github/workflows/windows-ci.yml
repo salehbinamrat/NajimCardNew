@@ -32,6 +32,21 @@ jobs:
         run: dotnet test tests/NajmCard.Delivery.Tests/NajmCard.Delivery.Tests.csproj --configuration Release --no-restore
       - name: Test real SQLite/DPAPI desktop persistence
         run: dotnet test tests/NajmCard.Desktop.Tests/NajmCard.Desktop.Tests.csproj --configuration Release --no-restore
+      - name: Check out approved phase 2 for read benchmarks
+        uses: actions/checkout@v4
+        with:
+          ref: bc26cedc2e60fbe2cbc778631c8b3cc6a2ad27f5
+          path: .benchmark-baseline
+          persist-credentials: false
+      - name: Compare simulated RouterOS reads before and after
+        shell: pwsh
+        run: ./scripts/benchmark-router-reads.ps1 -Label core
+      - name: Upload read performance measurements
+        uses: actions/upload-artifact@v4
+        with:
+          name: Router-read-benchmarks-core
+          path: out/router-reads-*.jsonl
+          if-no-files-found: error
       # A real offscreen WPF render at the owner's 1260x730 desktop dimensions.
       # Core must pass this visual-smoke capture before Release artifacts are trusted.
       - name: Capture actual creator UI at 1260x730
@@ -101,6 +116,21 @@ jobs:
         run: dotnet test tests/NajmCard.Delivery.Tests/NajmCard.Delivery.Tests.csproj --configuration Release --no-restore
       - name: Desktop persistence tests before packaging
         run: dotnet test tests/NajmCard.Desktop.Tests/NajmCard.Desktop.Tests.csproj --configuration Release --no-restore
+      - name: Check out approved phase 2 for read benchmarks
+        uses: actions/checkout@v4
+        with:
+          ref: bc26cedc2e60fbe2cbc778631c8b3cc6a2ad27f5
+          path: .benchmark-baseline
+          persist-credentials: false
+      - name: Compare simulated RouterOS reads before packaging
+        shell: pwsh
+        run: ./scripts/benchmark-router-reads.ps1 -Label release-${{ matrix.arch }}
+      - name: Upload read performance measurements
+        uses: actions/upload-artifact@v4
+        with:
+          name: Router-read-benchmarks-${{ matrix.arch }}
+          path: out/router-reads-*.jsonl
+          if-no-files-found: error
   windows-packages:
     name: Windows packages (${{ matrix.arch }})
     runs-on: windows-2022

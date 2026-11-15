@@ -9,9 +9,9 @@ public sealed record RouterOsCommandTimeoutProfile(
 
 public static class RouterOsCommandTimeoutPolicy
 {
-    public static RouterOsCommandTimeoutProfile For(string command)
+    public static RouterOsCommandTimeoutProfile For(string command,bool bounded=false)
     {
-        bool largeInventory = command is
+        bool largeInventory = !bounded && command is
             "/tool/user-manager/user/print" or "/user-manager/user/print"
             or "/tool/user-manager/session/print" or "/user-manager/session/print";
         return largeInventory
@@ -21,5 +21,16 @@ public static class RouterOsCommandTimeoutPolicy
             : new RouterOsCommandTimeoutProfile(
                 TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20),
                 30000, 128L * 1024 * 1024);
+    }
+
+    public static RouterOsCommandTimeoutProfile ForRequest(IReadOnlyList<string> words)
+    {
+        if(words.Count==0)throw new ArgumentException("Empty request",nameof(words));
+        // Session account filters can still return a large history. Only counts
+        // and single account/ID queries receive the short request deadline.
+        bool bounded=words.Any(w=>w.StartsWith("=count-only=",StringComparison.Ordinal)
+            ||w.StartsWith("?.id=",StringComparison.Ordinal)
+            ||w.StartsWith("?name=",StringComparison.Ordinal)&&!words[0].EndsWith("/session/print",StringComparison.Ordinal));
+        return For(words[0],bounded);
     }
 }

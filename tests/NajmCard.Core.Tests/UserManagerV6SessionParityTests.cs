@@ -23,7 +23,7 @@ public sealed class UserManagerV6SessionParityTests
             IReadOnlyList<IReadOnlyDictionary<string,string>> result=
                 attributes is not null && projectedMiss
                     ?[new Dictionary<string,string>{{".id","*10"},
-                        {"user","other-card"},
+                        {"unrecognized-reference","other-card"},
                         {"from-time","nov/13/2026 12:00:00"}}]
                     :[
                         new Dictionary<string,string>
@@ -67,12 +67,13 @@ public sealed class UserManagerV6SessionParityTests
     public async Task Missing_V6_Projection_Triggers_Full_Read_For_Selected_Account()
     {
         var router=new Router(projectedMiss:true);
-        var snapshot=await new RouterGateway(router)
-            .ReadUmSessionsForAccountAsync("3747686346","*F");
+        var gateway=new RouterGateway(router);
+        var snapshot=await gateway.ReadUmSessionsForAccountAsync("3747686346","*F");
         var row=Assert.Single(snapshot.Rows);
         Assert.Equal("10.0.192.45",row.Address);
         Assert.Equal(1,router.FullReads);
-        Assert.Contains("فحص إضافي",snapshot.Diagnostic);
+        await gateway.ReadUmSessionsAsync();
+        Assert.Equal(2,router.FullReads);
     }
 
     [Fact]

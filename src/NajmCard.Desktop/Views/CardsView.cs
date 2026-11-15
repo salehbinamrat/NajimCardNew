@@ -14,6 +14,27 @@ namespace NajmCard.Desktop.Views;
 public class CardsView : UserControl
 {
     private readonly RouterGateway _gateway;
+    private CancellationTokenSource _readVisibility=new();
+    private readonly SemaphoreSlim _pageReadGate=new(1,1);
+    private bool _hotspotReading;
+    private async Task<T> ReadForPageAsync<T>(Func<CancellationToken,Task<T>> read)
+    {
+        if(!IsLoaded)throw new OperationCanceledException("صفحة إدارة الكروت غير ظاهرة.");
+        var token=_readVisibility.Token;
+        await _pageReadGate.WaitAsync(token);
+        try
+        {
+            var value=await read(token);
+            token.ThrowIfCancellationRequested();
+            return value;
+        }
+        finally{_pageReadGate.Release();}
+    }
+    private void CancelPageReads()
+    {
+        _readVisibility.Cancel();_readVisibility.Dispose();
+        _readVisibility=new CancellationTokenSource();
+    }
     private readonly VoucherStore? _audit;
     private string CleanupAudit(string service,ExpiredTransferDeletionResult outcome)
     {
@@ -115,7 +136,7 @@ public class CardsView : UserControl
             online.IsEnabled=false;
             try
             {
-                var sessions=await _gateway.ReadSessionsAsync();
+                var sessions=await ReadForPageAsync(_gateway.ReadSessionsAsync);
                 onlineNames=sessions.Select(x=>x.User).ToHashSet(StringComparer.OrdinalIgnoreCase);
                 page=0;FilterHotspot();
             }
@@ -342,7 +363,7 @@ public class CardsView : UserControl
             pppStatus.Text = "جارٍ قراءة حسابات PPP وجلساتها وباقاتها...";
             try
             {
-                var report = await _gateway.ReadPppInventoryAsync();
+                var report = await ReadForPageAsync(_gateway.ReadPppInventoryAsync);
                 pppAccounts.ItemsSource = report.Accounts;
                 pppSessions.ItemsSource = report.ActiveSessions;
                 pppProfiles.ItemsSource = report.Profiles;
@@ -517,6 +538,7 @@ public class CardsView : UserControl
         tabs.Items.Add(new TabItem{Header="برودباند PPPoE",
             Content=PageUi.Surface(pppSection,"#3D91A4")});
         tabs.SelectedIndex=0;
+        tabs.SelectionChanged+=(_,e)=>{if(ReferenceEquals(e.OriginalSource,tabs))CancelPageReads();};
         sections.Children.Add(tabs);
         Content = PageUi.Wrap("إدارة كروت الشبكة",
             "Hotspot وUser Manager v6 وPPP في شاشة واحدة دون تكرار خيارات القائمة.",
@@ -527,7 +549,8 @@ public class CardsView : UserControl
             _umStatus.Text = "جارٍ فحص حسابات User Manager v6 من الراوتر...";
             try
             {
-                var report = await _gateway.ReadUserManagerV6InventoryAsync();
+                var report = await ReadForPageAsync(token=>
+                    _gateway.ReadCachedUserManagerV6InventoryAsync(force:true,ct:token));
                 _usermanUsers=report.Users;_syncUm?.Invoke();
                 _umStatus.Text = report.IsComplete
                     ? "الإجمالي: " + report.Total + " | صالحة: " + report.Valid +
@@ -537,6 +560,7 @@ public class CardsView : UserControl
                       (string.IsNullOrEmpty(report.Diagnostic) ? "" : " | " + report.Diagnostic)
                     : "تعذر التصنيف الموثوق: " + report.Diagnostic +
                       " | إجمالي الصفوف المقروءة: " + report.Total;
+                _umStatus.Text+=" | "+report.ReadLabel;
             }
             catch (Exception ex)
             {
@@ -546,14 +570,18 @@ public class CardsView : UserControl
             finally { loadUm.IsEnabled = true; }
         };
         Loaded += (_,_)=>_status.Text="اضغط تحديث لجلب مستخدمي Hotspot من الراوتر؛ البحث محلي.";
+        Unloaded+=(_,_)=>CancelPageReads();
     }
     private async Task RefreshAsync()
     {
-        try { _status.Text = "جارٍ تحميل الكروت..."; var users = await _gateway.ReadUsersAsync();
+        if(_hotspotReading||!IsLoaded)return;
+        _hotspotReading=true;
+        try { _status.Text = "جارٍ تحميل الكروت..."; var users = await ReadForPageAsync(_gateway.ReadUsersAsync);
             _hotspotUsers=users;_syncHotspot?.Invoke();
-            _status.Text = "تم تحميل " + users.Count + " كرتا من الراوتر."; }
+            _status.Text = "تم تحميل " + users.Count + " كرتا من الراوتر | وقت القراءة: "+DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); }
         catch (Exception ex) { _hotspotUsers=[];_syncHotspot?.Invoke();
             _status.Text = "فشل التحميل: " + ex.Message; }
+        finally{_hotspotReading=false;}
     }
     private async Task DisableAsync(bool disabled)
     {

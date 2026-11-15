@@ -18,14 +18,15 @@ public sealed partial class RouterGateway
     public async Task<IReadOnlyList<HotspotUser>> ReadDashboardUsersAsync(
         CancellationToken ct = default)
     {
+        using var readLease=await EnterHeavyReadAsync(ct);
         IReadOnlyList<IReadOnlyDictionary<string,string>> rows;
         if (_dashboardProjectionUnsupported)
         {
-            rows=await client.CommandAsync("/ip/hotspot/user/print",cancellationToken:ct);
+            rows=await ReadInventoryCommandAsync("/ip/hotspot/user/print",cancellationToken:ct);
         }
         else
         {
-            rows=await client.CommandAsync("/ip/hotspot/user/print",
+            rows=await ReadInventoryCommandAsync("/ip/hotspot/user/print",
                 new Dictionary<string,string> {[".proplist"]=DashboardProplist},ct);
             bool incomplete=rows.Any(row =>
                 string.IsNullOrWhiteSpace(Get(row,"name")) ||
@@ -42,10 +43,12 @@ public sealed partial class RouterGateway
                 // Never mistake missing / silently ignored projected columns for
                 // an authoritative zero. Use a full read, only if permissions allow.
                 _dashboardProjectionUnsupported=true;
-                rows=await client.CommandAsync("/ip/hotspot/user/print",cancellationToken:ct);
+                rows=await ReadInventoryCommandAsync("/ip/hotspot/user/print",cancellationToken:ct);
             }
         }
-        if(rows.Any(row=>string.IsNullOrWhiteSpace(Get(row,"name"))))
+        if(rows.Any(row=>string.IsNullOrWhiteSpace(Get(row,"name")) ||
+            !row.ContainsKey("profile") || Get(row,"disabled") is not ("yes" or "no" or "true" or "false" or "1" or "0") ||
+            !ValidCounter(row,"bytes-in") || !ValidCounter(row,"bytes-out") || !ValidCounter(row,"limit-bytes-total")))
             throw new InvalidDataException("لم يُعد الراوتر أسماء مستخدمي Hotspot اللازمة للوحة الرئيسية.");
         // Full RouterOS read is the legacy fallback, but the DTO still masks passwords.
         return rows.Select(row=>new HotspotUser(

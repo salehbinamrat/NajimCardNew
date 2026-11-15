@@ -177,6 +177,9 @@ public sealed class UserManagerAccountsScreen : UserControl
             UmSessionRow[] filtered=[];
             int sessionPage=0;
             bool sessionsLoaded=false;
+            string historyReadLabel="";
+            CancellationTokenSource? historyPending=null;
+            window.Closed+=(_,_)=>historyPending?.Cancel();
             void RenderHistory()
             {
                 if(!sessionsLoaded)return;
@@ -191,7 +194,7 @@ public sealed class UserManagerAccountsScreen : UserControl
                 int verifiedActive=history.Count(x=>x.IsActive==true);
                 int verifiedEnded=history.Count(x=>x.IsActive==false);
                 int unknown=history.Length-verifiedActive-verifiedEnded;
-                sessionDetails.Text=$"عدد سجلات الكرت على الراوتر: {history.Length:N0} | "+
+                sessionDetails.Text=historyReadLabel+" | "+$"عدد سجلات الكرت على الراوتر: {history.Length:N0} | "+
                     $"نشطة مؤكدة: {verifiedActive:N0} | منتهية: {verifiedEnded:N0} | "+
                     $"حالة غير معروفة: {unknown:N0}. "+
                     "العدد يمثل سجلات User Manager التاريخية وليس عدد الأجهزة المتصلة حاليا.";
@@ -205,11 +208,13 @@ public sealed class UserManagerAccountsScreen : UserControl
             {
                 viewSessions.IsEnabled=false;
                 sessionDetails.Text="يجري جلب سجلات User Manager والتحقق من المعرفات...";
+                using var historyRequest=new CancellationTokenSource();historyPending=historyRequest;
                 try
                 {
                     var sessions=await gateway.ReadUmSessionsForAccountAsync(
-                        row.Name,row.Id);
+                        row.Name,row.Id,historyRequest.Token);
                     if(!window.IsLoaded)return;
+                    if(!sessions.IsComplete)throw new InvalidDataException(sessions.Diagnostic);
                     if(sessions.Generation!=version)
                     {
                         sessionsLoaded=false;
@@ -219,6 +224,7 @@ public sealed class UserManagerAccountsScreen : UserControl
                     }
                     // RouterOS returns exact matches by username or the
                     // verified user's internal ID; never prefix-matches.
+                    historyReadLabel=sessions.ReadLabel;
                     history=sessions.Rows
                         .OrderByDescending(x=>x.StartedAt??DateTime.MinValue)
                         .ThenByDescending(x=>x.Id,StringComparer.Ordinal)
@@ -228,11 +234,12 @@ public sealed class UserManagerAccountsScreen : UserControl
                     RenderHistory();
                     if(history.Length==0)
                         sessionDetails.Text="لم تظهر جلسات مطابقة لرقم الكرت "+
-                            "بعد فحص القراءة السريعة وجميع حقول User Manager v6. "+
+                            "في نتيجة قراءة User Manager. "+
                             "إذا كانت ظاهرة في واجهة الويب، تحقق من مصدر السجلات "+
                             "وصلاحيات حساب API، ولا تعتمد الصفر كدليل على عدم استخدامها.";
                     else if(sessions.Diagnostic.Length>0)
                         sessionDetails.Text+=" | "+sessions.Diagnostic;
+                    sessionDetails.Text+=" | "+sessions.ReadLabel;
                 }
                 catch(Exception ex)
                 {
@@ -244,7 +251,7 @@ public sealed class UserManagerAccountsScreen : UserControl
                     sessionDetails.Text="تعذر قراءة سجل الجلسات؛ "+
                         "لا يُعرض عدد صفري مضلل: "+ex.Message;
                 }
-                finally{viewSessions.IsEnabled=true;}
+                finally{historyPending=null;viewSessions.IsEnabled=true;}
             };
             stateFilter.SelectionChanged+=(_,_)=>{sessionPage=0;RenderHistory();};
             pageSize.SelectionChanged+=(_,_)=>{sessionPage=0;RenderHistory();};
@@ -379,7 +386,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             Details();
         }
 
-        async Task Load()
+        async Task Load(bool force=false)
         {
             if(busy || !IsLoaded)return;
             busy=true;
@@ -391,7 +398,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             pending=request;
             try
             {
-                var snap=await gateway.ReadUmAccountsAsync(request.Token);
+                var snap=await gateway.ReadUmAccountsAsync(request.Token,force);
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 all=snap.Rows;version=snap.Generation;
                 SyncFilters();
@@ -414,7 +421,7 @@ public sealed class UserManagerAccountsScreen : UserControl
                 expiredCard.Text=all.Count(x=>x.Status=="منتهي")
                     .ToString("N0",CultureInfo.InvariantCulture);
                 page=0;Draw();
-                message.Text=$"تم جلب {all.Count:N0} حسابا فعليا من User Manager؛ "+
+                message.Text=snap.ReadLabel+" | "+$"تم جلب {all.Count:N0} حسابا فعليا من User Manager؛ "+
                     "الترقيم والبحث محليان بعد الجلب. راجع حالة RADIUS قبل اعتبار الكرت متصلا.";
             }
             catch(OperationCanceledException) when(request.IsCancellationRequested){}
@@ -459,7 +466,7 @@ public sealed class UserManagerAccountsScreen : UserControl
         }
 
         add.Click+=(_,_)=>openLegacy();
-        refresh.Click+=async(_,_)=>await Load();
+        refresh.Click+=async(_,_)=>await Load(force:true);
         enable.Click+=async(_,_)=>await Change(false);
         disable.Click+=async(_,_)=>await Change(true);
         delete.Click+=async(_,_) =>

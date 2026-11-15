@@ -142,7 +142,9 @@ public sealed class PppInventoryTests
             {
                 var command = await RouterOsProtocol.ReadSentenceAsync(stream, deadline.Token);
                 Assert.Equal(path, command[0]);
-                Assert.Single(command);
+                Assert.Equal(2,command.Count);
+                Assert.StartsWith("=.proplist=",command[1]);
+                Assert.DoesNotContain("password",command[1]);
                 await RouterOsProtocol.WriteSentenceAsync(stream,
                     ["!re", .. fields], deadline.Token);
                 await RouterOsProtocol.WriteSentenceAsync(stream, ["!done"], deadline.Token);

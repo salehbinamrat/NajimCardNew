@@ -20,6 +20,7 @@ public partial class GeneratorView
     private bool _loadedCustomersReady;
     private string _lastCatalogService="";
     private DateTimeOffset _lastCatalogLoadedAt;
+    private long _lastCatalogRevision;
 
     private void RequireRouteSelection()
     {
@@ -36,6 +37,7 @@ public partial class GeneratorView
         // re-query RouterOS. Explicit refresh always bypasses this short
         // cache, while service/owner changes still load fresh definitions.
         if(!force && _lastCatalogService==service && _loadedProfilesReady &&
+           (service!="userman" || _lastCatalogRevision==_gateway.CreatorCatalogRevision) &&
            _profile.SelectedIndex>=0 && _profile.Items.Count>0 &&
            DateTimeOffset.UtcNow-_lastCatalogLoadedAt<TimeSpan.FromMinutes(2))
             return;
@@ -140,6 +142,10 @@ public partial class GeneratorView
                     "تم تحميل "+names.Length+" باقة "+
                     (service=="userman"?" · حسابات المدير: "+customers.Length:"");
                 ApplyPendingPackageSelection(service);
+                _lastCatalogRevision=_gateway.CreatorCatalogRevision;
+                if(service=="userman" && _gateway.CreatorCatalogReadAt is {} catalogReadAt)
+                    _catalogStatus.Text+=" | قائمة محفوظة مؤقتا؛ وقت القراءة: "+
+                        catalogReadAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
                 if(previousOwner is null)SelectMatchingOwner();
             }
             finally{_applyingProfileCatalog=false;}

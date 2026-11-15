@@ -38,15 +38,16 @@ public sealed partial class RouterGateway
             ?"/tool/user-manager/session":"/user-manager/session";
         var projection=new Dictionary<string,string>
         {
-            [".proplist"]=".id,user,active"
+            [".proplist"]=".id,user,username,user-name,name,active"
         };
+        using var readInvalidation=TrackUserManagerMutation();
         int removed=0;
         foreach(var row in selected)
         {
             ct.ThrowIfCancellationRequested();
             var before=await query.QueryByIdAsync(parent+"/print",row.Id,projection,ct);
             if(before.Count!=1 || UmValue(before[0],".id")!=row.Id ||
-                UmValue(before[0],"user")!=row.Name ||
+                UmSessionField(before[0],"username","user","user-name","name")!=row.Name ||
                 !before[0].ContainsKey("active") ||
                 UmBoolean(before[0],"active")!=false)
                 return new UmSessionRemovalResult(removed,selected.Count,false,

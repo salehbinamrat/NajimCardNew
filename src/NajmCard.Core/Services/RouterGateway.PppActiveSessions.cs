@@ -8,7 +8,8 @@ public sealed partial class RouterGateway
     public async Task<IReadOnlyList<PppActiveSession>> ReadPppActiveSessionsAsync(
         CancellationToken ct = default)
     {
-        var rows=await client.CommandAsync("/ppp/active/print",
+        using var readLease=await EnterHeavyReadAsync(ct);
+        var rows=await ReadInventoryCommandAsync("/ppp/active/print",
             new Dictionary<string,string>
             {
                 [".proplist"]=".id,name,service,address,caller-id,uptime"
