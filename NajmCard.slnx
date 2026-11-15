@@ -3,4 +3,5 @@
   <Project Path="src/NajmCard.Desktop/NajmCard.Desktop.csproj" />
   <Project Path="tests/NajmCard.Core.Tests/NajmCard.Core.Tests.csproj" />
   <Project Path="tests/NajmCard.Desktop.Tests/NajmCard.Desktop.Tests.csproj" />
+  <Project Path="tests/NajmCard.Delivery.Tests/NajmCard.Delivery.Tests.csproj" />
 </Solution>

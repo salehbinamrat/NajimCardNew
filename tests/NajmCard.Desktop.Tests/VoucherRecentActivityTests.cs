@@ -12,7 +12,7 @@ public sealed class VoucherRecentActivityTests : IDisposable
     [Fact]
     public void Recording_Card_Batches_And_Confirmed_Delivery_Creates_Real_Activity()
     {
-        var card=new Voucher("001234","secret","profile","batch-a",DateTimeOffset.UtcNow);
+        var card=new Voucher("001234","secret","profile","batch-a",DateTimeOffset.UtcNow) {RouterId=VoucherDeliveryFixture.RouterId};
         using(var store=new VoucherStore(root))
         {
             Assert.Empty(store.ReadRecentActivities());
@@ -21,7 +21,7 @@ public sealed class VoucherRecentActivityTests : IDisposable
             Assert.Single(rows);
             Assert.Equal("INFO",rows[0].Status);
             Assert.DoesNotContain("secret",rows[0].Detail);
-            store.BeginSend(card);
+            card=store.BeginSend(card);
             store.FinishSend(card,"SENT");
         }
         using var reopened=new VoucherStore(root);

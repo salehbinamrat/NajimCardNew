@@ -42,14 +42,16 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
         if (service == "userman" && string.IsNullOrWhiteSpace(customer))
             throw new ArgumentException("حساب مدير User Manager مطلوب.");
         if (batch.Any(x => x is null || x.Service != service ||
-            x.BatchId != first.BatchId ||
+            x.BatchId != first.BatchId || x.RouterId!=first.RouterId ||
             (service == "userman" && x.Customer != customer)))
             throw new ArgumentException("لا ترسل كروت خدمات أو حسابات مدير مختلفة معاً.");
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (batch.Any(x => !seen.Add(x.Username)))
             throw new ArgumentException("الدفعة تحتوي اسم كرت مكرراً.");
 
-        var persisted = store.GetBatchVouchers(service, first.BatchId).ToLookup(
+        using var batchLock=store.LockBatch(first.RouterId,service,first.BatchId);
+        await gateway.VerifyRouterIdentityAsync(first.RouterId,cancellationToken);
+        var persisted = store.GetBatchVouchers(service, first.BatchId,first.RouterId).ToLookup(
             x => x.Service + "\u0000" + x.Username, StringComparer.OrdinalIgnoreCase);
         foreach (var voucher in batch)
         {
@@ -57,7 +59,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
             if (!persisted[key].Any(x => x.BatchId == voucher.BatchId
                 && x.Profile == voucher.Profile && x.Customer == voucher.Customer
                 && x.Password == voucher.Password && !x.SentToRouter
-                && x.DeliveryStatus is ("CREATED" or "FAILED")))
+                && x.DeliveryStatus is ("CREATED" or "FAILED" or "READY")))
                 throw new InvalidOperationException(
                     "الكرت مُرسل أو قيد التحقق أو غير محفوظ؛ راجع الراوتر أولاً.");
         }
@@ -100,9 +102,10 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
         // One open WAL connection per batch; every card still has TWO separate
         // durable FULL commits (lease before network, result after receipt).
         using var sendSession = store.OpenSendSession();
-        foreach (var voucher in batch)
+        foreach (var selected in batch)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            await gateway.VerifyRouterIdentityAsync(first.RouterId,cancellationToken);
             int number = processed + 1;
             bool reportCard = batch.Count <= 24 || number == 1 ||
                 number == batch.Count || number % progressStride == 0;
@@ -110,7 +113,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                 progress?.Report($"إرسال الكرت {number} من {batch.Count} إلى الراوتر...");
             // COMMIT to WAL+FULL synchronously BEFORE sending the first byte.
             var databaseTimer=Stopwatch.StartNew();
-            sendSession.BeginSend(voucher);
+            var voucher=sendSession.BeginSend(selected);
             databaseTimer.Stop();
             databaseElapsed += databaseTimer.Elapsed;
             var routerTimer=Stopwatch.StartNew();
@@ -125,6 +128,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                     state = result.Success ? "SENT" :
                         result.UncertainOutcome ? "UNKNOWN" : "FAILED";
                     error = result.Error ?? "";
+                    voucher=voucher with {RouterRecordId=result.UserId??""};
                 }
                 catch (Exception ex)
                 {
@@ -141,6 +145,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                     state = result.Success ? "SENT" :
                         result.UncertainOutcome ? "UNKNOWN" : "FAILED";
                     error = result.Error ?? "";
+                    voucher=voucher with {RouterRecordId=result.UserId??""};
                 }
                 catch (Exception ex)
                 {

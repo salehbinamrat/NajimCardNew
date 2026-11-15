@@ -38,7 +38,8 @@ public sealed partial class RouterGateway
                     ["name"]=voucher.Username,
                     ["password"]=voucher.Password,
                     ["profile"]=voucher.Profile,
-                    ["service"]="pppoe"
+                    ["service"]="pppoe",
+                    ["comment"]=voucher.DeliveryTag
                 },ct);
         }
         catch(RouterOsTrapException ex)

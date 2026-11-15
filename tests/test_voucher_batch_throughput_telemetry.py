@@ -22,7 +22,7 @@ class BatchThroughputTelemetryContract(unittest.TestCase):
         source=DISPATCH.read_text(encoding="utf-8")
         self.assertIn("gateway.ReadExistingVoucherNamesAsync",source)
         self.assertIn("VerifyUserManagerV6HotspotReadinessAsync",source)
-        self.assertIn("sendSession.BeginSend(voucher)",source)
+        self.assertIn("sendSession.BeginSend(selected)",source)
         self.assertIn("sendSession.FinishSend(voucher, state, error)",source)
         self.assertIn('state = "UNKNOWN"',source)
         self.assertIn("using var sendSession = store.OpenSendSession()",source)

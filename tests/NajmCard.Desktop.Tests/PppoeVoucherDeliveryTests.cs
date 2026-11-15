@@ -10,7 +10,7 @@ namespace NajmCard.Desktop.Tests;
 public sealed class PppoeVoucherDeliveryTests
 {
     private static Voucher Card(string name,string service) =>
-        new(name,"secret","gold","batch1",DateTimeOffset.UtcNow,Service:service);
+        new(name,"secret","gold","batch1",DateTimeOffset.UtcNow,Service:service) {RouterId=VoucherDeliveryFixture.RouterId};
 
     private sealed class Spy : IRouterCommandClient, IRouterReceiptClient
     {
@@ -29,6 +29,9 @@ public sealed class PppoeVoucherDeliveryTests
             string command,IReadOnlyDictionary<string,string>? attrs=null,
             CancellationToken ct=default)
         {
+            if(command=="/system/routerboard/print")
+                return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>(
+                    [new Dictionary<string,string>{{"serial-number",VoucherDeliveryFixture.Serial}}]);
             if (!command.EndsWith("/print",StringComparison.Ordinal))
                 throw new InvalidOperationException("No non-read PPPoE command expected");
             return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>([]);

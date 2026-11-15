@@ -198,7 +198,7 @@ public sealed class VoucherWorkspaceView : UserControl
         history.FontSize = 11;
         history.Click += (_, _) =>
         {
-            var dialog = new VoucherDeliveryHistoryWindow(store);
+            var dialog = new VoucherDeliveryHistoryWindow(store,gateway);
             if (Window.GetWindow(this) is Window owner) dialog.Owner = owner;
             dialog.ShowDialog();
         };

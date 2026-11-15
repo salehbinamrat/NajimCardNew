@@ -11,7 +11,7 @@ public sealed class VoucherBatchDispatchTests
 {
     private static Voucher Voucher(string name, string service, string customer = "") =>
         new(name, "pass123", "gold", "batch-r", DateTimeOffset.UtcNow,
-            Service: service, Customer: customer);
+            Service: service, Customer: customer) {RouterId=VoucherDeliveryFixture.RouterId};
 
     private sealed class Spy : IRouterCommandClient, IRouterReceiptClient, IRouterQueryClient
     {
@@ -50,6 +50,9 @@ public sealed class VoucherBatchDispatchTests
         {
             if (command.EndsWith("/print", StringComparison.Ordinal))
             {
+                if(command=="/system/routerboard/print")
+                    return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>(
+                        [new Dictionary<string,string>{{"serial-number",VoucherDeliveryFixture.Serial}}]);
                 Reads.Add(command);
                 OnInventoryRead?.Invoke();
                 if (FailNameRead && command == "/ppp/secret/print")
@@ -410,7 +413,7 @@ public sealed class VoucherBatchDispatchTests
                 UsernameOnly:mode=="username-only");
             var card=Assert.Single(VoucherGenerator.Generate(options)) with
             {
-                Service=service,Customer=service=="userman"?"admin":""
+                Service=service,Customer=service=="userman"?"admin":"",RouterId=VoucherDeliveryFixture.RouterId
             };
             store.SaveBatch([card]);
             var before=Assert.Single(store.GetBatchVouchers(service,card.BatchId));

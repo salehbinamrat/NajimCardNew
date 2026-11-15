@@ -18,7 +18,7 @@ class VoucherIssuancePerformanceContracts(unittest.TestCase):
         self.assertIn("using var tx = db.BeginTransaction();",store)
         dispatcher=(DESKTOP/"Services/VoucherBatchDispatcher.cs").read_text(encoding="utf-8")
         self.assertIn("using var sendSession = store.OpenSendSession();",dispatcher)
-        self.assertIn("sendSession.BeginSend(voucher);",dispatcher)
+        self.assertIn("sendSession.BeginSend(selected);",dispatcher)
         self.assertIn("sendSession.FinishSend(voucher, state, error);",dispatcher)
 
     def test_um_v6_learns_projection_only_without_removing_readback(self):

@@ -22,13 +22,13 @@ public sealed class VoucherBatchPrintOptionsTests
         {
             using var store=new VoucherStore(folder);
             var sent=new Voucher("12345","topSecret","gold","batch-1",
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow) {RouterId=VoucherDeliveryFixture.RouterId};
             var unknown=new Voucher("12346","otherSecret","gold","batch-2",
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow) {RouterId=VoucherDeliveryFixture.RouterId};
             store.SaveBatch([sent,unknown]);
-            store.BeginSend(sent);
+            sent=store.BeginSend(sent);
             store.FinishSend(sent,"SENT");
-            store.BeginSend(unknown);
+            unknown=store.BeginSend(unknown);
             store.FinishSend(unknown,"UNKNOWN");
             var batches=store.ListPrintableBatches();
             var only=Assert.Single(batches);

@@ -21,7 +21,7 @@ class ParallelVoucherPreflightContract(unittest.TestCase):
         self.assertIn("rows.Any(row=>!row.ContainsKey(actualField))",gateway)
         self.assertIn("ReadSourceAsync(path,field)",gateway)
         self.assertLess(dispatcher.index("gateway.ReadExistingVoucherNamesAsync"),
-                        dispatcher.index("sendSession.BeginSend(voucher)"))
+                        dispatcher.index("sendSession.BeginSend(selected)"))
         self.assertLess(dispatcher.index("await gateway.ReadExistingVoucherNamesAsync"),
                         dispatcher.index("using var sendSession = store.OpenSendSession()"))
 

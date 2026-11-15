@@ -20,7 +20,7 @@ public sealed class VoucherStoreServiceTests
 
     private static Voucher Card(string name, string service, string customer) =>
         new(name, "same-pass", "gold", "batch-1", DateTimeOffset.UtcNow,
-            Service: service, Customer: customer);
+            Service: service, Customer: customer) {RouterId=VoucherDeliveryFixture.RouterId};
 
     [Fact]
     public void Stores_And_Reads_UserManager_Owner_And_Service_Without_Confusing_Hotspot()
@@ -41,7 +41,7 @@ public sealed class VoucherStoreServiceTests
             Assert.Equal("00102", um.Username);
             Assert.Equal("admin", um.Customer);
             Assert.Equal("same-pass", um.Password);
-            store.MarkSent(["00102"], "userman");
+            store.FinishSend(store.BeginSend(um),"SENT");
             saved = store.GetVouchers();
             Assert.True(Assert.Single(saved.Where(x => x.Service == "userman")).SentToRouter);
             Assert.False(Assert.Single(saved.Where(x => x.Service == "hotspot")).SentToRouter);

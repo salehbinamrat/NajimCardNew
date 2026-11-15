@@ -29,6 +29,7 @@ public sealed record VoucherBatchPrintSnapshot(
     CardPrintOptions Print, VoucherCardAppearance Appearance,
     VoucherOutputPreferences? Output=null)
 {
+    public string RouterId { get; init; }="";
     public VoucherBatchPrintSnapshot Validate()
     {
         if(Service is not ("hotspot" or "userman" or "pppoe") ||

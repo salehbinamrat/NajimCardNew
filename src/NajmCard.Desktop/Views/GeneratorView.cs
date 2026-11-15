@@ -11,7 +11,6 @@ using NajmCard.Core.Services;
 using NajmCard.Desktop.Services;
 
 namespace NajmCard.Desktop.Views;
-
 public partial class GeneratorView : UserControl
 {
     private const string DefaultTemplate="NajmCard-Hadramout-Compact";
@@ -43,7 +42,7 @@ public partial class GeneratorView : UserControl
     {
         if(_batch.Count==0)return [];
         var service=_batch[0].Service;
-        return _store.GetBatchVouchers(service,_batch[0].BatchId)
+        return _store.GetBatchVouchers(service,_batch[0].BatchId,_batch[0].RouterId)
             .Where(x=>x.DeliveryStatus=="SENT" && x.SentToRouter).ToArray();
     }
     public void SelectService(string service)
@@ -611,18 +610,19 @@ public partial class GeneratorView : UserControl
                         ex.Message+"؛ راجعها قبل طباعة الكروت.";
                 }
             }
+            var routerId=persist?await _gateway.ReadRouterIdentityAsync():"";
             ReportOperationProgress("توليد أرقام الكروت...");
             IProgress<string> saveStage=new Progress<string>(ReportOperationProgress);
             var candidates=await Task.Run(()=>
             {
-                var reserved=_store.ReservedNames(service);
+                var reserved=_store.ReservedNames(service,routerId);
                 var newCards=VoucherGenerator.Generate(options,reserved)
-                    .Select(x=>x with {Service=service,Customer=customer}).ToArray();
+                    .Select(x=>x with {Service=service,Customer=customer,RouterId=routerId}).ToArray();
                 VoucherBatchPrintSnapshot? snapshot=null;
                 if(persist && capturedPrint is not null && capturedAppearance is not null)
                     snapshot=new VoucherBatchPrintSnapshot(
                         service,newCards[0].BatchId,profile,customer,
-                        capturedPrint,capturedAppearance,capturedOutput);
+                        capturedPrint,capturedAppearance,capturedOutput) {RouterId=routerId};
                 if(persist)
                 {
                     saveStage.Report("حفظ الكروت في قاعدة البيانات المحلية...");
@@ -696,22 +696,22 @@ public partial class GeneratorView : UserControl
                 .SendAsync(current, progress:new Progress<string>(ReportOperationProgress));
             if (result.UncertainOutcome)
             {
-                _batch = await Task.Run(()=>_store.GetBatchVouchers(service, current[0].BatchId).ToArray());
+                _batch = await Task.Run(()=>_store.GetBatchVouchers(service, current[0].BatchId,current[0].RouterId).ToArray());
                 BatchChanged?.Invoke();
                 _table.ItemsSource = _batch.Take(500).ToArray();
-                var reason=_store.FirstDeliveryError(service,current[0].BatchId);
+                var reason=_store.FirstDeliveryError(service,current[0].BatchId,current[0].RouterId);
                 _status.Text = "الاتصال أو رد الراوتر غير مؤكد. يُمنع إعادة إرسال كروت " +
                     "UNKNOWN/SENDING أو طباعتها قبل التحقق من الراوتر." +
                     (string.IsNullOrWhiteSpace(reason)?"":" السبب: "+reason);
             }
             else
             {
-                var persisted = await Task.Run(()=>_store.GetBatchVouchers(service, current[0].BatchId).ToArray());
+                var persisted = await Task.Run(()=>_store.GetBatchVouchers(service, current[0].BatchId,current[0].RouterId).ToArray());
                 _batch = persisted;
                 BatchChanged?.Invoke();
                 _table.ItemsSource = _batch.Take(500).ToArray();
                 var reason=result.Failed.Count>0?
-                    _store.FirstDeliveryError(service,current[0].BatchId):null;
+                    _store.FirstDeliveryError(service,current[0].BatchId,current[0].RouterId):null;
                 _status.Text = "تم إرسال " + result.Succeeded +
                     " كرتاً، وفشل " + result.Failed.Count +
                     ". جميع الحالات محفوظة محلياً." +
@@ -727,7 +727,7 @@ public partial class GeneratorView : UserControl
             try
             {
                 var batchId=_batch[0].BatchId;
-                _batch=await Task.Run(()=>_store.GetBatchVouchers(service,batchId).ToArray());
+                _batch=await Task.Run(()=>_store.GetBatchVouchers(service,batchId,_batch[0].RouterId).ToArray());
                 _table.ItemsSource=_batch.Take(500).ToArray();
                 BatchChanged?.Invoke();
                 _status.Text+=" | حُدثت الحالات المحفوظة؛ راجع سجل الدفعات قبل أي إعادة إرسال.";

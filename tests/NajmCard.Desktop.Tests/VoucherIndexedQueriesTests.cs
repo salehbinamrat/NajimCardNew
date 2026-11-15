@@ -21,7 +21,7 @@ public sealed class VoucherIndexedQueriesTests : IDisposable
         string customer="",int minute=0) =>
         new(username,"PrivatePW-"+username,"gold",batch,
             new DateTimeOffset(2026,11,7,12,0,0,TimeSpan.Zero).AddMinutes(minute),
-            Service:service,Customer:customer);
+            Service:service,Customer:customer) {RouterId=VoucherDeliveryFixture.RouterId};
 
     [Fact]
     public void Delivery_History_Recovers_Mixed_Outcomes_After_Reopening_Without_Reading_Passwords()
@@ -35,13 +35,13 @@ public sealed class VoucherIndexedQueriesTests : IDisposable
         {
             store.SaveBatch([sent, pending, failed, unknown, interrupted,
                 Card("00001", "batch", "userman", "admin", minute: 1)]);
-            store.BeginSend(sent);
+            sent=store.BeginSend(sent);
             store.FinishSend(sent, "SENT");
-            store.BeginSend(failed);
+            failed=store.BeginSend(failed);
             store.FinishSend(failed, "FAILED");
-            store.BeginSend(unknown);
+            unknown=store.BeginSend(unknown);
             store.FinishSend(unknown, "UNKNOWN");
-            store.BeginSend(interrupted);
+            interrupted=store.BeginSend(interrupted);
         }
 
         // The status view can still read records whose credential bytes are unavailable.
@@ -59,9 +59,9 @@ public sealed class VoucherIndexedQueriesTests : IDisposable
         var batch = summaries[1];
         Assert.Equal((5, 1, 1, 1, 2), (batch.Total, batch.Sent, batch.Pending, batch.Failed, batch.NeedsReview));
         Assert.Equal([
-            new("00001", "SENT"), new("00002", "CREATED"), new("00003", "FAILED"),
-            new("00004", "REVIEW"), new("00005", "REVIEW")
-        ], reopened.ReadDeliveryEntries(batch.Service, batch.BatchId));
+            ("00001", "SENT"), ("00002", "CREATED"), ("00003", "FAILED"),
+            ("00004", "UNKNOWN"), ("00005", "SENDING")
+        ], reopened.ReadDeliveryEntries(batch.Service, batch.BatchId).Select(x=>(x.Number,x.State)));
         Assert.Single(reopened.ReadDeliveryEntries("userman", "batch"));
     }
 
@@ -95,8 +95,8 @@ public sealed class VoucherIndexedQueriesTests : IDisposable
         var c=Card("00003","c",minute:3);
         var d=Card("00004","d",minute:4);
         store.SaveBatch([a,b,c,d]);
-        store.MarkSent([a.Username,c.Username,d.Username]);
-        store.BeginSend(b);
+        foreach(var card in new[]{a,c,d})store.FinishSend(store.BeginSend(card),"SENT");
+        b=store.BeginSend(b);
         store.FinishSend(b,"UNKNOWN","Router replied ambiguously");
         var rows=store.GetPrintableVouchers(2);
         Assert.Equal(["00004","00003"],rows.Select(v=>v.Username).ToArray());

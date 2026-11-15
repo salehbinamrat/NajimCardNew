@@ -52,119 +52,11 @@ public sealed partial class VoucherStore : IDisposable
         }
     }
 
-    private static void EnsureSchema(SqliteConnection db)
+    private void EnsureSchema(SqliteConnection db)
     {
-        using (var cmd = db.CreateCommand())
-        {
-            cmd.CommandText = """
-                CREATE TABLE IF NOT EXISTS vouchers (
-                    service TEXT NOT NULL COLLATE NOCASE DEFAULT 'hotspot',
-                    username TEXT NOT NULL COLLATE NOCASE,
-                    customer TEXT NOT NULL DEFAULT '',
-                    password_protected TEXT NOT NULL,
-                    profile TEXT NOT NULL,
-                    batch_id TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    sent INTEGER NOT NULL DEFAULT 0,
-                    PRIMARY KEY(service, username)
-                );
-                """;
-            cmd.ExecuteNonQuery();
-        }
-
-        var primaryKeys = new Dictionary<string,long>(StringComparer.OrdinalIgnoreCase);
-        using (var pragma = db.CreateCommand())
-        {
-            pragma.CommandText = "PRAGMA table_info(vouchers)";
-            using var reader = pragma.ExecuteReader();
-            while (reader.Read())
-                primaryKeys[reader.GetString(1)] = reader.GetInt64(5);
-        }
-        if (!primaryKeys.ContainsKey("username") || !primaryKeys.ContainsKey("password_protected"))
-            throw new InvalidDataException("مخطط قاعدة كروت تريم كارد غير معروف؛ لم تُعدّل البيانات.");
-
-        bool currentSchema = primaryKeys.TryGetValue("service", out long sPk) && sPk == 1
-            && primaryKeys.TryGetValue("username", out long uPk) && uPk == 2
-            && primaryKeys.ContainsKey("customer");
-        if (!currentSchema)
-        {
-            // DDL and data copy are transactional; preserve the original file on any failure.
-            using var tx = db.BeginTransaction();
-            using var cmd = db.CreateCommand();
-            cmd.Transaction = tx;
-            cmd.CommandText = """
-                CREATE TABLE vouchers_migrated (
-                    service TEXT NOT NULL COLLATE NOCASE DEFAULT 'hotspot',
-                    username TEXT NOT NULL COLLATE NOCASE,
-                    customer TEXT NOT NULL DEFAULT '',
-                    password_protected TEXT NOT NULL,
-                    profile TEXT NOT NULL,
-                    batch_id TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    sent INTEGER NOT NULL DEFAULT 0,
-                    PRIMARY KEY(service, username)
-                );
-                """;
-            cmd.ExecuteNonQuery();
-            var serviceSql = primaryKeys.ContainsKey("service") ? "COALESCE(service, 'hotspot')" : "'hotspot'";
-            var customerSql = primaryKeys.ContainsKey("customer") ? "COALESCE(customer, '')" : "''";
-            cmd.CommandText = $"""
-                INSERT INTO vouchers_migrated(service,username,customer,
-                    password_protected,profile,batch_id,created_at,sent)
-                SELECT {serviceSql},username,{customerSql},
-                    password_protected,profile,batch_id,created_at,sent FROM vouchers;
-                """;
-            cmd.ExecuteNonQuery();
-            cmd.CommandText = """
-                DROP TABLE vouchers;
-                ALTER TABLE vouchers_migrated RENAME TO vouchers;
-                CREATE INDEX idx_vouchers_batch ON vouchers(batch_id);
-                """;
-            cmd.ExecuteNonQuery();
-            tx.Commit();
-        }
-        else
-        {
-            using var cmd = db.CreateCommand();
-            cmd.CommandText = "CREATE INDEX IF NOT EXISTS idx_vouchers_batch ON vouchers(batch_id);";
-            cmd.ExecuteNonQuery();
-        }
-        EnsureDeliveryColumns(db);
+        EnsureRouterDeliverySchema(db);
         EnsureIndexedQuerySchema(db);
         EnsureActivitySchema(db);
-    }
-
-    private static void EnsureDeliveryColumns(SqliteConnection db)
-    {
-        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        using (var table = db.CreateCommand())
-        {
-            table.CommandText = "PRAGMA table_info(vouchers)";
-            using var reader = table.ExecuteReader();
-            while (reader.Read()) columns.Add(reader.GetString(1));
-        }
-
-        if (columns.Contains("delivery_status") && columns.Contains("last_error"))
-            return;
-        using var tx = db.BeginTransaction();
-        using var command = db.CreateCommand();
-        command.Transaction = tx;
-        if (!columns.Contains("delivery_status"))
-        {
-            command.CommandText =
-                "ALTER TABLE vouchers ADD COLUMN delivery_status TEXT NOT NULL DEFAULT 'CREATED'";
-            command.ExecuteNonQuery();
-            command.CommandText =
-                "UPDATE vouchers SET delivery_status=CASE WHEN sent=1 THEN 'SENT' ELSE 'CREATED' END";
-            command.ExecuteNonQuery();
-        }
-        if (!columns.Contains("last_error"))
-        {
-            command.CommandText =
-                "ALTER TABLE vouchers ADD COLUMN last_error TEXT NOT NULL DEFAULT ''";
-            command.ExecuteNonQuery();
-        }
-        tx.Commit();
     }
 
     // No password is a legitimate Hadramout code_only voucher. Do not call
@@ -183,6 +75,8 @@ public sealed partial class VoucherStore : IDisposable
     private static void Validate(Voucher voucher)
     {
         ArgumentNullException.ThrowIfNull(voucher);
+        if(voucher.RouterId is null||voucher.RouterId.Length>128||voucher.RouterId.Any(char.IsControl))
+            throw new ArgumentException("هوية الراوتر غير صالحة.");
         if (voucher.Service is not ("hotspot" or "userman" or "pppoe"))
             throw new ArgumentException("خدمة الكرت غير مدعومة.", nameof(voucher));
         if (string.IsNullOrWhiteSpace(voucher.Username)
@@ -208,7 +102,7 @@ public sealed partial class VoucherStore : IDisposable
             if(vouchers.Any(v=>v.Service!=printSnapshot.Service ||
                 v.BatchId!=printSnapshot.BatchId ||
                 v.Profile!=printSnapshot.Profile ||
-                v.Customer!=printSnapshot.Customer))
+                v.Customer!=printSnapshot.Customer || v.RouterId!=printSnapshot.RouterId))
                 throw new ArgumentException(
                     "قالب الطباعة لا يطابق خدمة أو دفعة أو باقة الكروت.");
         }
@@ -221,9 +115,10 @@ public sealed partial class VoucherStore : IDisposable
         cmd.Transaction=tx;
         cmd.CommandText="""
             INSERT INTO vouchers(service,username,customer,password_protected,
-                profile,batch_id,created_at,sent,delivery_status)
-            VALUES($svc,$u,$customer,$p,$profile,$b,$c,$s,$state)
+                profile,batch_id,created_at,sent,delivery_status,router_id,updated_utc)
+            VALUES($svc,$u,$customer,$p,$profile,$b,$c,$s,$state,$router,$c)
             """;
+        var router=cmd.Parameters.Add("$router",SqliteType.Text);
         var svc=cmd.Parameters.Add("$svc",SqliteType.Text);
         var username=cmd.Parameters.Add("$u",SqliteType.Text);
         var customer=cmd.Parameters.Add("$customer",SqliteType.Text);
@@ -236,6 +131,7 @@ public sealed partial class VoucherStore : IDisposable
         cmd.Prepare();
         foreach(var voucher in vouchers)
         {
+            router.Value=voucher.RouterId;
             svc.Value=voucher.Service;
             username.Value=voucher.Username;
             customer.Value=voucher.Customer;
@@ -246,10 +142,18 @@ public sealed partial class VoucherStore : IDisposable
             sent.Value=voucher.SentToRouter?1:0;
             state.Value=voucher.SentToRouter?"SENT":"CREATED";
             cmd.ExecuteNonQuery();
+            WriteDeliveryEvent(db,tx,voucher,"",voucher.SentToRouter?"SENT":"CREATED","حفظ الكرت محليا");
+            using var entry=db.CreateCommand();entry.Transaction=tx;
+            entry.CommandText="INSERT OR IGNORE INTO voucher_batches VALUES($router,$service,$batch,$created)";
+            entry.Parameters.AddWithValue("$router",voucher.RouterId);
+            entry.Parameters.AddWithValue("$service",voucher.Service);
+            entry.Parameters.AddWithValue("$batch",voucher.BatchId);
+            entry.Parameters.AddWithValue("$created",voucher.CreatedAt.ToString("O"));
+            entry.ExecuteNonQuery();
         }
         // Same transaction: a batch is never committed without its activity.
         var first=vouchers[0];
-        WriteActivity(db,tx,ActivityBatchKey(first.Service,first.BatchId),
+        WriteActivity(db,tx,ActivityBatchKey(first.Service,first.BatchId,first.RouterId),
             "CARDS","إنشاء دفعة كروت","INFO",
             "خدمة "+first.Service+" | عدد الكروت "+vouchers.Count.ToString(CultureInfo.InvariantCulture));
         // Credential rows and their print-template snapshot must commit as one
@@ -265,60 +169,47 @@ public sealed partial class VoucherStore : IDisposable
         using var cmd=db.CreateCommand();
         cmd.CommandText="""
             SELECT username,password_protected,profile,batch_id,created_at,
-                sent,service,customer,delivery_status FROM vouchers
+                sent,service,customer,delivery_status,router_id,attempt_id,updated_utc,last_error,router_record_id FROM vouchers
             ORDER BY created_at DESC LIMIT $limit
             """;
         cmd.Parameters.AddWithValue("$limit",Math.Clamp(limit,1,10000));
         return ReadVoucherRows(cmd);
     }
 
-    public IReadOnlySet<string> ReservedNames(string service = "hotspot")
+    public IReadOnlySet<string> ReservedNames(string service = "hotspot",string? routerId=null)
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT username FROM vouchers WHERE service=$svc";
+        cmd.CommandText = "SELECT username FROM vouchers WHERE service=$svc AND ($router IS NULL OR router_id=$router)";
         cmd.Parameters.AddWithValue("$svc", service);
+        cmd.Parameters.AddWithValue("$router",(object?)routerId??DBNull.Value);
         using var reader = cmd.ExecuteReader();
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (reader.Read()) names.Add(reader.GetString(0));
         return names;
     }
 
-    public void MarkSent(IEnumerable<string> usernames, string service = "hotspot")
-    {
-        ArgumentNullException.ThrowIfNull(usernames);
-        if (service is not ("hotspot" or "userman" or "pppoe"))
-            throw new ArgumentException("نوع خدمة غير صالح.", nameof(service));
-        using var db = Open();
-        using var tx = db.BeginTransaction();
-        foreach (var name in usernames)
-        {
-            using var cmd = db.CreateCommand();
-            cmd.Transaction = tx;
-            cmd.CommandText = "UPDATE vouchers SET sent=1, delivery_status='SENT' WHERE username=$name AND service=$svc";
-            cmd.Parameters.AddWithValue("$name", name);
-            cmd.Parameters.AddWithValue("$svc", service);
-            cmd.ExecuteNonQuery();
-        }
-        tx.Commit();
-    }
+    [Obsolete("Use a durable send lease and its exact receipt, or verified reconciliation.")]
+    public void MarkSent(IEnumerable<string> usernames,string service="hotspot")=>
+        throw new InvalidOperationException("لا يمكن تأكيد إرسال الكروت بالاسم وحده؛ يلزم إيصال مرتبط بالراوتر والمحاولة.");
 
     /// <summary>
     /// Persist an exclusive pre-send lease before network I/O. A crash must
     /// leave a SENDING row that cannot be silently reissued at next launch.
     /// Only CREATED / explicitly failed requests can enter SENDING.
     /// </summary>
-    public void BeginSend(Voucher voucher)
+    public Voucher BeginSend(Voucher voucher)
     {
         using var db = Open();
-        BeginSendOnConnection(db, voucher);
+        return BeginSendOnConnection(db, voucher,out _);
     }
 
-    private static string BeginSendOnConnection(SqliteConnection db, Voucher voucher)
+    private static Voucher BeginSendOnConnection(SqliteConnection db, Voucher voucher,out string previousState)
     {
         Validate(voucher);
+        RequireRouter(voucher.RouterId);
+        var lease=voucher with {AttemptId=Guid.NewGuid().ToString("N"),DeliveryStatus="SENDING",UpdatedUtc=DateTimeOffset.UtcNow.ToString("O")};
         using var tx = db.BeginTransaction();
-        string previousState;
 
         using (var read = db.CreateCommand())
         {
@@ -326,8 +217,9 @@ public sealed partial class VoucherStore : IDisposable
             read.CommandText = """
                 SELECT password_protected,delivery_status FROM vouchers
                 WHERE service=$service AND username=$name AND batch_id=$batch
-                  AND customer=$customer AND profile=$profile
+                  AND customer=$customer AND profile=$profile AND router_id=$router
                 """;
+            read.Parameters.AddWithValue("$router",voucher.RouterId);
             read.Parameters.AddWithValue("$service", voucher.Service);
             read.Parameters.AddWithValue("$name", voucher.Username);
             read.Parameters.AddWithValue("$batch", voucher.BatchId);
@@ -346,12 +238,15 @@ public sealed partial class VoucherStore : IDisposable
         using var cmd = db.CreateCommand();
         cmd.Transaction = tx;
         cmd.CommandText = """
-            UPDATE vouchers SET delivery_status='SENDING',
+            UPDATE vouchers SET delivery_status='SENDING',attempt_id=$attempt,updated_utc=$updated,
                 last_error='بدأ الإرسال؛ افحص الراوتر إذا توقف البرنامج'
             WHERE service=$service AND username=$name AND batch_id=$batch
-              AND customer=$customer AND profile=$profile AND sent=0
-              AND delivery_status IN ('CREATED','FAILED')
+              AND customer=$customer AND profile=$profile AND router_id=$router AND sent=0
+              AND delivery_status IN ('CREATED','FAILED','READY')
             """;
+        cmd.Parameters.AddWithValue("$router",voucher.RouterId);
+        cmd.Parameters.AddWithValue("$attempt",lease.AttemptId);
+        cmd.Parameters.AddWithValue("$updated",lease.UpdatedUtc);
         cmd.Parameters.AddWithValue("$service", voucher.Service);
         cmd.Parameters.AddWithValue("$name", voucher.Username);
         cmd.Parameters.AddWithValue("$batch", voucher.BatchId);
@@ -360,8 +255,9 @@ public sealed partial class VoucherStore : IDisposable
         if (cmd.ExecuteNonQuery() != 1)
             throw new InvalidOperationException(
                 "الكرت مُرسل أو قيد الإرسال أو نتيجته غير مؤكدة؛ لا يمكن إعادة إرساله.");
+        WriteDeliveryEvent(db,tx,lease,previousState,"SENDING","بدأت محاولة إرسال محفوظة قبل الاتصال");
         tx.Commit();
-        return previousState;
+        return lease;
     }
 
     /// <summary>Record the authoritative result; never convert UNKNOWN into retryable FAILED.</summary>
@@ -389,8 +285,9 @@ public sealed partial class VoucherStore : IDisposable
                 COALESCE(SUM(CASE WHEN delivery_status='SENT' THEN 1 ELSE 0 END),0),
                 COALESCE(SUM(CASE WHEN delivery_status='UNKNOWN' THEN 1 ELSE 0 END),0),
                 COALESCE(SUM(CASE WHEN delivery_status='FAILED' THEN 1 ELSE 0 END),0)
-            FROM vouchers WHERE service=$svc AND batch_id=$batch
+            FROM vouchers WHERE service=$svc AND batch_id=$batch AND router_id=$router
             """;
+        counts.Parameters.AddWithValue("$router",voucher.RouterId);
         counts.Parameters.AddWithValue("$svc",voucher.Service);
         counts.Parameters.AddWithValue("$batch",voucher.BatchId);
         using var reader=counts.ExecuteReader();
@@ -411,18 +308,24 @@ public sealed partial class VoucherStore : IDisposable
         BatchProgress? cached=null)
     {
         ArgumentNullException.ThrowIfNull(voucher);
+        RequireRouter(voucher.RouterId);
+        if(string.IsNullOrEmpty(voucher.AttemptId))throw new InvalidOperationException("إيصال الإرسال لا يطابق محاولة محفوظة.");
         if (state is not ("SENT" or "FAILED" or "UNKNOWN"))
             throw new ArgumentException("حالة تسليم الكرت غير صالحة.", nameof(state));
         using var tx = db.BeginTransaction();
         using var cmd = db.CreateCommand();
         cmd.Transaction = tx;
         cmd.CommandText = """
-            UPDATE vouchers SET delivery_status=$state, last_error=$error,
+            UPDATE vouchers SET delivery_status=$state, last_error=$error,updated_utc=$updated,router_record_id=$remote,
                 sent=CASE WHEN $state='SENT' THEN 1 ELSE 0 END
             WHERE service=$service AND username=$name AND batch_id=$batch
-              AND customer=$customer AND profile=$profile
-              AND delivery_status='SENDING'
+              AND customer=$customer AND profile=$profile AND router_id=$router
+              AND delivery_status='SENDING' AND attempt_id=$attempt
             """;
+        cmd.Parameters.AddWithValue("$router",voucher.RouterId);
+        cmd.Parameters.AddWithValue("$attempt",voucher.AttemptId);
+        cmd.Parameters.AddWithValue("$updated",DateTimeOffset.UtcNow.ToString("O"));
+        cmd.Parameters.AddWithValue("$remote",voucher.RouterRecordId);
         cmd.Parameters.AddWithValue("$state", state);
         cmd.Parameters.AddWithValue("$error", error.Length > 1000 ? error[..1000] : error);
         cmd.Parameters.AddWithValue("$service", voucher.Service);
@@ -445,11 +348,12 @@ public sealed partial class VoucherStore : IDisposable
         string outcome=progress.Uncertain>0?"ERROR":
             progress.Successful==progress.Total?"SUCCESS":
             progress.Failed>0?"PARTIAL":"INFO";
-        WriteActivity(db,tx,ActivityBatchKey(voucher.Service,voucher.BatchId),
+        WriteActivity(db,tx,ActivityBatchKey(voucher.Service,voucher.BatchId,voucher.RouterId),
             "ROUTER","إرسال دفعة كروت",outcome,
             "خدمة "+voucher.Service+" | ناجح "+progress.Successful+
             " من "+progress.Total+" | فاشل "+progress.Failed+
             " | غير مؤكد "+progress.Uncertain);
+        WriteDeliveryEvent(db,tx,voucher,"SENDING",state,"نتيجة محاولة الإرسال");
         tx.Commit();
         return progress;
     }
@@ -468,17 +372,19 @@ public sealed partial class VoucherStore : IDisposable
         private BatchProgress? _progress;
         private string? _service;
         private string? _batchId;
+        private string? _routerId;
         private long _dataVersion=-1;
 
         internal SendSession(VoucherStore store) => _db = store.Open();
 
-        public void BeginSend(Voucher voucher)
+        public Voucher BeginSend(Voucher voucher)
         {
             // A manual retry may legitimately move FAILED -> SENDING.
             // Drop the fast summary so that a formerly failed row is not
             // counted twice when its next receipt becomes SENT.
-            var previous=BeginSendOnConnection(_db,voucher);
+            var lease=BeginSendOnConnection(_db,voucher,out var previous);
             if(previous=="FAILED")_progress=null;
+            return lease;
         }
 
         public void FinishSend(Voucher voucher, string state, string error = "")
@@ -489,11 +395,12 @@ public sealed partial class VoucherStore : IDisposable
             // process changes card delivery states.
             var currentVersion=ReadDataVersion(_db);
             if(_progress is null || _service!=voucher.Service ||
-                _batchId!=voucher.BatchId || _dataVersion!=currentVersion)
+                _batchId!=voucher.BatchId || _routerId!=voucher.RouterId || _dataVersion!=currentVersion)
             {
                 _progress=ReadBatchProgress(_db,null,voucher);
                 _service=voucher.Service;
                 _batchId=voucher.BatchId;
+                _routerId=voucher.RouterId;
                 _dataVersion=currentVersion;
             }
             // Only advance the in-memory counters AFTER the SQL commit.

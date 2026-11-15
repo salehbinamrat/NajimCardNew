@@ -17,6 +17,7 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
     {
         internal readonly SemaphoreSlim Gate=new(1,1);
         internal IRouterCommandClient? Current=current;
+        internal string? VerifiedIdentity;
     }
 
     private readonly Lane _fast;
@@ -25,6 +26,26 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
     private readonly CancellationTokenSource _lifetime=new();
     private readonly CancellationToken _sessionToken;
     private int _closed;
+    private string? _routerIdentity;
+
+    public Task<string> BindRouterIdentityAsync(CancellationToken ct=default)=>
+        ExecuteAsync(_fast,async (current,token)=>
+        {
+            var identity=await RouterDeviceIdentity.ReadAsync(current,token);
+            var previous=Interlocked.CompareExchange(ref _routerIdentity,identity,null);
+            if(previous is not null&&previous!=identity)throw new RouterIdentityMismatchException();
+            _fast.VerifiedIdentity=identity;
+            return identity;
+        },true,ct);
+
+    private async Task VerifyLaneIdentityAsync(Lane lane,IRouterCommandClient current,CancellationToken ct)
+    {
+        var expected=Volatile.Read(ref _routerIdentity);
+        if(expected is null||lane.VerifiedIdentity==expected)return;
+        if(await RouterDeviceIdentity.ReadAsync(current,ct)!=expected)
+            throw new RouterIdentityMismatchException();
+        lane.VerifiedIdentity=expected;
+    }
 
     public ResilientRouterSession(IRouterCommandClient authenticated,
         Func<CancellationToken,Task<IRouterCommandClient>> connect)
@@ -72,20 +93,30 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
         {
             var current=lane.Current ??= await _connect(token);
             token.ThrowIfCancellationRequested();
-            try{return await operation(current,token);}
+            try
+            {
+                await VerifyLaneIdentityAsync(lane,current,token);
+                return await operation(current,token);
+            }
             catch(Exception ex) when(Disconnected(current,ex))
             {
                 lane.Current=null;
+                lane.VerifiedIdentity=null;
                 await ReleaseAsync(current);
                 // A write may already have reached the router before the reply was lost.
                 if(!retryRead || token.IsCancellationRequested)
                     throw;
                 var replacement=lane.Current=await _connect(token);
                 token.ThrowIfCancellationRequested();
-                try{return await operation(replacement,token);}
+                try
+                {
+                    await VerifyLaneIdentityAsync(lane,replacement,token);
+                    return await operation(replacement,token);
+                }
                 catch(Exception repeat) when(Disconnected(replacement,repeat))
                 {
                     lane.Current=null;
+                    lane.VerifiedIdentity=null;
                     await ReleaseAsync(replacement);
                     throw;
                 }
