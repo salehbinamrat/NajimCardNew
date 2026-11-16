@@ -12,10 +12,15 @@ public sealed class PppoeVoucherDeliveryTests
     private static Voucher Card(string name,string service) =>
         new(name,"secret","gold","batch1",DateTimeOffset.UtcNow,Service:service) {RouterId=VoucherDeliveryFixture.RouterId};
 
-    private sealed class Spy : IRouterCommandClient, IRouterReceiptClient
+    private sealed class Spy : IRouterCommandClient, IRouterReceiptClient, IRouterQueryClient
     {
         public readonly List<string> Writes=[];
         public bool MissingReceipt;
+        public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByIdAsync(string command,string id,
+            IReadOnlyDictionary<string,string>? attributes=null,CancellationToken cancellationToken=default)=>
+            Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>([new Dictionary<string,string>
+            {{".id",id},{"name","001234"},{"profile","gold"},{"disabled","false"},{"service","pppoe"}}]);
+
         public Task<RouterCommandReply> CommandWithReceiptAsync(
             string command,IReadOnlyDictionary<string,string>? attrs=null,
             CancellationToken ct=default)

@@ -26,6 +26,7 @@ public sealed partial class RouterGateway
     public async Task VerifyUserManagerV6HotspotReadinessAsync(
         string profile,string customer,CancellationToken ct=default)
     {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.Readiness);
         if(string.IsNullOrWhiteSpace(profile) || string.IsNullOrWhiteSpace(customer))
             throw new ArgumentException("اختر باقة وحساب مدير User Manager v6.");
 
@@ -41,14 +42,18 @@ public sealed partial class RouterGateway
         if(matches.Length==0)
             throw new InvalidOperationException(
                 "الباقة المختارة غير موجودة في User Manager v6؛ حدّث الباقات قبل الإصدار.");
-        if(matches.Any(x=>
-            (Get(x,"owner") is { Length:>0 } owner && 
-                !string.Equals(owner,customer,StringComparison.OrdinalIgnoreCase)) ||
-            (Get(x,"owner").Length==0 && Get(x,"customer") is { Length:>0 } cust &&
-                !string.Equals(cust,customer,StringComparison.OrdinalIgnoreCase))))
+        if(matches.Any(x=>!UserManagerV6QuotaCatalog.TryOwner(x,out _)))
+        {
+            // Some v6 builds omit projected owner columns. One complete
+            // compatibility read may establish ownership; absence never does.
+            packageRows=await client.CommandAsync("/tool/user-manager/profile/print",cancellationToken:ct);
+            matches=packageRows.Where(x=>Get(x,"name")==profile).ToArray();
+        }
+        if(matches.Any(x=>!UserManagerV6QuotaCatalog.TryOwner(x,out _))||
+            matches.Count(x=>UserManagerV6QuotaCatalog.TryOwner(x,out var owner)&&
+                string.Equals(owner,customer,StringComparison.OrdinalIgnoreCase))!=1)
             throw new InvalidOperationException(
-                "حساب المدير لا يطابق مالك الباقة في User Manager v6؛ "+
-                "اختر حساب المدير الصحيح قبل إنشاء أي كرت.");
+                "تعذر تحديد باقة واحدة مملوكة لحساب المدير؛ حدّث الباقات وتحقق من الملكية قبل الإصدار.");
 
         var servers=await client.CommandAsync("/ip/hotspot/print",
             new Dictionary<string,string>

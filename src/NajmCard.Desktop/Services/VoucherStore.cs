@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using NajmCard.Core.Models;
+using NajmCard.Core.Services;
 
 namespace NajmCard.Desktop.Services;
 
@@ -89,7 +90,16 @@ public sealed partial class VoucherStore : IDisposable
 
     public void SaveBatch(IReadOnlyList<Voucher> vouchers,
         VoucherBatchPrintSnapshot? printSnapshot=null)
+        =>SaveBatchCore(vouchers,printSnapshot,false);
+
+    public void SavePreparedBatch(IReadOnlyList<Voucher> vouchers,
+        VoucherBatchPrintSnapshot? printSnapshot=null)
+        =>SaveBatchCore(vouchers,printSnapshot,true);
+
+    private void SaveBatchCore(IReadOnlyList<Voucher> vouchers,
+        VoucherBatchPrintSnapshot? printSnapshot,bool recheckNames)
     {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.SQLite);
         ArgumentNullException.ThrowIfNull(vouchers);
         if(vouchers.Count==0)return;
         if(vouchers.Count>10000)
@@ -106,8 +116,18 @@ public sealed partial class VoucherStore : IDisposable
                 throw new ArgumentException(
                     "قالب الطباعة لا يطابق خدمة أو دفعة أو باقة الكروت.");
         }
+        // DPAPI can be slow; finish it before holding SQLite's writer lock.
+        var protectedPasswords=vouchers.Select(v=>Protect(v.Password)).ToArray();
         using var db=Open();
         using var tx=db.BeginTransaction();
+        if(recheckNames)
+        {
+            var firstRouter=vouchers[0].RouterId;RequireRouter(firstRouter);
+            if(vouchers.Any(v=>v.RouterId!=firstRouter))throw new ArgumentException("اختر راوترا واحدا للدفعة.");
+            var occupied=ReadReservedAcrossServices(db,tx,firstRouter);
+            if(vouchers.Any(v=>!occupied.Add(v.Username)))throw new InvalidOperationException(
+                "رقم كرت محجوز محليا في خدمة أخرى أو في سجل قديم غير محدد الملكية؛ لم تُحفظ الدفعة.");
+        }
         // One prepared INSERT and its parameter objects are reused across the
         // entire SQLite transaction. This eliminates thousands of command and
         // SQLite compilation allocations on large RouterOS batches.
@@ -129,20 +149,27 @@ public sealed partial class VoucherStore : IDisposable
         var sent=cmd.Parameters.Add("$s",SqliteType.Integer);
         var state=cmd.Parameters.Add("$state",SqliteType.Text);
         cmd.Prepare();
+        using var history=CreateDeliveryEventCommand(db,tx);
+        int position=0;
         foreach(var voucher in vouchers)
         {
             router.Value=voucher.RouterId;
             svc.Value=voucher.Service;
             username.Value=voucher.Username;
             customer.Value=voucher.Customer;
-            password.Value=Protect(voucher.Password);
+            password.Value=protectedPasswords[position++];
             profile.Value=voucher.Profile;
             batch.Value=voucher.BatchId;
             created.Value=voucher.CreatedAt.ToString("O",CultureInfo.InvariantCulture);
             sent.Value=voucher.SentToRouter?1:0;
             state.Value=voucher.SentToRouter?"SENT":"CREATED";
             cmd.ExecuteNonQuery();
-            WriteDeliveryEvent(db,tx,voucher,"",voucher.SentToRouter?"SENT":"CREATED","حفظ الكرت محليا");
+            WriteDeliveryEvent(db,tx,voucher,"",voucher.SentToRouter?"SENT":"CREATED","حفظ الكرت محليا",history);
+        }
+        // Register each batch once, instead of reexecuting an ignored INSERT
+        // for every voucher. Keep the audit and print snapshot in this FULL commit.
+        foreach(var voucher in vouchers.DistinctBy(v=>(v.RouterId,v.Service,v.BatchId)))
+        {
             using var entry=db.CreateCommand();entry.Transaction=tx;
             entry.CommandText="INSERT OR IGNORE INTO voucher_batches VALUES($router,$service,$batch,$created)";
             entry.Parameters.AddWithValue("$router",voucher.RouterId);
@@ -189,6 +216,19 @@ public sealed partial class VoucherStore : IDisposable
         return names;
     }
 
+    public IReadOnlySet<string> ReservedNamesAcrossServices(string routerId)
+    {
+        RequireRouter(routerId);using var db=Open();return ReadReservedAcrossServices(db,null,routerId);
+    }
+    private static HashSet<string> ReadReservedAcrossServices(SqliteConnection db,SqliteTransaction? tx,string routerId)
+    {
+        using var cmd=db.CreateCommand();cmd.Transaction=tx;
+        cmd.CommandText="SELECT username FROM vouchers WHERE router_id=$router OR router_id=''";
+        cmd.Parameters.AddWithValue("$router",routerId);
+        using var reader=cmd.ExecuteReader();var names=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while(reader.Read())names.Add(reader.GetString(0));return names;
+    }
+
     [Obsolete("Use a durable send lease and its exact receipt, or verified reconciliation.")]
     public void MarkSent(IEnumerable<string> usernames,string service="hotspot")=>
         throw new InvalidOperationException("لا يمكن تأكيد إرسال الكروت بالاسم وحده؛ يلزم إيصال مرتبط بالراوتر والمحاولة.");
@@ -206,6 +246,7 @@ public sealed partial class VoucherStore : IDisposable
 
     private static Voucher BeginSendOnConnection(SqliteConnection db, Voucher voucher,out string previousState)
     {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.SQLite);
         Validate(voucher);
         RequireRouter(voucher.RouterId);
         var lease=voucher with {AttemptId=Guid.NewGuid().ToString("N"),DeliveryStatus="SENDING",UpdatedUtc=DateTimeOffset.UtcNow.ToString("O")};
@@ -307,6 +348,7 @@ public sealed partial class VoucherStore : IDisposable
         SqliteConnection db, Voucher voucher, string state, string error,
         BatchProgress? cached=null)
     {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.SQLite);
         ArgumentNullException.ThrowIfNull(voucher);
         RequireRouter(voucher.RouterId);
         if(string.IsNullOrEmpty(voucher.AttemptId))throw new InvalidOperationException("إيصال الإرسال لا يطابق محاولة محفوظة.");

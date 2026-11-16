@@ -38,7 +38,8 @@ class HadramoutPackagePrintParity(unittest.TestCase):
         self.assertIn("VoucherBatchPrintSnapshot? printSnapshot=null",voucher_store)
         self.assertLess(voucher_store.index("WriteBatchPrintSnapshot(db,tx,printSnapshot)"),
                         voucher_store.index("tx.Commit();",voucher_store.index("public void SaveBatch(")))
-        self.assertIn("SaveBatch(newCards,snapshot)",creator)
+        self.assertIn("new VoucherBatchPreparer(_gateway,_store).PrepareAsync",creator)
+        self.assertIn("store.SavePreparedBatch(cards,snapshot)",read(SOURCE/"Services/VoucherBatchPreparer.cs"))
         self.assertIn("new VoucherBatchPrintSnapshot(",creator)
         self.assertIn("LoadBatchPrintSnapshot(",batch_store)
         self.assertIn("SaveBatchPrintSnapshot(",batch_store)

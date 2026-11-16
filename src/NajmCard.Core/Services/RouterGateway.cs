@@ -65,8 +65,9 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     /// Missing menu may be skipped; permission/network errors fail closed.
     /// </summary>
     public async Task<IReadOnlySet<string>> ReadExistingVoucherNamesAsync(
-        CancellationToken ct = default)
+        CancellationToken ct = default,string? requiredService=null)
     {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.NameCheck);
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var sources = new (string Path, string Field)[]
         {
@@ -95,6 +96,8 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             }
             catch(RouterOsTrapException ex) when(MissingMenu(ex))
             {
+                if(path==(requiredService switch{"hotspot"=>"/ip/hotspot/user/print",
+                    "pppoe"=>"/ppp/secret/print","userman"=>"/tool/user-manager/user/print",_=>""}))throw;
                 if(path!="/tool/user-manager/user/print")
                     return Array.Empty<string>();
                 // RouterOS v7 has a different User Manager namespace. Never
@@ -113,9 +116,9 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             }
             // Fail closed if the projection omits names even after full
             // readback. Do not issue any card after a partial name scan.
-            if(rows.Any(row=>!row.ContainsKey(actualField)))
+            if(rows.Any(row=>!row.ContainsKey(actualField)||string.IsNullOrWhiteSpace(row[actualField])))
                 rows=await client.CommandAsync(actualPath,cancellationToken:ct);
-            if(rows.Any(row=>!row.ContainsKey(actualField)))
+            if(rows.Any(row=>!row.ContainsKey(actualField)||string.IsNullOrWhiteSpace(row[actualField])))
                 throw new InvalidDataException(
                     "لم يعد RouterOS أسماء المستخدمين المطلوبة؛ أُوقف الإصدار دون أي تعديل.");
             return rows.Select(row=>row[actualField])
@@ -753,12 +756,6 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     /// Never retry an ambiguous write. Only an explicit activation trap permits
     /// cleanup, which is restricted to the ID just returned by /add.
     /// </summary>
-    // RouterOS v6 builds differ in whether projected account fields are
-    // returned. Learn once per connected gateway instead of repeating a
-    // projected read followed by a full fallback for every voucher.
-    // 0=unknown, 1=projected fields supported, 2=full exact-ID read needed.
-    private int _umV6ReadProjectionMode;
-
     public async Task<UserManagerV6DeliveryResult> CreateAndActivateUserManagerV6Async(
         Voucher voucher, string customer, CancellationToken ct = default)
     {
@@ -783,6 +780,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         RouterCommandReply created;
         try
         {
+            using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.Add);
             created = await receiptClient.CommandWithReceiptAsync(
                 "/tool/user-manager/user/add",
                 new Dictionary<string,string>
@@ -819,6 +817,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
 
         try
         {
+            using(VoucherPipelineOperation.Measure(VoucherPipelineStage.Activation))
             await client.CommandAsync(
                 "/tool/user-manager/user/create-and-activate-profile",
                 new Dictionary<string,string>
@@ -827,88 +826,9 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
                     ["customer"] = customer,
                     ["profile"] = voucher.Profile
                 }, ct);
-            // Hadramout uses /add followed by create-and-activate-profile.
-            // That sequence is necessary, but !done only confirms RouterOS
-            // accepted the command. A voucher may still be absent or lack
-            // an actual profile. Do not mark it SENT/printable until a live
-            // exact-ID read confirms both the username and assigned profile.
-            // Never replay either write, even if this read is unavailable.
-            // RouterOS readback failures are NOT activation traps.
-            // Never roll back an account after activation has been ACKed.
-            try
-            {
-                if (client is not IRouterQueryClient lookup)
-                    return new UserManagerV6DeliveryResult(false, true, id,
-                        "قبل الراوتر أمر الربط، لكن لا تتوفر قراءة للتحقق من الحساب؛ لم يُعتمد للطباعة.");
-                const string verifyPath = "/tool/user-manager/user/print";
-                var projection = new Dictionary<string,string>
-                {
-                    [".proplist"] = ".id,username,actual-profile,customer"
-                };
-                string? lastVerificationError = null;
-                for (int attempt=0;attempt<3;attempt++)
-                {
-                    // RouterOS v6 may apply a profile just after its !done ACK.
-                    // A shorter first retry recognizes ready cards sooner,
-                    // while the last attempt is still at the original 450ms.
-                    // No extra router requests and no ambiguous writes retried.
-                    if(attempt>0)await Task.Delay(attempt==1?60:390,ct);
-                    var mode=System.Threading.Volatile.Read(ref _umV6ReadProjectionMode);
-                    var found=mode==2
-                        ?await lookup.QueryByIdAsync(verifyPath,id,cancellationToken:ct)
-                        :await lookup.QueryByIdAsync(verifyPath,id,projection,ct);
-                    // Older RouterOS 6 builds sometimes omit projected columns.
-                    // Detect that once, then query only the exact ID with full
-                    // fields for subsequent cards. Never scan the entire user DB.
-                    if(mode!=2 && found.Count==1)
-                    {
-                        if(!found[0].ContainsKey("username") ||
-                           !found[0].ContainsKey("actual-profile"))
-                        {
-                            System.Threading.Volatile.Write(ref _umV6ReadProjectionMode,2);
-                            found=await lookup.QueryByIdAsync(verifyPath,id,
-                                cancellationToken:ct);
-                        }
-                        else if(mode==0)
-                            System.Threading.Volatile.Write(ref _umV6ReadProjectionMode,1);
-                    }
-                    if(found.Count!=1)
-                    {
-                        lastVerificationError="لم يرجع الراوتر حسابا واحدا بالمعرف الذي أُنشئ.";
-                        continue;
-                    }
-                    var actual=found[0];
-                    if(Get(actual,".id")!=id ||
-                       !string.Equals(Get(actual,"username"),voucher.Username,
-                           StringComparison.Ordinal))
-                    {
-                        lastVerificationError="هوية الحساب المقروء لا تطابق رقم الكرت الذي أُنشئ.";
-                        break;
-                    }
-                    if(actual.TryGetValue("customer",out var reportedCustomer) &&
-                       !string.IsNullOrWhiteSpace(reportedCustomer) &&
-                       !string.Equals(reportedCustomer,customer,StringComparison.OrdinalIgnoreCase))
-                    {
-                        lastVerificationError="حساب مدير الكرت لا يطابق حساب المدير المحدد.";
-                        break;
-                    }
-                    if(string.Equals(Get(actual,"actual-profile"),voucher.Profile,
-                       StringComparison.OrdinalIgnoreCase))
-                        return new UserManagerV6DeliveryResult(true,false,id,null);
-                    lastVerificationError="حساب الكرت موجود لكن باقته لم تتأكد في User Manager.";
-                }
-                return new UserManagerV6DeliveryResult(false,true,id,
-                    (lastVerificationError??"تعذر تأكيد ظهور الكرت وباقته.")+
-                    " راجع الكرت بالاسم في User Manager قبل الطباعة، ولا تُعد إرساله.");
-
-            }
-            catch (Exception ex) when (ex is IOException or OperationCanceledException
-                or InvalidDataException or ObjectDisposedException)
-            {
-                return new UserManagerV6DeliveryResult(false,true,id,
-                    "استجاب الراوتر لأمر إنشاء الحساب وربط الباقة، لكن تعذر تأكيد ظهوره: "+
-                    ex.Message+" | لا تُعد إصدار الكرت أو طباعته قبل التحقق.");
-            }
+            var verificationError=await VerifyIssuedVoucherAsync(voucher,id,"userman",customer,ct);
+            return new UserManagerV6DeliveryResult(verificationError is null,
+                verificationError is not null,id,verificationError);
         }
         catch (RouterOsTrapException ex)
         {

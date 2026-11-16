@@ -41,6 +41,21 @@ jobs:
       - name: Compare simulated RouterOS reads before and after
         shell: pwsh
         run: ./scripts/benchmark-router-reads.ps1 -Label core
+      - name: Check out approved phase 3 for voucher benchmarks
+        uses: actions/checkout@v4
+        with:
+          ref: 7f3b92b4656eb8fa14052b87cb493766b3fd1d6b
+          path: .pipeline-baseline
+          persist-credentials: false
+      - name: Compare voucher pipeline and real WPF PDF before and after
+        shell: pwsh
+        run: ./scripts/benchmark-voucher-pipeline.ps1 -Label core
+      - name: Upload voucher pipeline measurements
+        uses: actions/upload-artifact@v4
+        with:
+          name: Voucher-pipeline-benchmarks-core
+          path: out/voucher-*.jsonl
+          if-no-files-found: error
       - name: Upload read performance measurements
         uses: actions/upload-artifact@v4
         with:
@@ -125,6 +140,21 @@ jobs:
       - name: Compare simulated RouterOS reads before packaging
         shell: pwsh
         run: ./scripts/benchmark-router-reads.ps1 -Label release-${{ matrix.arch }}
+      - name: Check out approved phase 3 for voucher benchmarks
+        uses: actions/checkout@v4
+        with:
+          ref: 7f3b92b4656eb8fa14052b87cb493766b3fd1d6b
+          path: .pipeline-baseline
+          persist-credentials: false
+      - name: Compare voucher pipeline and real WPF PDF before and after
+        shell: pwsh
+        run: ./scripts/benchmark-voucher-pipeline.ps1 -Label release-${{ matrix.arch }} -Architecture ${{ matrix.arch }}
+      - name: Upload voucher pipeline measurements
+        uses: actions/upload-artifact@v4
+        with:
+          name: Voucher-pipeline-benchmarks-${{ matrix.arch }}
+          path: out/voucher-*.jsonl
+          if-no-files-found: error
       - name: Upload read performance measurements
         uses: actions/upload-artifact@v4
         with:

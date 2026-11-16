@@ -20,6 +20,9 @@ class SecureBulkVoucherGenerationContracts(unittest.TestCase):
         self.assertIn("DifferentPassword(p.PasswordCharacters,p.PasswordLength,username,entropy)",CODE)
         self.assertIn("CryptographicOperations.ZeroMemory(_buffer)",CODE)
         self.assertIn("StringComparer.OrdinalIgnoreCase",CODE)
-        self.assertIn("if(!used.Add(username))continue;",CODE)
+        self.assertIn("entropy.NextBelow(remaining)",CODE)
+        self.assertIn("swaps.Remove(last)",CODE)
+        self.assertIn("while(value>=bound)",CODE)
+        self.assertNotIn("budget--",CODE)
 
 if __name__=="__main__": unittest.main()

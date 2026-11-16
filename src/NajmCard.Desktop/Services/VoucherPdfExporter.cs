@@ -59,6 +59,7 @@ public static class VoucherPdfExporter
 
     public static void Export(FixedDocument document,string path)
     {
+        using var render=NajmCard.Core.Services.VoucherPipelineOperation.Measure(NajmCard.Core.Services.VoucherPipelineStage.Print);
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         if(!string.Equals(Path.GetExtension(path),".pdf",StringComparison.OrdinalIgnoreCase))
@@ -122,10 +123,15 @@ public static class VoucherPdfExporter
                     foreach(var text in credentials)DrawCredential(graphics,text,source);
                 }
                 // Stage the complete PDF before touching any existing report.
-                pdf.Save(staged);
+                render?.Dispose();
+                using(NajmCard.Core.Services.VoucherPipelineOperation.Measure(NajmCard.Core.Services.VoucherPipelineStage.Save))
+                    pdf.Save(staged);
             }
-            if(File.Exists(target))File.Replace(staged,target,null);
-            else File.Move(staged,target);
+            using(NajmCard.Core.Services.VoucherPipelineOperation.Measure(NajmCard.Core.Services.VoucherPipelineStage.Save))
+            {
+                if(File.Exists(target))File.Replace(staged,target,null);
+                else File.Move(staged,target);
+            }
         }
         finally {if(File.Exists(staged))File.Delete(staged);}
     }

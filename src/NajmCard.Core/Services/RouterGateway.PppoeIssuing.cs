@@ -31,6 +31,7 @@ public sealed partial class RouterGateway
         RouterCommandReply reply;
         try
         {
+            using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.Add);
             reply=await receiptClient.CommandWithReceiptAsync(
                 "/ppp/secret/add",
                 new Dictionary<string,string>
@@ -59,6 +60,7 @@ public sealed partial class RouterGateway
             return new PppoeVoucherDeliveryResult(false,true,null,
                 "لا يوجد معرف جديد صالح وحيد من الراوتر؛ نتيجة الإنشاء غير مؤكدة.");
 
-        return new PppoeVoucherDeliveryResult(true,false,id,null);
+        var error=await VerifyIssuedVoucherAsync(voucher,id,"pppoe","",ct);
+        return new PppoeVoucherDeliveryResult(error is null,error is not null,id,error);
     }
 }

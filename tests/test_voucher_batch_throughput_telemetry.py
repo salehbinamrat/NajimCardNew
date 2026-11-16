@@ -15,7 +15,7 @@ class BatchThroughputTelemetryContract(unittest.TestCase):
         self.assertIn("databaseTimer.Elapsed",source)
         self.assertIn("routerElapsed +=",source)
         self.assertIn("databaseElapsed +=",source)
-        self.assertIn("كرت/ث",source)
+        self.assertIn("كرت مؤكد/ث",source)
         self.assertIn("زمن الراوتر",source)
         self.assertIn("زمن الحفظ",source)
     def test_does_not_remove_exact_verification_or_durable_receipts(self):

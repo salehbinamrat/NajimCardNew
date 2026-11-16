@@ -22,13 +22,12 @@ class VoucherIssuancePerformanceContracts(unittest.TestCase):
         self.assertIn("sendSession.FinishSend(voucher, state, error);",dispatcher)
 
     def test_um_v6_learns_projection_only_without_removing_readback(self):
-        gateway=(CORE/"RouterGateway.cs").read_text(encoding="utf-8")
-        self.assertIn("_umV6ReadProjectionMode",gateway)
-        self.assertIn("Volatile.Read(ref _umV6ReadProjectionMode)",gateway)
-        self.assertIn("QueryByIdAsync(verifyPath,id,projection,ct)",gateway)
-        self.assertIn("QueryByIdAsync(verifyPath,id,",gateway)
-        self.assertIn("lastVerificationError",gateway)
-        self.assertIn("for (int attempt=0;attempt<3;attempt++)",gateway)
+        verifier=(CORE/"RouterGateway.VoucherVerification.cs").read_text(encoding="utf-8")
+        self.assertIn("_fullVoucherReadback",verifier)
+        self.assertIn("query.QueryByIdAsync(path,id",verifier)
+        self.assertIn("rows.Count==1&&Complete(rows[0])",verifier)
+        self.assertIn("VoucherReadbackPoller.VerifyAsync",verifier)
+        self.assertIn("evidence.Confirmed?null:evidence.Error",verifier)
 
     def test_creator_reentry_cache_is_bounded_and_manual_refresh_forced(self):
         catalog=(DESKTOP/"Views/GeneratorView.ProfileLoading.cs").read_text(encoding="utf-8")
