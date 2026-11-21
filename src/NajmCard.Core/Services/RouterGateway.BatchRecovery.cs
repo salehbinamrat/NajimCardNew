@@ -4,15 +4,25 @@ namespace NajmCard.Core.Services;
 
 public sealed partial class RouterGateway
 {
-    public Task<string> ReadRouterIdentityAsync(CancellationToken ct=default)=>
-        client is ResilientRouterSession session?session.BindRouterIdentityAsync(ct):
-            RouterDeviceIdentity.ReadAsync(client,ct);
+    public async Task<string> ReadRouterIdentityAsync(CancellationToken ct=default)
+    {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.Identity);
+        return await (client is ResilientRouterSession session?session.BindRouterIdentityAsync(ct):
+            RouterDeviceIdentity.ReadAsync(client,ct));
+    }
 
     public async Task VerifyRouterIdentityAsync(string expected,CancellationToken ct=default)
     {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.Identity);
         if(string.IsNullOrWhiteSpace(expected))
             throw new InvalidOperationException("ملكية الدفعة القديمة غير معروفة؛ لا تُنسب تلقائيا إلى الراوتر الحالي.");
-        if(await ReadRouterIdentityAsync(ct)!=expected)throw new RouterIdentityMismatchException();
+        if(client is ResilientRouterSession session)
+        {
+            // The first check binds this session; every replacement connection
+            // is independently verified inside ExecuteAsync before any command.
+            await session.EnsureRouterIdentityAsync(expected,ct);
+        }
+        else if(await RouterDeviceIdentity.ReadAsync(client,ct)!=expected)throw new RouterIdentityMismatchException();
     }
 
     public async Task<VoucherReconciliation> ReconcileVoucherAsync(Voucher card,CancellationToken ct=default)

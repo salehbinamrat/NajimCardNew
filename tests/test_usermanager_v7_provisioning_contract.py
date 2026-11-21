@@ -13,7 +13,7 @@ class V7ProvisioningContracts(unittest.TestCase):
         service=(CORE/"ResilientRouterSession.cs").read_text(encoding="utf-8")
         for source in (client,interface,service):
             self.assertIn("QueryByNameAsync",source)
-        self.assertIn('"?name="+name',client)
+        self.assertIn('"?username=":"?name=")+name',client)
         for path in ("/user-manager/user/print",
                      "/ip/hotspot/user/print","/ppp/secret/print"):
             self.assertIn(path,client)

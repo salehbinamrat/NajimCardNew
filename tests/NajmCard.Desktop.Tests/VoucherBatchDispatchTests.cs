@@ -36,10 +36,11 @@ public sealed class VoucherBatchDispatchTests
             CancellationToken cancellationToken = default)
         {
             Writes.Add((command, new Dictionary<string,string>(attributes!)));
-            if(command=="/tool/user-manager/user/add")
+            if(command.EndsWith("/add",StringComparison.Ordinal))
             {
-                LastUsername=attributes!["username"];
-                LastCustomer=attributes["customer"];
+                LastUsername=attributes!.GetValueOrDefault("username")??attributes.GetValueOrDefault("name");
+                LastProfile=attributes.GetValueOrDefault("profile");
+                LastCustomer=attributes.GetValueOrDefault("customer");
             }
             return Task.FromResult(new RouterCommandReply(
                 [], MissingId ? new Dictionary<string,string>() : new Dictionary<string,string> { ["ret"] = "*A" }));
@@ -107,7 +108,8 @@ public sealed class VoucherBatchDispatchTests
             [
                 new Dictionary<string,string>
                 {
-                    [".id"]=id,["username"]=LastUsername??"",
+                    [".id"]=id,["username"]=LastUsername??"",["name"]=LastUsername??"",
+                    ["profile"]=LastProfile??"",["disabled"]="false",["service"]="pppoe",
                     ["actual-profile"]=SuppressActualProfile?"":LastProfile??"",
                     ["customer"]=LastCustomer??""
                 }

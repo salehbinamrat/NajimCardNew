@@ -20,6 +20,7 @@ public static class VoucherExcelExporter
     public static string Export(IReadOnlyList<Voucher> vouchers, string output,
         string title = "Cards", bool includePasswords = false)
     {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.Save);
         ArgumentNullException.ThrowIfNull(vouchers);
         ArgumentException.ThrowIfNullOrWhiteSpace(output);
         if (!string.Equals(Path.GetExtension(output), ".xlsx", StringComparison.OrdinalIgnoreCase))

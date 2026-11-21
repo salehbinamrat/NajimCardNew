@@ -9,6 +9,7 @@ public static class VoucherBatchCsvExporter
 {
     public static string Export(IReadOnlyList<Voucher> vouchers,string destination)
     {
+        using var measurement=NajmCard.Core.Services.VoucherPipelineOperation.Measure(NajmCard.Core.Services.VoucherPipelineStage.Save);
         ArgumentNullException.ThrowIfNull(vouchers);
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         if(vouchers.Count is <1 or >10000 ||

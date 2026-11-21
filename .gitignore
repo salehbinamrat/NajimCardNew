@@ -18,3 +18,5 @@ appsettings.Local.json
 # Generated distributables (not source files)
 out/
 .benchmark-baseline/
+.pipeline-baseline/
+__pycache__/

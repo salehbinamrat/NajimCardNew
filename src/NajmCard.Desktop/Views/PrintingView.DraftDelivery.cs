@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using NajmCard.Desktop.Services;
+using NajmCard.Core.Services;
 
 namespace NajmCard.Desktop.Views;
 
@@ -48,7 +49,9 @@ public partial class PrintingView
         {
             try
             {
-                VoucherPdfExporter.Export(buildDocument(),path);
+                FixedDocument document;
+                using(VoucherPipelineOperation.Measure(VoucherPipelineStage.Print))document=buildDocument();
+                VoucherPdfExporter.Export(document,path);
                 completion.SetResult();
             }
             catch(Exception ex){completion.SetException(ex);}

@@ -12,14 +12,17 @@ namespace NajmCard.Desktop.Services;
 public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore store)
 {
     public async Task<BatchDeliveryResult> SendAsync(IReadOnlyList<Voucher> batch,
-        CancellationToken cancellationToken = default,IProgress<string>? progress = null)
+        CancellationToken cancellationToken = default,IProgress<string>? progress = null,
+        VoucherPipelineMetrics? metrics=null)
     {
+        using var operation=new VoucherPipelineOperation(metrics);
         ArgumentNullException.ThrowIfNull(batch);
         if (batch.Count == 0 || batch.Count > 10000)
             throw new ArgumentException("عدد كروت الدفعة غير صالح.", nameof(batch));
         // Freeze the caller-owned collection before yielding. IReadOnlyList
         // does not prevent its owner from replacing cards during preflight.
         var snapshot=batch.ToArray();
+        operation.Metrics.SetTotal(snapshot.Length);
         // SQLite FULL commits and DPAPI are synchronous. Keep the complete
         // sequential delivery transaction off the WPF dispatcher, including
         // its initial validation and continuations after each router reply.
@@ -49,6 +52,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
         if (batch.Any(x => !seen.Add(x.Username)))
             throw new ArgumentException("الدفعة تحتوي اسم كرت مكرراً.");
 
+        using var gatewayLock=await gateway.EnterVoucherBatchAsync(cancellationToken);
         using var batchLock=store.LockBatch(first.RouterId,service,first.BatchId);
         await gateway.VerifyRouterIdentityAsync(first.RouterId,cancellationToken);
         var persisted = store.GetBatchVouchers(service, first.BatchId,first.RouterId).ToLookup(
@@ -68,7 +72,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
         // A complete cross-service read is mandatory; do not lease a card or send
         // any RouterOS writes if any service is unavailable/forbidden or names collide.
         progress?.Report("التحقق من الأرقام الموجودة على الراوتر...");
-        var existingNames = await gateway.ReadExistingVoucherNamesAsync(cancellationToken);
+        var existingNames = await gateway.ReadExistingVoucherNamesAsync(cancellationToken,requiredService:service);
         var collisions = batch.Where(v => existingNames.Contains(v.Username))
             .Select(v => v.Username).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (collisions.Length > 0)
@@ -157,8 +161,10 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
             {
                 try
                 {
-                    await gateway.AddHotspotUserAsync(voucher, cancellationToken);
-                    state = "SENT";
+                    var result=await gateway.CreateHotspotVoucherAsync(voucher,cancellationToken);
+                    state=result.Success?"SENT":result.UncertainOutcome?"UNKNOWN":"FAILED";
+                    error=result.Error??"";
+                    voucher=voucher with{RouterRecordId=result.UserId??""};
                 }
                 catch (RouterOsTrapException ex)
                 {
@@ -178,6 +184,7 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
             // investigate; never assume a potentially created card is absent.
             databaseTimer.Restart();
             sendSession.FinishSend(voucher, state, error);
+            VoucherPipelineOperation.Current?.Metrics.Committed(state);
             databaseTimer.Stop();
             databaseElapsed += databaseTimer.Elapsed;
             if (reportCard || state != "SENT")
@@ -185,10 +192,11 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                 // Stopwatch is monotonic; report only aggregate durations and
                 // actual successful/failed counts. Never log credentials.
                 double elapsed=Math.Max(batchTimer.Elapsed.TotalSeconds,0.001);
-                double rate=number/elapsed;
+                int confirmed=succeeded+(state=="SENT"?1:0);
+                double rate=confirmed/elapsed;
                 progress?.Report($"تسجيل نتيجة الكرت {number} من {batch.Count}: "+
                     (state=="SENT"?"تم الإرسال":state=="FAILED"?"رفضه الراوتر":"النتيجة غير مؤكدة")+
-                    $" | {rate:F1} كرت/ث | زمن الراوتر {routerElapsed.TotalSeconds:F1}ث"+
+                    $" | المؤكد {confirmed} من {batch.Count} | {rate:F1} كرت مؤكد/ث | زمن الراوتر {routerElapsed.TotalSeconds:F1}ث"+
                     $" | زمن الحفظ {databaseElapsed.TotalSeconds:F1}ث");
             }
             switch (state)
@@ -200,10 +208,10 @@ public sealed class VoucherBatchDispatcher(RouterGateway gateway, VoucherStore s
                     failed.Add(voucher.Username);
                     break;
                 default:
-                    return new BatchDeliveryResult(succeeded, failed, true);
+                    return new BatchDeliveryResult(succeeded, failed, true){Performance=VoucherPipelineOperation.Current?.Metrics.Snapshot()};
             }
             processed++;
         }
-        return new BatchDeliveryResult(succeeded, failed, false);
+        return new BatchDeliveryResult(succeeded, failed, false){Performance=VoucherPipelineOperation.Current?.Metrics.Snapshot()};
     }
 }

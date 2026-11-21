@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <Stage4 Condition="'$(Stage4)' == ''">true</Stage4>
+    <DefineConstants Condition="'$(Stage4)' == 'true'">$(DefineConstants);STAGE4</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/NajmCard.Core/NajmCard.Core.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.14" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+    <Compile Include="../../src/NajmCard.Desktop/Services/VoucherStore*.cs" Link="Production/%(Filename)%(Extension)" />
+    <Compile Include="../../src/NajmCard.Desktop/Services/VoucherBatch*.cs" Link="Production/%(Filename)%(Extension)" />
+    <Compile Include="../../tests/Fixtures/VoucherPipelineRouter.cs" Link="Fixtures/VoucherPipelineRouter.cs" />
+  </ItemGroup>
+</Project>

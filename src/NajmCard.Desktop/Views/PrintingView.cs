@@ -79,7 +79,11 @@ public partial class PrintingView : UserControl
     public void ApplyOptions(CardPrintOptions options)=>_applyOptions(options);
     public bool PreparePreview()=>_preparePreview();
     public string LastOperationMessage => _status.Text;
-    public void PrintBatch()=>_printBatch();
+    public void PrintBatch()
+    {
+        using var operation=new VoucherPipelineOperation();
+        _printBatch();
+    }
     public Task<bool> SavePdfToPathAsync(string path)=>_exportPdf(path);
     public void Invalidate()=>_invalidate();
 
@@ -514,7 +518,8 @@ public partial class PrintingView : UserControl
                     selectedAppearance,Options,Math.Clamp(Int(qty.Text),1,10000))
                     is not { } job)return false;
                 var (cards,style,opts)=job;
-                prepared=MakeDocument(cards,opts,style);
+                using(VoucherPipelineOperation.Measure(VoucherPipelineStage.Print))
+                    prepared=MakeDocument(cards,opts,style);
                 store.SaveBatchPrintSnapshot(SnapshotForPrint(
                     cards,opts,style,GetOutputPreferences()));
                 preparedCards=cards.ToArray();
@@ -580,7 +585,8 @@ public partial class PrintingView : UserControl
                     return;
                 }
                 submittedToSpooler=true;
-                dlg.PrintDocument(prepared!.DocumentPaginator,"NajmCard Confirmed Voucher Batch");
+                using(VoucherPipelineOperation.Measure(VoucherPipelineStage.Print))
+                    dlg.PrintDocument(prepared!.DocumentPaginator,"NajmCard Confirmed Voucher Batch");
                 _status.Text="أُرسلت المهمة للطابعة؛ راجع محاذاة الورق على نسخة اختبار.";
             }
             catch(Exception ex)

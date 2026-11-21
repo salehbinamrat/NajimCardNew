@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using NajmCard.Core.Services;
 
 namespace NajmCard.Desktop.Views;
 
@@ -12,6 +13,8 @@ namespace NajmCard.Desktop.Views;
 internal sealed class VoucherOperationProgressWindow : Window
 {
     private readonly TextBlock _stage;
+    private readonly TextBlock _confirmed=new(){Foreground=Brushes.White,FontSize=12,TextWrapping=TextWrapping.Wrap};
+    private readonly ProgressBar _indicator;
 
     public VoucherOperationProgressWindow(string operation)
     {
@@ -47,7 +50,7 @@ internal sealed class VoucherOperationProgressWindow : Window
             MinHeight=42,
             VerticalAlignment=VerticalAlignment.Center
         };
-        var indicator=new ProgressBar
+        _indicator=new ProgressBar
         {
             Height=8,
             IsIndeterminate=true,
@@ -58,7 +61,8 @@ internal sealed class VoucherOperationProgressWindow : Window
         var content=new StackPanel();
         content.Children.Add(heading);
         content.Children.Add(_stage);
-        content.Children.Add(indicator);
+        content.Children.Add(_confirmed);
+        content.Children.Add(_indicator);
         Content=new Border
         {
             Background=(Brush)new BrushConverter().ConvertFrom("#341326")!,
@@ -78,5 +82,13 @@ internal sealed class VoucherOperationProgressWindow : Window
             return;
         }
         _stage.Text=stage;
+    }
+
+    public void UpdateConfirmed(VoucherPipelineProgress progress)
+    {
+        if(!Dispatcher.CheckAccess()){Dispatcher.BeginInvoke(new Action(()=>UpdateConfirmed(progress)));return;}
+        _indicator.IsIndeterminate=progress.Total<=0;
+        _indicator.Maximum=Math.Max(1,progress.Total);_indicator.Value=progress.Confirmed;
+        _confirmed.Text=$"مؤكد ومحفوظ: {progress.Confirmed:N0} / {progress.Total:N0} | فاشل: {progress.Failed:N0} | غير مؤكد: {progress.Unknown:N0}";
     }
 }

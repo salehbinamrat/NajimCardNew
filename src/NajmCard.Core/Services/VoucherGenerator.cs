@@ -4,7 +4,7 @@ using NajmCard.Core.Models;
 
 namespace NajmCard.Core.Services;
 
-/// <summary>Pure cryptographically random voucher generation, with bounded collision retries.</summary>
+/// <summary>Cryptographic sampling without replacement from the unoccupied number space.</summary>
 public static class VoucherGenerator
 {
     public const string Digits = "0123456789";
@@ -74,15 +74,18 @@ public static class VoucherGenerator
     public static IReadOnlyList<Voucher> Generate(VoucherGenerationOptions options,
         IReadOnlySet<string>? reserved = null)
     {
+        using var measurement=VoucherPipelineOperation.Measure(VoucherPipelineStage.Generation);
         var p=Prepare(options);
         var used=new HashSet<string>(
             reserved ?? new HashSet<string>(),StringComparer.OrdinalIgnoreCase);
         // Reject an exhausted local/router namespace before spending thousands
         // of cryptographic RNG calls retrying inevitable collisions.
         var alphabet=new HashSet<char>(p.Characters.Select(char.ToUpperInvariant));
-        var occupied=used.Count(name=>IsCandidateName(
-            name,p.Prefix,p.SuffixLength,alphabet));
-        if(BigInteger.Pow(p.Characters.Length,p.SuffixLength)-occupied<options.Count)
+        var ordinals=p.Characters.Select((c,i)=>(c:char.ToUpperInvariant(c),i)).ToDictionary(x=>x.c,x=>x.i);
+        var blocked=used.Where(name=>IsCandidateName(name,p.Prefix,p.SuffixLength,alphabet))
+            .Select(name=>Ordinal(name.AsSpan(p.Prefix.Length),ordinals)).Order().ToArray();
+        var remaining=BigInteger.Pow(p.Characters.Length,p.SuffixLength)-blocked.Length;
+        if(remaining<options.Count)
             throw new ArgumentException(
                 "مساحة أرقام الكروت المتبقية لا تكفي للدفعة؛ غيّر البادئة أو الطول أو مجموعة الأحرف.");
         var results=new List<Voucher>(options.Count);
@@ -92,20 +95,38 @@ public static class VoucherGenerator
         var batchCreatedAt=DateTimeOffset.UtcNow;
         string batch=batchCreatedAt.ToString("yyyyMMddHHmmss")+"-"+
             Guid.NewGuid().ToString("N")[..8];
-        long budget=Math.Max((long)options.Count*65,200);
-        while(results.Count<options.Count && budget-- > 0)
+        // Sparse Fisher-Yates over FREE ranks. Mapping a rank through sorted
+        // occupied ordinals is logarithmic; even a single free number is found
+        // without scanning an enormous space or relying on lucky random retries.
+        var swaps=new Dictionary<BigInteger,BigInteger>();
+        while(results.Count<options.Count)
         {
-            string username=p.Prefix+entropy.NextToken(p.Characters,p.SuffixLength);
-            if(!used.Add(username))continue;
+            var draw=entropy.NextBelow(remaining);
+            var rank=swaps.GetValueOrDefault(draw,draw);
+            var last=--remaining;
+            swaps[draw]=swaps.GetValueOrDefault(last,last);swaps.Remove(last);
+            int lo=0,hi=blocked.Length;
+            while(lo<hi){int mid=lo+(hi-lo)/2;if(blocked[mid]-mid<=rank)lo=mid+1;else hi=mid;}
+            string username=p.Prefix+Token(rank+lo,p.Characters,p.SuffixLength);
             string password=options.UsernameOnly ? "" :
                 options.PasswordEqualsUsername ? username :
                 DifferentPassword(p.PasswordCharacters,p.PasswordLength,username,entropy);
             results.Add(new Voucher(username,password,options.Profile,batch,batchCreatedAt));
         }
-        if(results.Count!=options.Count)
-            throw new InvalidOperationException(
-                "تعذر توليد عدد الكروت المطلوبة دون تكرار؛ غيّر الأحرف أو طول الرقم.");
         return results;
+    }
+
+    private static BigInteger Ordinal(ReadOnlySpan<char> token,IReadOnlyDictionary<char,int> ordinals)
+    {
+        BigInteger value=0;
+        foreach(char c in token)value=value*ordinals.Count+ordinals[char.ToUpperInvariant(c)];
+        return value;
+    }
+    private static string Token(BigInteger value,string chars,int length)
+    {
+        Span<char> token=stackalloc char[length];
+        for(int i=length-1;i>=0;i--){value=BigInteger.DivRem(value,chars.Length,out var digit);token[i]=chars[(int)digit];}
+        return new string(token);
     }
 
     private static bool IsCandidateName(string name,string prefix,int suffixLength,
@@ -115,7 +136,8 @@ public static class VoucherGenerator
            !name.StartsWith(prefix,StringComparison.OrdinalIgnoreCase))
             return false;
         for(var i=prefix.Length;i<name.Length;i++)
-            if(!alphabet.Contains(char.ToUpperInvariant(name[i])))
+            if(!alphabet.Contains(char.ToUpperInvariant(name[i]))||
+                !char.IsAscii(name[i])&&!string.Equals(name[i].ToString(),char.ToUpperInvariant(name[i]).ToString(),StringComparison.OrdinalIgnoreCase))
                 return false;
         return true;
     }
@@ -156,6 +178,25 @@ public static class VoucherGenerator
     {
         private readonly byte[] _buffer=new byte[4096];
         private int _position=4096;
+
+        public BigInteger NextBelow(BigInteger bound)
+        {
+            if(bound<=1)return BigInteger.Zero;
+            int bits=(int)(bound-1).GetBitLength();
+            Span<byte> bytes=stackalloc byte[(bits+7)/8];
+            BigInteger value;
+            do
+            {
+                for(int i=0;i<bytes.Length;i++)
+                {
+                    if(_position==_buffer.Length){RandomNumberGenerator.Fill(_buffer);_position=0;}
+                    bytes[i]=_buffer[_position++];
+                }
+                bytes[^1]&=(byte)(0xff>>(bytes.Length*8-bits));
+                value=new BigInteger(bytes,isUnsigned:true,isBigEndian:false);
+            }while(value>=bound);
+            return value;
+        }
 
         public string NextToken(string alphabet,int length)
         {

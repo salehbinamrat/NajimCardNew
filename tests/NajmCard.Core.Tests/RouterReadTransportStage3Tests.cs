@@ -11,6 +11,7 @@ public sealed class RouterReadTransportStage3Tests
     [Theory]
     [InlineData("?.id=*A")]
     [InlineData("?name=card")]
+    [InlineData("?username=card")]
     [InlineData("=count-only=")]
     public void OneRecordAndCountRequestsHaveShortDeadlines(string word)
     {

@@ -27,4 +27,5 @@ public sealed record BatchDeliveryResult(int Succeeded, IReadOnlyList<string> Fa
     bool UncertainOutcome)
 {
     public bool Success => Failed.Count == 0 && !UncertainOutcome;
+    public NajmCard.Core.Services.VoucherPipelineSnapshot? Performance {get;init;}
 }
