@@ -15,6 +15,13 @@ internal static class Program
     {
         if(args.Length!=1)throw new ArgumentException("Usage: VoucherPrintBenchmarks output.jsonl");
         var app=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};
+        // Load the same resources as App.xaml without starting the production
+        // application (login, licensing, network and physical printing).
+        foreach(var theme in new[]{"BurgundyGold","VectorIcons"})
+            app.Resources.MergedDictionaries.Add(new ResourceDictionary
+            {
+                Source=new Uri($"pack://application:,,,/NajmCard;component/Themes/{theme}.xaml")
+            });
         var target=Path.GetFullPath(args[0]);Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         using var output=new StreamWriter(target,false);
         foreach(var size in new[]{1,1,100,1000,10000}.Select((size,index)=>(size,index)))
