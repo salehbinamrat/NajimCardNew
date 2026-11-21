@@ -11,7 +11,7 @@ using NajmCard.Desktop.Views;
 internal static class Program
 {
     [STAThread]
-    private static void Main(string[] args)
+    private static int Main(string[] args)
     {
         if(args.Length!=1)throw new ArgumentException("Usage: VoucherPrintBenchmarks output.jsonl");
         var app=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};
@@ -22,7 +22,19 @@ internal static class Program
             {
                 Source=new Uri($"pack://application:,,,/NajmCard;component/Themes/{theme}.xaml")
             });
-        var target=Path.GetFullPath(args[0]);Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        // Keep the application dispatcher pumping just as it does in the real
+        // UI while the archive renderer works on its separate STA thread.
+        app.Startup+=async(_,_)=>
+        {
+            try{await MeasureAsync(args[0]);app.Shutdown();}
+            catch(Exception ex){Console.Error.WriteLine(ex);app.Shutdown(1);}
+        };
+        return app.Run();
+    }
+
+    private static async Task MeasureAsync(string destination)
+    {
+        var target=Path.GetFullPath(destination);Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         using var output=new StreamWriter(target,false);
         foreach(var size in new[]{1,1,100,1000,10000}.Select((size,index)=>(size,index)))
         {
@@ -40,7 +52,8 @@ internal static class Program
                 using var operation=new VoucherPipelineOperation();var timer=Stopwatch.StartNew();
                 var method=typeof(PrintingView).GetMethod("SaveBatchArchivePdfAsync",BindingFlags.Instance|BindingFlags.NonPublic)
                     ??throw new InvalidOperationException("Actual archive renderer is missing");
-                ((Task)method.Invoke(printer,[cards,appearance,options,path])!).GetAwaiter().GetResult();
+                Console.WriteLine($"WPF {size.size}: starting actual archive render (warmup={size.index==0})");
+                await ((Task)method.Invoke(printer,[cards,appearance,options,path])!).WaitAsync(TimeSpan.FromMinutes(10));
                 timer.Stop();var measured=operation.Metrics.Snapshot();
                 using var pdf=UglyToad.PdfPig.PdfDocument.Open(path);
                 var plan=CardPrintLayoutPlanner.Calculate(options,cards.Length);
@@ -57,6 +70,5 @@ internal static class Program
             }
             finally{if(Directory.Exists(root))Directory.Delete(root,true);}
         }
-        app.Shutdown();
     }
 }

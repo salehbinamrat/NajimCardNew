@@ -47,9 +47,14 @@ jobs:
           ref: 7f3b92b4656eb8fa14052b87cb493766b3fd1d6b
           path: .pipeline-baseline
           persist-credentials: false
-      - name: Compare voucher pipeline and real WPF PDF before and after
+      - name: Compare real WPF PDF before and after
+        timeout-minutes: 25
         shell: pwsh
-        run: ./scripts/benchmark-voucher-pipeline.ps1 -Label core
+        run: ./scripts/benchmark-voucher-pipeline.ps1 -Label core -Mode Print
+      - name: Compare durable voucher pipeline before and after
+        timeout-minutes: 120
+        shell: pwsh
+        run: ./scripts/benchmark-voucher-pipeline.ps1 -Label core -Mode Pipeline
       - name: Upload voucher pipeline measurements
         uses: actions/upload-artifact@v4
         with:
@@ -146,9 +151,14 @@ jobs:
           ref: 7f3b92b4656eb8fa14052b87cb493766b3fd1d6b
           path: .pipeline-baseline
           persist-credentials: false
-      - name: Compare voucher pipeline and real WPF PDF before and after
+      - name: Compare real WPF PDF before and after
+        timeout-minutes: 25
         shell: pwsh
-        run: ./scripts/benchmark-voucher-pipeline.ps1 -Label release-${{ matrix.arch }} -Architecture ${{ matrix.arch }}
+        run: ./scripts/benchmark-voucher-pipeline.ps1 -Label release-${{ matrix.arch }} -Architecture ${{ matrix.arch }} -Mode Print
+      - name: Compare durable voucher pipeline before and after
+        timeout-minutes: 120
+        shell: pwsh
+        run: ./scripts/benchmark-voucher-pipeline.ps1 -Label release-${{ matrix.arch }} -Architecture ${{ matrix.arch }} -Mode Pipeline
       - name: Upload voucher pipeline measurements
         uses: actions/upload-artifact@v4
         with:
