@@ -28,6 +28,19 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
     private int _closed;
     private string? _routerIdentity;
 
+    public async Task EnsureRouterIdentityAsync(string expected,CancellationToken ct=default)
+    {
+        if(Volatile.Read(ref _routerIdentity) is null)await BindRouterIdentityAsync(ct);
+        await VerifyBoundRouterIdentityAsync(expected,ct);
+    }
+
+    public Task VerifyBoundRouterIdentityAsync(string expected,CancellationToken ct=default)=>
+        ExecuteAsync(_fast,(current,token)=>
+        {
+            if(Volatile.Read(ref _routerIdentity)!=expected)throw new RouterIdentityMismatchException();
+            return Task.FromResult(true);
+        },true,ct);
+
     public Task<string> BindRouterIdentityAsync(CancellationToken ct=default)=>
         ExecuteAsync(_fast,async (current,token)=>
         {
@@ -107,6 +120,7 @@ public sealed class ResilientRouterSession : IRouterCommandClient, IRouterReceip
                 // A write may already have reached the router before the reply was lost.
                 if(!retryRead || token.IsCancellationRequested)
                     throw;
+                VoucherPipelineOperation.Current?.Metrics.ReadRetry();
                 var replacement=lane.Current=await _connect(token);
                 token.ThrowIfCancellationRequested();
                 try

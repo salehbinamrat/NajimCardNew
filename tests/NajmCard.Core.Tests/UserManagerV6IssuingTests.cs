@@ -60,8 +60,7 @@ public sealed class UserManagerV6IssuingTests
             if(FailVerificationRead)throw new IOException("Router readback failed");
             if(MissingVerifiedRecord)
                 return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>([]);
-            var profile=WrongVerifiedProfile || (DelayedProfileVisibility && ReadsById.Count==1)
-                ? "other" : "gold";
+            var profile=WrongVerifiedProfile?"other":DelayedProfileVisibility&&ReadsById.Count==1?"":"gold";
             IReadOnlyList<IReadOnlyDictionary<string,string>> result=
             [
                 new Dictionary<string,string>
@@ -108,7 +107,7 @@ public sealed class UserManagerV6IssuingTests
         Assert.False(result.Success);
         Assert.True(result.UncertainOutcome);
         Assert.Equal(2,spy.Calls.Count); // no second write or destructive rollback
-        Assert.Equal(3,spy.ReadsById.Count);
+        Assert.Single(spy.ReadsById); // A conflicting nonempty profile is not a pending assignment.
     }
 
     [Fact]

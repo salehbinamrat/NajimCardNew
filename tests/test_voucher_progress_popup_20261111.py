@@ -45,11 +45,12 @@ class VoucherProgressPopupContract(unittest.TestCase):
         mode=read(V/"GeneratorView.CredentialMode.cs")
         dispatch=read(SERVICES/"VoucherBatchDispatcher.cs")
         self.assertIn("public event Action<string>? OperationProgressChanged;",mode)
-        self.assertIn('ReportOperationProgress("توليد أرقام الكروت...")',creator)
-        self.assertIn('saveStage.Report("حفظ الكروت في قاعدة البيانات المحلية...")',creator)
-        self.assertIn("_store.SaveBatch(newCards,snapshot);",creator)
-        self.assertLess(creator.index('saveStage.Report("حفظ الكروت'),
-                        creator.index('_store.SaveBatch(newCards,snapshot);'))
+        preparer=read(SERVICES/"VoucherBatchPreparer.cs")
+        self.assertIn('progress?.Report("توليد أرقام الكروت المتاحة...")',preparer)
+        self.assertIn('progress?.Report("حفظ الكروت في قاعدة البيانات المحلية...")',preparer)
+        self.assertIn("store.SavePreparedBatch(cards,snapshot);",preparer)
+        self.assertLess(preparer.index("gateway.ReadExistingVoucherNamesAsync"),preparer.index("store.SavePreparedBatch"))
+        self.assertIn("new VoucherBatchPreparer(_gateway,_store).PrepareAsync",creator)
         self.assertIn("progress:new Progress<string>(ReportOperationProgress)",creator)
         self.assertIn('progress?.Report("التحقق من الأرقام',dispatch)
         self.assertIn('progress?.Report($"إرسال الكرت',dispatch)
@@ -59,7 +60,8 @@ class VoucherProgressPopupContract(unittest.TestCase):
         self.assertLess(dispatch.index("sendSession.FinishSend(voucher, state, error);"),
                         dispatch.index('progress?.Report($"تسجيل نتيجة الكرت'))
         self.assertIn("progressStride",dispatch)
-        self.assertIn("phaseSeconds",read(V/"VoucherWorkspaceView.cs"))
+        self.assertIn("pipeline.Metrics.Snapshot()",read(V/"VoucherWorkspaceView.cs"))
+        self.assertIn("popup.UpdateConfirmed",read(V/"VoucherWorkspaceView.cs"))
         self.assertNotIn("Task.Delay(",popup if (popup := read(V/"VoucherOperationProgressWindow.cs")) else "")
 
 if __name__=="__main__":

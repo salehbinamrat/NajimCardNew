@@ -30,7 +30,8 @@ public static class RouterOsCommandTimeoutPolicy
         // and single account/ID queries receive the short request deadline.
         bool bounded=words.Any(w=>w.StartsWith("=count-only=",StringComparison.Ordinal)
             ||w.StartsWith("?.id=",StringComparison.Ordinal)
-            ||w.StartsWith("?name=",StringComparison.Ordinal)&&!words[0].EndsWith("/session/print",StringComparison.Ordinal));
+            ||(w.StartsWith("?name=",StringComparison.Ordinal)||w.StartsWith("?username=",StringComparison.Ordinal))
+                &&!words[0].EndsWith("/session/print",StringComparison.Ordinal));
         return For(words[0],bounded);
     }
 }

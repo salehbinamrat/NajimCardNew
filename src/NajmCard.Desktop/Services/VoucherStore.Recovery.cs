@@ -38,20 +38,28 @@ public sealed partial class VoucherStore
         catch(IOException ex){throw new InvalidOperationException("الدفعة قيد الإرسال أو المطابقة في عملية أخرى؛ انتظر اكتمالها.",ex);}
     }
 
-    private static void WriteDeliveryEvent(SqliteConnection db,SqliteTransaction tx,Voucher card,
-        string previous,string state,string reason)
+    private static SqliteCommand CreateDeliveryEventCommand(SqliteConnection db,SqliteTransaction tx)
     {
-        using var cmd=db.CreateCommand();cmd.Transaction=tx;
+        var cmd=db.CreateCommand();cmd.Transaction=tx;
         cmd.CommandText="""
             INSERT INTO voucher_delivery_events(router_id,service,batch_id,username,previous_state,
                 state,at_utc,attempt_id,reason,router_record_id)
             VALUES($router,$service,$batch,$user,$previous,$state,$now,$attempt,$reason,$remote)
             """;
-        cmd.Parameters.AddWithValue("$router",card.RouterId);cmd.Parameters.AddWithValue("$service",card.Service);
-        cmd.Parameters.AddWithValue("$batch",card.BatchId);cmd.Parameters.AddWithValue("$user",card.Username);
-        cmd.Parameters.AddWithValue("$previous",previous);cmd.Parameters.AddWithValue("$state",state);
-        cmd.Parameters.AddWithValue("$now",DateTimeOffset.UtcNow.ToString("O"));cmd.Parameters.AddWithValue("$attempt",card.AttemptId);
-        cmd.Parameters.AddWithValue("$reason",reason);cmd.Parameters.AddWithValue("$remote",card.RouterRecordId);
+        foreach(var name in new[]{"$router","$service","$batch","$user","$previous","$state","$now","$attempt","$reason","$remote"})
+            cmd.Parameters.Add(name,SqliteType.Text);
+        cmd.Prepare();return cmd;
+    }
+    private static void WriteDeliveryEvent(SqliteConnection db,SqliteTransaction tx,Voucher card,
+        string previous,string state,string reason,SqliteCommand? prepared=null)
+    {
+        using var owned=prepared is null?CreateDeliveryEventCommand(db,tx):null;
+        var cmd=prepared??owned!;
+        cmd.Parameters["$router"].Value=card.RouterId;cmd.Parameters["$service"].Value=card.Service;
+        cmd.Parameters["$batch"].Value=card.BatchId;cmd.Parameters["$user"].Value=card.Username;
+        cmd.Parameters["$previous"].Value=previous;cmd.Parameters["$state"].Value=state;
+        cmd.Parameters["$now"].Value=DateTimeOffset.UtcNow.ToString("O");cmd.Parameters["$attempt"].Value=card.AttemptId;
+        cmd.Parameters["$reason"].Value=reason;cmd.Parameters["$remote"].Value=card.RouterRecordId;
         cmd.ExecuteNonQuery();
     }
 

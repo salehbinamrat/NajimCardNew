@@ -18,13 +18,15 @@ class UserManagerDeliveryParity(unittest.TestCase):
         self.assertIn('"/tool/user-manager/user/add"',src)
         self.assertIn('"/tool/user-manager/user/create-and-activate-profile"',src)
         self.assertIn('["numbers"] = id',src)
-        self.assertIn('const string verifyPath = "/tool/user-manager/user/print"',src)
-        self.assertIn('lookup.QueryByIdAsync(verifyPath,id,projection,ct)',src)
-        self.assertIn('Get(actual,"username"),voucher.Username',src)
-        self.assertIn('Get(actual,"actual-profile"),voucher.Profile',src)
-        self.assertIn('return new UserManagerV6DeliveryResult(true,false,id,null)',src)
-        self.assertIn('RouterOS readback failures are NOT activation traps',src)
-        self.assertIn('لا تُعد إصدار الكرت أو طباعته قبل التحقق',src)
+        verifier=(CORE/"RouterGateway.VoucherVerification.cs").read_text(encoding="utf-8")
+        self.assertIn('VerifyIssuedVoucherAsync(voucher,id,"userman",customer,ct)',src)
+        self.assertIn('query.QueryByIdAsync(path,id',verifier)
+        self.assertIn('Get(row,nameKey)!=voucher.Username',verifier)
+        self.assertIn('string.Equals(actual,voucher.Profile',verifier)
+        self.assertIn('UserManagerV6QuotaCatalog.TryOwner',verifier)
+        self.assertIn('verificationError is null',src)
+        self.assertIn('catch(Exception ex) when(ex is IOException',verifier)
+        self.assertIn('لا تعِد الإرسال',verifier)
 
     def test_durable_write_and_safe_print_order(self):
         dispatch=(SERVICES/"VoucherBatchDispatcher.cs").read_text(encoding="utf-8")
@@ -51,7 +53,7 @@ class UserManagerDeliveryParity(unittest.TestCase):
         # render; SQLite already has the cards and their print snapshot.
         on_saved=ui[ui.index('saveBeforeSend:generated=>'):ui.index('if(!sent)')]
         self.assertNotIn('SaveDraftArchivePdfAsync',on_saved)
-        self.assertIn('_store.SaveBatch(newCards,snapshot)',(VIEWS/"GeneratorView.cs").read_text(encoding="utf-8"))
+        self.assertIn('store.SavePreparedBatch(cards,snapshot)',(VIEWS.parent/"Services/VoucherBatchPreparer.cs").read_text(encoding="utf-8"))
         self.assertNotIn('File.Move(savedBeforeSend!',ui)
         self.assertIn('if(previewOnly)',printer)
         draft=(VIEWS/"PrintingView.DraftDelivery.cs").read_text(encoding="utf-8")

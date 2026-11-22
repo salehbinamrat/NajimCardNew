@@ -16,6 +16,7 @@
   <!-- Exercise the real persistence/dispatch code on every OS without WPF.
        Empty-password fixtures avoid substituting or weakening Windows DPAPI. -->
   <ItemGroup>
+    <Compile Include="../Fixtures/VoucherPipelineRouter.cs" Link="Fixtures/VoucherPipelineRouter.cs" />
     <Compile Include="../../src/NajmCard.Desktop/Services/VoucherStore*.cs" Link="Production/%(Filename)%(Extension)" />
     <Compile Include="../../src/NajmCard.Desktop/Services/VoucherBatch*.cs" Link="Production/%(Filename)%(Extension)" />
   </ItemGroup>

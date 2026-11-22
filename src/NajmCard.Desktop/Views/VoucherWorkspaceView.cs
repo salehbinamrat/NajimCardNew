@@ -260,36 +260,9 @@ public sealed class VoucherWorkspaceView : UserControl
             var popup=new VoucherOperationProgressWindow(operation);
             if(Window.GetWindow(this) is Window owner)popup.Owner=owner;
             var watch=Stopwatch.StartNew();
-            var stageAt=Stopwatch.GetTimestamp();
-            string? currentStage=null;
-            var phaseSeconds=new Dictionary<string,double>(StringComparer.Ordinal);
-            static string Phase(string stage)
-            {
-                if(stage.Contains("PDF",StringComparison.OrdinalIgnoreCase))return "ملفات PDF";
-                if(stage.Contains("التحقق من الأرقام",StringComparison.Ordinal) ||
-                    stage.Contains("جاهزية User Manager",StringComparison.Ordinal))
-                    return "فحص الراوتر";
-                if(stage.Contains("إرسال الكرت",StringComparison.Ordinal) ||
-                    stage.Contains("تسجيل نتيجة الكرت",StringComparison.Ordinal))
-                    return "إصدار الكروت";
-                if(stage.Contains("قاعدة البيانات",StringComparison.Ordinal))
-                    return "الحفظ المحلي";
-                return "التحضير";
-            }
-            void FinishStage()
-            {
-                if(currentStage is null)return;
-                var seconds=Stopwatch.GetElapsedTime(stageAt).TotalSeconds;
-                var phase=Phase(currentStage);
-                phaseSeconds[phase]=phaseSeconds.GetValueOrDefault(phase)+seconds;
-            }
-            void ShowStage(string stage)
-            {
-                FinishStage();
-                currentStage=stage;
-                stageAt=Stopwatch.GetTimestamp();
-                popup.UpdateStage(stage);
-            }
+            using var pipeline=new VoucherPipelineOperation();
+            pipeline.Metrics.Progress=new Progress<VoucherPipelineProgress>(popup.UpdateConfirmed);
+            void ShowStage(string stage)=>popup.UpdateStage(stage);
             creator.OperationProgressChanged+=ShowStage;
             try
             {
@@ -299,17 +272,13 @@ public sealed class VoucherWorkspaceView : UserControl
             finally
             {
                 creator.OperationProgressChanged-=ShowStage;
-                FinishStage();
+                pipeline.Metrics.Progress=null;
                 popup.Close();
-                if(watch.Elapsed.TotalSeconds>=1)
-                {
-                    var slowest=phaseSeconds.OrderByDescending(x=>x.Value)
-                        .Take(2).Select(x=>x.Key+" "+
-                            x.Value.ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+"ث");
-                    status.Text+=" | زمن العملية "+
-                        watch.Elapsed.TotalSeconds.ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+
-                        "ث؛ الأبطأ: "+string.Join("، ",slowest);
-                }
+                var measurement=pipeline.Metrics.Snapshot();
+                status.Text+=$" | المؤكد والمحفوظ {measurement.Confirmed:N0} | زمن العملية {watch.Elapsed.TotalSeconds:F1}ث";
+                try{store.SavePipelineMeasurement(measurement);}
+                catch(Exception ex) when(ex is IOException or UnauthorizedAccessException)
+                {status.Text+=" | تعذر حفظ قياسات الأداء: "+ex.Message;}
             }
         }
         async Task ExportAdditionalAsync()

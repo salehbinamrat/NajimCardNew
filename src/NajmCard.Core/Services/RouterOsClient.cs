@@ -98,6 +98,7 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
             if (_disposed) throw new ObjectDisposedException(nameof(RouterOsClient));
             if (words.Count == 0)
                 throw new ArgumentException("RouterOS command cannot be empty.", nameof(words));
+            await VoucherPipelineOperation.BeforeCommandAsync(token);
             var policy = RouterOsCommandTimeoutPolicy.ForRequest(words);
             using var total = CancellationTokenSource.CreateLinkedTokenSource(token);
             total.CancelAfter(policy.Total);
@@ -227,7 +228,7 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
         string command,string name,IReadOnlyDictionary<string,string>? attributes=null,
         CancellationToken cancellationToken=default)
     {
-        if(command is not ("/user-manager/user/print" or
+        if(command is not ("/user-manager/user/print" or "/tool/user-manager/user/print" or
             "/ip/hotspot/user/print" or "/ppp/secret/print"))
             throw new ArgumentException("استعلام الاسم غير مصرح به لهذا القسم.",nameof(command));
         if(string.IsNullOrWhiteSpace(name) || name.Length>64 ||
@@ -238,7 +239,7 @@ public sealed class RouterOsClient : IAsyncDisposable, IRouterReceiptClient, IRo
         if(attributes is not null)
             foreach(var (key,value) in attributes)
                 words.Add("="+key+"="+value);
-        words.Add("?name="+name);
+        words.Add((command=="/tool/user-manager/user/print"?"?username=":"?name=")+name);
         return RouterOsReplyDecoder.Decode(
             await ExchangeAsync(words,cancellationToken)).Records;
     }

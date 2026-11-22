@@ -610,26 +610,17 @@ public partial class GeneratorView : UserControl
                         ex.Message+"؛ راجعها قبل طباعة الكروت.";
                 }
             }
-            var routerId=persist?await _gateway.ReadRouterIdentityAsync():"";
-            ReportOperationProgress("توليد أرقام الكروت...");
+            using var operation=new VoucherPipelineOperation();
             IProgress<string> saveStage=new Progress<string>(ReportOperationProgress);
-            var candidates=await Task.Run(()=>
-            {
-                var reserved=_store.ReservedNames(service,routerId);
-                var newCards=VoucherGenerator.Generate(options,reserved)
-                    .Select(x=>x with {Service=service,Customer=customer,RouterId=routerId}).ToArray();
-                VoucherBatchPrintSnapshot? snapshot=null;
-                if(persist && capturedPrint is not null && capturedAppearance is not null)
-                    snapshot=new VoucherBatchPrintSnapshot(
-                        service,newCards[0].BatchId,profile,customer,
-                        capturedPrint,capturedAppearance,capturedOutput) {RouterId=routerId};
-                if(persist)
-                {
-                    saveStage.Report("حفظ الكروت في قاعدة البيانات المحلية...");
-                    _store.SaveBatch(newCards,snapshot);
-                }
-                return newCards;
-            });
+            VoucherBatchPrintSnapshot? Snapshot(IReadOnlyList<Voucher> cards)=>
+                capturedPrint is null || capturedAppearance is null?null:
+                new VoucherBatchPrintSnapshot(service,cards[0].BatchId,profile,customer,
+                    capturedPrint,capturedAppearance,capturedOutput){RouterId=cards[0].RouterId};
+            var candidates=persist
+                ?(await new VoucherBatchPreparer(_gateway,_store).PrepareAsync(options,service,customer,
+                    Snapshot,progress:saveStage)).ToArray()
+                :await Task.Run(()=>VoucherGenerator.Generate(options,_store.ReservedNames(service,""))
+                    .Select(x=>x with{Service=service,Customer=customer}).ToArray());
             _batch=persist?candidates:[];
             BatchChanged?.Invoke();
             _table.ItemsSource=candidates.Take(500).ToArray();
