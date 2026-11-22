@@ -20,8 +20,8 @@ class UserManagerPagesRegression(unittest.TestCase):
 
     def test_report_independent_of_profile_relation_read_failure(self):
         src=read(VIEWS,"UserManagerReportsView.cs")
-        self.assertLess(src.index("var connections=await gateway.ReadUmSessionsAsync("),
-                        src.index("try\n                {\n                    plans=await gateway.ReadUmPlansAsync("))
+        self.assertLess(src.index("var connections=await Task.Run(()=>gateway.ReadUmSessionsAsync("),
+                        src.index("try\n                {\n                    plans=await Task.Run(()=>gateway.ReadUmPlansAsync("))
         self.assertIn("planWarning=\"تعذرت قراءة جدول الباقات:",src)
         self.assertIn("users.Rows.Select(x=>x.Profile)",src)
         self.assertNotIn("counts.Take(6)",src)

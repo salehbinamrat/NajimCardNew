@@ -22,7 +22,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
     private static long Long(IReadOnlyDictionary<string, string> row, string key) =>
         long.TryParse(Get(row, key), NumberStyles.Integer, CultureInfo.InvariantCulture, out long n) ? n : 0;
     private static bool Disabled(IReadOnlyDictionary<string, string> row) =>
-        Get(row, "disabled") is "true" or "yes" or "1";
+        RouterOsBoolean.Parse(Get(row, "disabled")) == true;
 
     private string _lastRouterIdentity = "";
 
@@ -182,7 +182,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             Get(current,"username")!=selected.Username ||
             !current.ContainsKey("disabled") ||
             Get(current,"actual-profile")!=selected.Profile ||
-            (Get(current,"disabled") is "yes" or "true" or "1") != selected.Disabled)
+            RouterOsBoolean.Parse(Get(current,"disabled")) != selected.Disabled)
             throw new InvalidOperationException("تغيرت هوية الحساب أو باقته أو حالته؛ حدّث القائمة قبل التعديل.");
 
         using var readInvalidation=TrackUserManagerMutation();
@@ -223,7 +223,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
             if (after.Count==1 && Get(after[0],".id")==selected.Id
                 && Get(after[0],"username")==selected.Username
                 && after[0].ContainsKey("disabled")
-                && (Get(after[0],"disabled") is "yes" or "true" or "1")==(action=="disable"))
+                && RouterOsBoolean.Parse(Get(after[0],"disabled"))==(action=="disable"))
                 return new UserManagerV6MutationResult(true,false,
                     action=="disable"?"تم تعطيل الحساب والتحقق من حالته.":"تم تفعيل الحساب والتحقق من حالته.");
             return new UserManagerV6MutationResult(false,true,
@@ -268,10 +268,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         };
         const string path="/ppp/secret/print";
 
-        static bool IsDisabled(string value) =>
-            value.Equals("yes",StringComparison.OrdinalIgnoreCase)
-            || value.Equals("true",StringComparison.OrdinalIgnoreCase)
-            || value=="1";
+        static bool? IsDisabled(string value) => RouterOsBoolean.Parse(value);
 
         async Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> ReadTarget() =>
             await targeted.QueryByIdAsync(path,selected.Id,projected,ct);
@@ -362,7 +359,7 @@ public sealed partial class RouterGateway(IRouterCommandClient client)
         var accounts = secrets.Select(row => new PppAccount(
             Get(row, ".id"), Get(row, "name"), Get(row, "profile"),
             Get(row, "service"),
-            Get(row, "disabled") is "true" or "yes" or "1",
+            RouterOsBoolean.Parse(Get(row, "disabled")) == true,
             activeNames.Contains(Get(row, "name")),
             Get(row, "comment"))).ToArray();
 

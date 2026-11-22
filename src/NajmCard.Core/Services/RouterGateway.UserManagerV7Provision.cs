@@ -37,8 +37,8 @@ public sealed partial class RouterGateway
 
         var state=await client.CommandAsync("/user-manager/print",
             new Dictionary<string,string> { [".proplist"]="enabled,use-profiles" },ct);
-        if(state.Count!=1 || Get(state[0],"enabled")!="yes" ||
-           Get(state[0],"use-profiles")!="yes")
+        if(state.Count!=1 || RouterOsBoolean.Parse(Get(state[0],"enabled"))!=true ||
+           RouterOsBoolean.Parse(Get(state[0],"use-profiles"))!=true)
             throw new InvalidOperationException(
                 "يلزم تفعيل User Manager وخيار use-profiles قبل إنشاء الحساب.");
 

@@ -69,7 +69,7 @@ class UserManagerSixScreensContract(unittest.TestCase):
         ui=(VIEWS/"UserManagerMaintenanceView.cs").read_text(encoding="utf-8")
         self.assertIn("ReadUmRouterBackupsAsync",ui)
         self.assertIn("CreateUmRouterBackupAsync",ui)
-        self.assertIn("store.Backup()",ui)
+        self.assertIn("store.BackupArchive()",ui)
         self.assertIn("لا يمكن",ui)
         policy=(CORE/"RouterOsCommandPolicy.cs").read_text(encoding="utf-8")
         self.assertIn("overwrite",policy)

@@ -50,16 +50,6 @@ public static class VoucherBatchCsvExporter
         finally{if(File.Exists(temp))File.Delete(temp);}
     }
 
-    private static string Csv(string? raw)
-    {
-        var value=raw??"";
-        // Prefix spreadsheet formula-looking cells with an apostrophe, including
-        // whitespace-prefixed formulas, to avoid CSV injection on Excel open.
-        var lead=value.TrimStart(' ','\t','\r','\n');
-        if(lead.Length>0 && "=+-@".Contains(lead[0]))
-            value="'"+value;
-        return "\"" + value.Replace("\"","\"\"",StringComparison.Ordinal)
-            .Replace("\r"," ",StringComparison.Ordinal)
-            .Replace("\n"," ",StringComparison.Ordinal) + "\"";
-    }
+    private static string Csv(string? raw)=>
+        NajmCard.Core.Services.SpreadsheetCsv.Quote(raw,singleLine:true);
 }

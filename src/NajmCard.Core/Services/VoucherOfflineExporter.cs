@@ -9,8 +9,6 @@ namespace NajmCard.Core.Services;
 /// </summary>
 public static class VoucherOfflineExporter
 {
-    private const int MaximumCards = 10000;
-
     public static string ExportCredentialsText(IReadOnlyList<Voucher> vouchers, string destination)
     {
         ValidateVouchers(vouchers, requireScriptFields: false);
@@ -37,9 +35,6 @@ public static class VoucherOfflineExporter
     private static void ValidateVouchers(IReadOnlyList<Voucher> vouchers, bool requireScriptFields)
     {
         ArgumentNullException.ThrowIfNull(vouchers);
-        if (vouchers.Count > MaximumCards)
-            throw new ArgumentOutOfRangeException(nameof(vouchers),
-                "لا يمكن تصدير أكثر من 10000 كرت في ملف واحد.");
         var usernames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in vouchers)
         {

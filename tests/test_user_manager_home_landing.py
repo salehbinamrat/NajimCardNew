@@ -62,7 +62,7 @@ class UserManagerHomeContract(unittest.TestCase):
         self.assertIn('SaveFileDialog',reports)
         self.assertIn('ReadUserManagerV6DatabaseStatusAsync',maintenance)
         self.assertIn('DiagnoseUserManagerV7RadiusAsync',maintenance)
-        self.assertIn('store.Backup()',maintenance)
+        self.assertIn('store.BackupArchive()',maintenance)
         self.assertIn('لا يمكن',maintenance)
         self.assertIn('CreateUmRouterBackupAsync',maintenance)
         self.assertIn('ReadUmRouterBackupsAsync',maintenance)

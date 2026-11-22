@@ -30,12 +30,7 @@ public sealed partial class RouterGateway
     }
 
     private static bool? UmBoolean(IReadOnlyDictionary<string,string> row,string key)
-        => UmValue(row,key).ToLowerInvariant() switch
-        {
-            "yes" or "true" or "1"=>true,
-            "no" or "false" or "0"=>false,
-            _=>null
-        };
+        => RouterOsBoolean.Parse(UmValue(row,key));
 
     /// <summary>
     /// Router local calendar time: keep unspecified time zone rather than

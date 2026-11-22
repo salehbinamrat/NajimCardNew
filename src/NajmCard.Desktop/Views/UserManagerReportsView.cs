@@ -40,7 +40,7 @@ public sealed class UserManagerReportsView : UserControl
                 UmUi.Label("إلى",12,true),until),
             UmUi.Row(UmUi.Label("الباقة",12,true),package,read,export)));
 
-        var summary=UmUi.Metrics(("عدد الحسابات","—"),("الجلسات النشطة","—"),
+        var summary=UmUi.Metrics(("الحسابات الحالية","—"),("الجلسات النشطة","—"),
             ("الاستهلاك المثبت","—"),("المدفوعات المعتمدة","—"));
         TextBlock Metric(int at)=>(TextBlock)((StackPanel)
             ((DockPanel)((Border)summary.Children[at]).Child).Children[1]).Children[1];
@@ -74,9 +74,10 @@ public sealed class UserManagerReportsView : UserControl
         UmDataSnapshot<UmApprovedPayment>? payments=null;
         string paymentWarning="المدفوعات لم تُقرأ بعد";
         string planWarning="";
-        bool busy=false;
+        bool busy=false,exportBusy=false;
         CancellationTokenSource? pending=null;
-        static long Add(long a,long b)=>a>long.MaxValue-b?long.MaxValue:a+b;
+        int renderVersion=0;
+        IEnumerable<IReadOnlyList<string>>? displayedExport=null;
 
         DateTime? FromDate()
         {
@@ -96,11 +97,6 @@ public sealed class UserManagerReportsView : UserControl
             "مخصص"=>until.SelectedDate?.Date,
             _=>null
         };
-        bool Within(DateTime? value,DateTime? lower,DateTime? upper)
-            =>(!lower.HasValue&&!upper.HasValue) || (value.HasValue &&
-                (!lower.HasValue||value.Value.Date>=lower.Value.Date) &&
-                (!upper.HasValue||value.Value.Date<=upper.Value.Date));
-
         static void ResetChart(StackPanel chart,string text)
         {
             while(chart.Children.Count>1)chart.Children.RemoveAt(1);
@@ -185,9 +181,12 @@ public sealed class UserManagerReportsView : UserControl
             });
         }
 
-        void Render()
+        async Task Render()
         {
+            export.IsEnabled=false;displayedExport=null;
+            var version=++renderVersion;
             if(accounts is null||sessions is null)return;
+            var accountData=accounts;var sessionData=sessions;var paymentData=payments;
             var lower=FromDate();
             var upper=ToDate();
             if(lower>upper)
@@ -196,97 +195,108 @@ public sealed class UserManagerReportsView : UserControl
                 return;
             }
             var selected=package.SelectedItem?.ToString()??"كل الباقات";
-            var users=accounts.Rows.Where(x=>selected=="كل الباقات"||
-                x.Profile==selected).ToArray();
-            // Session rows are not historically linked to a specific profile.
-            // Do not apply current-user profile as if it were the session's
-            // original profile; this could silently misstate historical usage.
-            var dated=sessions.Rows.Where(x=>Within(x.StartedAt,lower,upper)).ToArray();
-            var scope=UserManagerReportFilters.CountActiveSessions(dated);
-            // RADIUS sessions do not carry a reliable historical Profile
-            // association. Never present global session statistics as though
-            // they were filtered by the current user's selected package.
             bool allPackages=selected=="كل الباقات";
-            var amount=0L;int complete=0;
-            foreach(var row in dated)
-                if(row.TotalBytes is long bytes)
+            try
+            {
+                var prepared=await Task.Run(()=>
                 {
-                    amount=Add(amount,bytes);complete++;
-                }
-            Metric(0).Text=users.Length.ToString("N0",CultureInfo.InvariantCulture);
-            Metric(1).Text=!allPackages?"غير متاح حسب الباقة":
-                scope.Known==0?"غير متاح":
-                scope.Active.ToString("N0",CultureInfo.InvariantCulture)+
-                (scope.IsComplete?"":" (جزئي)");
-            Metric(2).Text=!allPackages?"غير متاح حسب الباقة":
-                complete==0?"غير متاح":UmUi.Bytes(amount)+
-                (complete<dated.Length?" (جزئي)":"");
-            var paymentScope=payments is null?null:
-                UserManagerReportFilters.SelectApprovedPayments(
-                    payments.Rows,lower,upper,allPackages?null:selected);
-            var paid=paymentScope?.Rows.ToArray();
-            decimal verifiedRevenue=0;
-            string revenueCurrency="";
-            bool validRevenue=paid is not null &&
-                paymentScope!.IsComplete &&
-                UserManagerRevenueMath.TryTotalSingleCurrency(
-                    paid,out verifiedRevenue,out revenueCurrency);
-            Metric(3).Text=paid is null?"غير متاح":
-                paymentScope is not null&&!paymentScope.IsComplete
-                    ?"غير متاح (بيانات الدفع ناقصة)":
-                !validRevenue?"عملة غير معروفة أو عملات متعددة":
-                paid.Length==0?"0 (مدفوعات)":
-                verifiedRevenue.ToString("N2",CultureInfo.InvariantCulture)+
-                " "+revenueCurrency;
-            DrawDistribution(users);
-            if(allPackages)
-                DrawBars(traffic,dated.Where(x=>x.TotalBytes.HasValue&&x.StartedAt.HasValue)
-                    .Select(x=>(x.StartedAt!.Value,(decimal)x.TotalBytes!.Value/1073741824m)),
-                    "GiB");
-            else
-                ResetChart(traffic,
-                    "لا يمكن نسبة جلسات RADIUS التاريخية إلى الباقة الحالية بدقة.");
-            if(paid is null)
-                ResetChart(revenue,"لا تتوفر سجلات مدفوعات مؤكدة: "+paymentWarning);
-            else if(paymentScope is not null&&!paymentScope.IsComplete)
-                ResetChart(revenue,
-                    "لا يمكن تأكيد إيرادات الفترة أو الباقة مع سجلات دفع بلا تاريخ أو باقة معروفة.");
-            else if(!validRevenue)
-                ResetChart(revenue,
-                    "لا يمكن رسم الإيرادات بعملات مختلطة أو غير معروفة دون تحويل معتمد.");
-            else
-                DrawBars(revenue,paid.Where(x=>x.Date.HasValue)
-                    .Select(x=>(x.Date!.Value,x.Amount)),revenueCurrency);
-            var dateKnownInScope=dated.Count(x=>x.StartedAt.HasValue);
-            var undatedInDatabase=sessions.Rows.Count(x=>!x.StartedAt.HasValue);
-            message.Text=accounts.ReadLabel+" | جلسات: "+sessions.ReadLabel+" | "+$"RouterOS {(int)accounts.Generation} | "+
-                $"الحسابات: {users.Length} | سجلات الفترة: {dated.Length} | "+
-                $"المؤرخة منها: {dateKnownInScope} | بلا تاريخ في القاعدة: {undatedInDatabase}. "+
-                "إيرادات البطاقات المباعة خارج User Manager ليست محسوبة. "+
-                (allPackages?"":"الجلسات التاريخية غير منسوبة للباقة؛ الإيرادات حسب الباقة المثبتة في الدفع. ")+
-                (paymentScope is not null&&!paymentScope.IsComplete
-                    ?"هناك مدفوعات معتمدة بلا باقة أو تاريخ صالح؛ لم يُعرض مجموع مضلل. ":"")+
-                (payments is not null&&!lower.HasValue&&!upper.HasValue&&
-                 payments.Rows.Any(x=>!x.Date.HasValue)
-                    ?"الرسم اليومي يستبعد مدفوعات بلا تاريخ.":"")+
-                (planWarning.Length>0?" | الباقات: "+planWarning:"");
-            export.IsEnabled=true;
+                    var users=accountData.Rows.Where(x=>allPackages||
+                        string.Equals(x.Profile,selected,StringComparison.OrdinalIgnoreCase)).ToArray();
+                    var trafficScope=UserManagerReportFilters.SelectTraffic(sessionData.Rows,lower,upper,allPackages?null:selected);
+                    var paymentScope=paymentData is null?null:UserManagerReportFilters.SelectApprovedPayments(
+                        paymentData.Rows,lower,upper,allPackages?null:selected);
+                    var exportRows=UserManagerReportCsv.Rows(users,trafficScope,paymentScope,lower,upper,
+                        allPackages?null:selected,accountData.ReadLabel+" | "+sessionData.ReadLabel+(paymentData is null?"":" | "+paymentData.ReadLabel));
+                    return (users,trafficScope,paymentScope,exportRows);
+                });
+                if(version!=renderVersion||!IsLoaded)return;
+                var users=prepared.users;var trafficScope=prepared.trafficScope;
+                var dated=trafficScope.Rows.Select(x=>x.Session).ToArray();
+                var scope=UserManagerReportFilters.CountActiveSessions(dated);
+                var complete=trafficScope.KnownCount;var amount=trafficScope.KnownBytes;
+                Metric(0).Text=users.Length.ToString("N0",CultureInfo.InvariantCulture);
+                Metric(1).Text=!allPackages?"غير متاح حسب الباقة":
+                    scope.Known==0?"غير متاح":
+                    scope.Active.ToString("N0",CultureInfo.InvariantCulture)+
+                    (scope.IsComplete&&trafficScope.UncertainDateCount==0?"":" (جزئي)");
+                Metric(2).Text=!allPackages?"غير متاح حسب الباقة":
+                    complete==0?"غير متاح":UmUi.Bytes(amount)+
+                    (trafficScope.IsComplete?"":" (جزئي)");
+                var paymentScope=prepared.paymentScope;
+                var paid=paymentScope?.Rows.ToArray();
+                decimal verifiedRevenue=0;
+                string revenueCurrency="";
+                bool validRevenue=paid is not null &&
+                    paymentScope!.IsComplete &&
+                    UserManagerRevenueMath.TryTotalSingleCurrency(
+                        paid,out verifiedRevenue,out revenueCurrency);
+                Metric(3).Text=paid is null?"غير متاح":
+                    paymentScope is not null&&!paymentScope.IsComplete
+                        ?"غير متاح (بيانات الدفع ناقصة)":
+                    !validRevenue?"عملة غير معروفة أو عملات متعددة":
+                    paid.Length==0?"0 (مدفوعات)":
+                    verifiedRevenue.ToString("N2",CultureInfo.InvariantCulture)+
+                    " "+revenueCurrency;
+                DrawDistribution(users);
+                if(allPackages)
+                    DrawBars(traffic,trafficScope.DailyBytes
+                        .Select(x=>(x.Key,(decimal)x.Value/1073741824m)),
+                        "GiB");
+                else
+                    ResetChart(traffic,
+                        "لا يمكن نسبة جلسات RADIUS التاريخية إلى الباقة الحالية بدقة.");
+                if(paid is null)
+                    ResetChart(revenue,"لا تتوفر سجلات مدفوعات مؤكدة: "+paymentWarning);
+                else if(paymentScope is not null&&!paymentScope.IsComplete)
+                    ResetChart(revenue,
+                        "لا يمكن تأكيد إيرادات الفترة أو الباقة مع سجلات دفع بلا تاريخ أو باقة معروفة.");
+                else if(!validRevenue)
+                    ResetChart(revenue,
+                        "لا يمكن رسم الإيرادات بعملات مختلطة أو غير معروفة دون تحويل معتمد.");
+                else
+                    DrawBars(revenue,paid.Where(x=>x.Date.HasValue)
+                        .Select(x=>(x.Date!.Value,x.Amount)),revenueCurrency);
+                var dateKnownInScope=dated.Count(x=>x.StartedAt.HasValue);
+                var undatedInDatabase=sessionData.Rows.Count(x=>!x.StartedAt.HasValue);
+                message.Text=accountData.ReadLabel+" | جلسات: "+sessionData.ReadLabel+" | "+$"RouterOS {(int)accountData.Generation} | "+
+                    $"الحسابات: {users.Length} | سجلات الفترة: {dated.Length} | "+
+                    $"المؤرخة منها: {dateKnownInScope} | بلا تاريخ في القاعدة: {undatedInDatabase}. "+
+                    $"سجلات لم يثبت توزيعها اليومي: {trafficScope.UnallocatedDailyCount}. "+
+                    "الجلسات العابرة لحدود الفترة لا يُنسب إجماليها للفترة؛ لا يُفترض توزيع متساوٍ. "+
+                    "الرسوم تعرض آخر 12 يوماً متاحاً؛ التصدير يشمل جميع سجلات المرشحات. الحسابات تعكس حالتها الحالية. "+
+                    "إيرادات البطاقات المباعة خارج User Manager ليست محسوبة. "+
+                    (allPackages?"":"الجلسات التاريخية غير منسوبة للباقة؛ الإيرادات حسب الباقة المثبتة في الدفع. ")+
+                    (paymentScope is not null&&!paymentScope.IsComplete
+                        ?"هناك مدفوعات معتمدة بلا باقة أو تاريخ صالح؛ لم يُعرض مجموع مضلل. ":"")+
+                    (payments is not null&&!lower.HasValue&&!upper.HasValue&&
+                     payments.Rows.Any(x=>!x.Date.HasValue)
+                        ?"الرسم اليومي يستبعد مدفوعات بلا تاريخ.":"")+
+                    (planWarning.Length>0?" | الباقات: "+planWarning:"");
+                displayedExport=prepared.exportRows;export.IsEnabled=!exportBusy;
+            }
+            catch(Exception ex)
+            {
+                if(version!=renderVersion)return;
+                displayedExport=null;export.IsEnabled=false;
+                message.Text="تعذر تجهيز التقرير دون بيانات ناقصة: "+ex.Message;
+            }
         }
 
         async Task Load()
         {
             if(busy||!IsLoaded)return;
             busy=true;read.IsEnabled=false;export.IsEnabled=false;
+            renderVersion++;displayedExport=null;accounts=null;sessions=null;payments=null;
             message.Text="يجري جلب حسابات وجلسات وباقات User Manager من الراوتر...";
             using var request=new CancellationTokenSource();pending=request;
             try
             {
-                var users=await gateway.ReadUmAccountsAsync(request.Token);
+                var users=await Task.Run(()=>gateway.ReadUmAccountsAsync(request.Token),request.Token);
                 if(!users.IsComplete)
                     throw new InvalidDataException(
                         "حسابات User Manager غير مكتملة؛ لا يمكن إصدار تقرير دقيق. "+
                         users.Diagnostic);
-                var connections=await gateway.ReadUmSessionsAsync(request.Token);
+                var connections=await Task.Run(()=>gateway.ReadUmSessionsAsync(request.Token),request.Token);
                 if(!connections.IsComplete)throw new InvalidDataException(connections.Diagnostic);
                 // Package-link failures must NOT discard verified account,
                 // session and payment data. An old v6 router can retain
@@ -295,7 +305,7 @@ public sealed class UserManagerReportsView : UserControl
                 planWarning="";
                 try
                 {
-                    plans=await gateway.ReadUmPlansAsync(request.Token);
+                    plans=await Task.Run(()=>gateway.ReadUmPlansAsync(request.Token),request.Token);
                     if(!plans.IsComplete)planWarning=plans.Diagnostic;
                 }
                 catch(OperationCanceledException) when(request.IsCancellationRequested){throw;}
@@ -308,13 +318,14 @@ public sealed class UserManagerReportsView : UserControl
                 paymentWarning="";
                 if(users.Generation==RouterOsGeneration.V7)
                 {
-                    try{confirmed=await gateway.ReadUmApprovedPaymentsAsync(request.Token);}
+                    try{confirmed=await Task.Run(()=>gateway.ReadUmApprovedPaymentsAsync(request.Token),request.Token);}
                     catch(OperationCanceledException) when(request.IsCancellationRequested){throw;}
                     catch(Exception ex){paymentWarning=ex.Message;}
                 }
                 else paymentWarning="إصدار RouterOS 6 لا يدعم تقرير المدفوعات بهذا المسار.";
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 accounts=users;sessions=connections;payments=confirmed;
+                var previousPackage=package.SelectedItem?.ToString();
                 package.Items.Clear();package.Items.Add("كل الباقات");
                 var available=users.Rows.Select(x=>x.Profile)
                     .Concat(plans?.Rows.Where(x=>x.Kind=="Profile").Select(x=>x.Name)
@@ -323,8 +334,9 @@ public sealed class UserManagerReportsView : UserControl
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(x=>x,StringComparer.OrdinalIgnoreCase);
                 foreach(var name in available)package.Items.Add(name);
-                package.SelectedIndex=0;
-                Render();
+                if(previousPackage is not null&&package.Items.Contains(previousPackage))package.SelectedItem=previousPackage;
+                else package.SelectedIndex=0;
+                await Render();
             }
             catch(OperationCanceledException) when(request.IsCancellationRequested){}
             catch(Exception ex)
@@ -340,13 +352,14 @@ public sealed class UserManagerReportsView : UserControl
         }
 
         read.Click+=async(_,_)=>await Load();
-        period.SelectionChanged+=(_,_)=>Render();
-        from.SelectedDateChanged+=(_,_)=>Render();
-        until.SelectedDateChanged+=(_,_)=>Render();
-        package.SelectionChanged+=(_,_)=>Render();
-        export.Click+=(_,_) =>
+        period.SelectionChanged+=async(_,_)=>await Render();
+        from.SelectedDateChanged+=async(_,_)=>await Render();
+        until.SelectedDateChanged+=async(_,_)=>await Render();
+        package.SelectionChanged+=async(_,_)=>await Render();
+        export.Click+=async(_,_) =>
         {
-            if(accounts is null||sessions is null)return;
+            var rows=displayedExport;
+            if(rows is null||exportBusy)return;
             var dialog=new SaveFileDialog{Filter="CSV (*.csv)|*.csv",
                 DefaultExt=".csv",AddExtension=true,
                 FileName="NajimCardNew-UserManager-Report-"+
@@ -354,20 +367,14 @@ public sealed class UserManagerReportsView : UserControl
             if(dialog.ShowDialog()!=true)return;
             try
             {
-                var lower=FromDate();var upper=ToDate();
-                var rows=sessions.Rows.Where(x=>
-                    (!lower.HasValue&&!upper.HasValue)||Within(x.StartedAt,lower,upper));
-                UmCsv.Export(dialog.FileName,
-                    ["المستخدم","وقت الاتصال","مدة الجلسة","IP","MAC","التنزيل",
-                        "الرفع","الحالة"],
-                    rows.Select(x=>(IReadOnlyList<string>)[x.Name,x.Started,x.Uptime,
-                        x.Address,x.Mac,UmUi.Bytes(x.DownloadBytes),
-                        UmUi.Bytes(x.UploadBytes),x.Status]));
-                message.Text="تم تصدير تقرير الجلسات الحقيقي دون بيانات اعتماد.";
+                exportBusy=true;export.IsEnabled=false;
+                await Task.Run(()=>UmCsv.Export(dialog.FileName,UserManagerReportCsv.Headers,rows));
+                message.Text="تم تصدير لقطة التقرير المختارة وقت بدء التصدير، مع بيان الاستهلاك غير المنسوب والبيانات غير المتاحة.";
             }
             catch(Exception ex){message.Text="فشل تصدير التقرير: "+ex.Message;}
+            finally{exportBusy=false;export.IsEnabled=displayedExport is not null;}
         };
-        Unloaded+=(_,_)=>pending?.Cancel();
+        Unloaded+=(_,_)=>{renderVersion++;displayedExport=null;pending?.Cancel();};
         foreach(var chart in chartContainers)
             chart.Children.Add(UmUi.Label("اقرأ التقرير لرؤية الرسم البياني.",12,false,UmUi.Gray));
     }

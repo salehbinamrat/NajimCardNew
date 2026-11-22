@@ -26,6 +26,9 @@ public static class VoucherExcelExporter
         if (!string.Equals(Path.GetExtension(output), ".xlsx", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("يجب اختيار ملف Excel بامتداد .xlsx", nameof(output));
 
+        if(vouchers.Count>1048575)
+            throw new InvalidOperationException("تجاوز التقرير حد Excel الفعلي: 1048575 كرت مع صف العناوين. استخدم CSV لتصدير جميع السجلات.");
+
         string destination = Path.GetFullPath(output);
         string parent = Path.GetDirectoryName(destination)
             ?? throw new ArgumentException("مسار الملف غير صالح", nameof(output));
@@ -37,6 +40,13 @@ public static class VoucherExcelExporter
             using (var book = new XLWorkbook())
             {
                 var sheet = book.Worksheets.Add(CleanSheetTitle(title));
+                var details = book.Worksheets.Add(sheet.Name.Equals("Delivery",StringComparison.OrdinalIgnoreCase)
+                    ? "Delivery metadata" : "Delivery");
+                string[] metadataHeaders=["username","router_id","service","batch_id","customer",
+                    "delivery_status","attempt_id","router_record_id","updated_utc","last_error"];
+                for(var c=0;c<metadataHeaders.Length;c++)details.Cell(1,c+1).SetValue(metadataHeaders[c]);
+                details.SheetView.FreezeRows(1);
+                details.Columns().Width=24;
                 sheet.RightToLeft = true;
                 sheet.SheetView.FreezeRows(1);
                 sheet.ShowGridLines = false;
@@ -54,6 +64,8 @@ public static class VoucherExcelExporter
                 var row = 2;
                 foreach (var card in vouchers)
                 {
+                    if(row>1048576)
+                        throw new InvalidOperationException("تجاوز التقرير حد Excel الفعلي: 1048575 كرت مع صف العناوين. استخدم CSV لتصدير جميع السجلات.");
                     if (card is null)
                         throw new ArgumentException("قائمة الكروت تحتوي سجلاً غير صالح.");
                     var values = new[]
@@ -81,8 +93,19 @@ public static class VoucherExcelExporter
                         cell.Style.NumberFormat.Format = "@";
                         cell.SetValue(value); // text value; never set FormulaA1
                     }
+                    string[] metadata=[card.Username,card.RouterId,card.Service,card.BatchId,card.Customer,
+                        card.DeliveryStatus,card.AttemptId,card.RouterRecordId,card.UpdatedUtc,includePasswords?card.LastError:""];
+                    for(var c=0;c<metadata.Length;c++)
+                    {
+                        if((metadata[c]?.Length??0)>32767)
+                            throw new ArgumentException("تجاوزت قيمة في سجل الإرسال الحد المسموح لخلية Excel.");
+                        var cell=details.Cell(row,c+1);
+                        cell.Style.NumberFormat.Format="@";
+                        cell.SetValue(metadata[c]??"");
+                    }
                     row++;
                 }
+                details.Range(1,1,Math.Max(1,row-1),metadataHeaders.Length).SetAutoFilter();
 
                 var range = sheet.Range(1, 1, Math.Max(1, row - 1), Headers.Count);
                 range.SetAutoFilter();

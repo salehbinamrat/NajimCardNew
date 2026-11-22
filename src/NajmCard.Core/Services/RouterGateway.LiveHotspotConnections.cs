@@ -32,12 +32,8 @@ public sealed partial class RouterGateway
     {
         if(row.TryGetValue("radius",out var raw))
         {
-            if(raw.Equals("yes",StringComparison.OrdinalIgnoreCase)||
-                raw.Equals("true",StringComparison.OrdinalIgnoreCase)||
-                raw=="1")return HotspotConnectionOrigin.UserManagerRadius;
-            if(raw.Equals("no",StringComparison.OrdinalIgnoreCase)||
-                raw.Equals("false",StringComparison.OrdinalIgnoreCase)||
-                raw=="0")return HotspotConnectionOrigin.LocalHotspot;
+            if(RouterOsBoolean.Parse(raw)==true)return HotspotConnectionOrigin.UserManagerRadius;
+            if(RouterOsBoolean.Parse(raw)==false)return HotspotConnectionOrigin.LocalHotspot;
             // Nonstandard values should never be silently counted as local.
             return HotspotConnectionOrigin.Unknown;
         }

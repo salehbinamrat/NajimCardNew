@@ -112,7 +112,7 @@ public sealed class UserManagerSearchScreen : UserControl
                 {
                     case "المستخدمون":
                     {
-                        var data=await gateway.ReadUmAccountsAsync(request.Token);
+                        var data=await Task.Run(()=>gateway.ReadUmAccountsAsync(request.Token));
                         version=(int)data.Generation;readLabel=data.ReadLabel;
                         if(!data.IsComplete)throw new InvalidDataException(data.Diagnostic);
                         foreach(var x in data.Rows)rows.Add(new Hit("مستخدم",x.Name,
@@ -122,7 +122,7 @@ public sealed class UserManagerSearchScreen : UserControl
                     case "الباقات":
                     case "القيود":
                     {
-                        var data=await gateway.ReadUmPlansAsync(request.Token);
+                        var data=await Task.Run(()=>gateway.ReadUmPlansAsync(request.Token));
                         version=(int)data.Generation;readLabel=data.ReadLabel;
                         if(!data.IsComplete)throw new InvalidDataException(data.Diagnostic);
                         foreach(var x in data.Rows.Where(x=>x.Kind==
@@ -135,7 +135,7 @@ public sealed class UserManagerSearchScreen : UserControl
                     }
                     case "الجلسات":
                     {
-                        var data=await gateway.ReadUmSessionsAsync(request.Token);
+                        var data=await Task.Run(()=>gateway.ReadUmSessionsAsync(request.Token));
                         version=(int)data.Generation;readLabel=data.ReadLabel;
                         if(!data.IsComplete)throw new InvalidDataException(data.Diagnostic);
                         foreach(var x in data.Rows)rows.Add(new Hit("جلسة",x.Name,

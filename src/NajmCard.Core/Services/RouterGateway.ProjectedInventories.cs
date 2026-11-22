@@ -22,5 +22,5 @@ public sealed partial class RouterGateway
     private static bool HasRecordIdentity(IReadOnlyDictionary<string,string> row,string name)=>
         !string.IsNullOrWhiteSpace(Get(row,".id"))&&!string.IsNullOrWhiteSpace(Get(row,name));
     private static bool HasDisabledState(IReadOnlyDictionary<string,string> row)=>
-        Get(row,"disabled") is "no" or "yes" or "true" or "false" or "0" or "1";
+        RouterOsBoolean.Parse(Get(row,"disabled")).HasValue;
 }

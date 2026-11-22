@@ -171,7 +171,11 @@ public sealed class HotspotFtpTransferService(IHotspotFtpConnector connector)
         return files.Count;
     }
 
-    public async Task<HotspotFtpDownloadResult> DownloadSnapshotAsync(
+    public Task<HotspotFtpDownloadResult> DownloadSnapshotAsync(
+        HotspotFtpConnection connection,string remoteRoot,string destinationParent,CancellationToken ct=default)
+        =>Task.Run(()=>DownloadSnapshotCoreAsync(connection,remoteRoot,destinationParent,ct),ct);
+
+    private async Task<HotspotFtpDownloadResult> DownloadSnapshotCoreAsync(
         HotspotFtpConnection connection,string remoteRoot,string destinationParent,
         CancellationToken ct=default)
     {
@@ -201,7 +205,11 @@ public sealed class HotspotFtpTransferService(IHotspotFtpConnector connector)
         }
     }
 
-    public async Task<HotspotFtpUploadResult> UploadWithBackupAsync(
+    public Task<HotspotFtpUploadResult> UploadWithBackupAsync(
+        HotspotFtpConnection connection,HotspotTemplateWorkspace template,string remoteRoot,string backupArchive,CancellationToken ct=default)
+        =>Task.Run(()=>UploadWithBackupCoreAsync(connection,template,remoteRoot,backupArchive,ct),ct);
+
+    private async Task<HotspotFtpUploadResult> UploadWithBackupCoreAsync(
         HotspotFtpConnection connection,HotspotTemplateWorkspace template,
         string remoteRoot,string backupArchive,CancellationToken ct=default)
     {

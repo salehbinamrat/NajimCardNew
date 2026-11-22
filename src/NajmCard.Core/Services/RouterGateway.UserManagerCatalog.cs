@@ -84,10 +84,10 @@ public sealed partial class RouterGateway
             var profile=section==UserManagerCatalogSection.Users&&!v7
                 ?Field("actual-profile"):"غير متاح هنا";
             var status=section==UserManagerCatalogSection.Users
-                ?Field("disabled") switch
+                ?RouterOsBoolean.Parse(Field("disabled")) switch
                   {
-                      "yes" or "true" => "معطل",
-                      "no" or "false" => "مفعل",
+                      true => "معطل",
+                      false => "مفعل",
                       _ => "غير معروف"
                   }
                 :section==UserManagerCatalogSection.Sessions?Field("active"):"—";

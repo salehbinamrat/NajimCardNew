@@ -62,11 +62,38 @@ public sealed class HotspotFtpTransferTests
     private sealed class FakeConnector(FakeFtp ftp):IHotspotFtpConnector
     {
         public int Connections;
+        public SynchronizationContext? OpenContext;
         public Task<IHotspotFtpSession> OpenAsync(HotspotFtpConnection info,CancellationToken ct=default)
         {
-            Connections++;
+            OpenContext=SynchronizationContext.Current;Connections++;
             return Task.FromResult<IHotspotFtpSession>(ftp);
         }
+    }
+
+    [Theory]
+    [InlineData(false)][InlineData(true)]
+    public async Task TransferStartsOutsideTheCallingUiContext(bool upload)
+    {
+        var root=Temp();
+        try
+        {
+            var local=Path.Combine(root,"local");Directory.CreateDirectory(local);
+            File.WriteAllText(Path.Combine(local,"login.html"),"$(username)");
+            var workspace=HotspotTemplateWorkspace.Open(local);
+            var ftp=new FakeFtp();ftp.Files["hotspot/login.html"]=[1,2,3];
+            var connector=new FakeConnector(ftp);var service=new HotspotFtpTransferService(connector);
+            var previous=SynchronizationContext.Current;Task operation;
+            SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
+            try
+            {
+                operation=upload?service.UploadWithBackupAsync(Connection(),workspace,"hotspot",Path.Combine(root,"backup.zip")):
+                    service.DownloadSnapshotAsync(Connection(),"hotspot",root);
+            }
+            finally{SynchronizationContext.SetSynchronizationContext(previous);}
+            await operation;
+            Assert.Null(connector.OpenContext);
+        }
+        finally{Directory.Delete(root,true);}
     }
 
     [Theory]

@@ -331,6 +331,8 @@ public class ToolsView : UserControl
             using var timeout=new CancellationTokenSource(TimeSpan.FromMinutes(20));
             runningTransfer=timeout;
             ftpDownload.IsEnabled=ftpUpload.IsEnabled=false;
+            choose.IsEnabled=save.IsEnabled=export.IsEnabled=files.IsEnabled=false;
+            editor.IsReadOnly=true;
             ftpCancel.IsEnabled=true;
             try
             {
@@ -350,6 +352,10 @@ public class ToolsView : UserControl
             {
                 runningTransfer=null;
                 ftpDownload.IsEnabled=ftpUpload.IsEnabled=true;
+                choose.IsEnabled=files.IsEnabled=true;
+                export.IsEnabled=workspace is not null;
+                save.IsEnabled=selected?.Editable==true;
+                editor.IsReadOnly=selected?.Editable!=true;
                 ftpCancel.IsEnabled=false;
             }
         }

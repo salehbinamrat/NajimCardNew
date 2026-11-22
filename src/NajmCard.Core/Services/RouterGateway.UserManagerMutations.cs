@@ -18,12 +18,8 @@ public sealed partial class RouterGateway
     {
         if (!row.TryGetValue("disabled",out var status))
             throw new InvalidDataException("لم يعد الراوتر حالة الحساب؛ أُوقفت العملية.");
-        return status.Trim().ToLowerInvariant() switch
-        {
-            "yes" or "true" or "1" => true,
-            "no" or "false" or "0" => false,
-            _ => throw new InvalidDataException("حالة تعطيل الحساب غير معروفة؛ أُوقفت العملية.")
-        };
+        return RouterOsBoolean.Parse(status) ??
+            throw new InvalidDataException("حالة تعطيل الحساب غير معروفة؛ أُوقفت العملية.");
     }
 
     private async Task<(RouterOsGeneration Generation,IRouterQueryClient Query,string PrintPath,
@@ -152,8 +148,8 @@ public sealed partial class RouterGateway
             {
                 [".proplist"]="enabled,use-profiles"
             },ct);
-        if(config.Count!=1 || Get(config[0],"enabled")!="yes" ||
-           Get(config[0],"use-profiles")!="yes")
+        if(config.Count!=1 || RouterOsBoolean.Parse(Get(config[0],"enabled"))!=true ||
+           RouterOsBoolean.Parse(Get(config[0],"use-profiles"))!=true)
             throw new InvalidOperationException(
                 "يجب تفعيل User Manager وخيار use-profiles في الراوتر قبل إسناد الباقات.");
 

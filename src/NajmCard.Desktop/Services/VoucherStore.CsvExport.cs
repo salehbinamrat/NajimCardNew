@@ -28,7 +28,7 @@ public sealed partial class VoucherStore
         cmd.CommandText=$"""
             SELECT username,{secret} AS selected_secret,profile,batch_id,
                 created_at,sent,service,customer,router_id,delivery_status,updated_utc
-            FROM vouchers ORDER BY created_at DESC LIMIT 10000
+            FROM vouchers ORDER BY created_at DESC,router_id,service,username
             """;
         using var reader=cmd.ExecuteReader();
 
@@ -78,8 +78,6 @@ public sealed partial class VoucherStore
         }
     }
 
-    private static string Csv(string value) => "\"" +
-        value.Replace("\"","\"\"",StringComparison.Ordinal)
-            .Replace("\r"," ",StringComparison.Ordinal)
-            .Replace("\n"," ",StringComparison.Ordinal) + "\"";
+    private static string Csv(string value) =>
+        NajmCard.Core.Services.SpreadsheetCsv.Quote(value,singleLine:true);
 }

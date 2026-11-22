@@ -60,6 +60,17 @@ public sealed class PppSelectedAccountActionTests
         }
     }
 
+    [Theory]
+    [InlineData("")][InlineData("unknown")]
+    public async Task UnknownDisabledStateRefusesWrite(string flag)
+    {
+        var row=new Dictionary<string,string>(Row()) {["disabled"]=flag};
+        var spy=new Spy {Rows=[row]};
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>
+            new RouterGateway(spy).SetPppAccountDisabledAsync(Selected(),true));
+        Assert.Single(spy.Calls);
+    }
+
     [Fact]
     public async Task Disable_Rechecks_Exact_Id_Then_Confirms_Actual_New_Status()
     {

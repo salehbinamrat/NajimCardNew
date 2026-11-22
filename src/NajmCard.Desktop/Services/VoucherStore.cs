@@ -19,18 +19,26 @@ public sealed partial class VoucherStore : IDisposable
 
     public VoucherStore(string? rootDirectory = null)
     {
-        DirectoryPath = rootDirectory ?? Path.Combine(
+        DirectoryPath = Path.GetFullPath(rootDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NajmCardNew", "Data");
+            "NajmCardNew", "Data"));
         Directory.CreateDirectory(DirectoryPath);
         _filename = Path.Combine(DirectoryPath, "najmcard.db");
-        using var db = Open(configureWal:true);
-        EnsureSchema(db);
+        _lifetimeLease=SharedLease();
+        try
+        {
+            using var db = Open(configureWal:true);
+            EnsureSchema(db);
+        }
+        catch{Dispose();throw;}
     }
 
     private SqliteConnection Open(bool configureWal=false)
     {
-        var connection = new SqliteConnection($"Data Source={_filename};Mode=ReadWriteCreate;Pooling=False");
+        var release=TrackConnection();
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            {DataSource=_filename,Mode=SqliteOpenMode.ReadWriteCreate,Pooling=false}.ToString());
+        connection.StateChange+=(_,e)=>{if(e.CurrentState==System.Data.ConnectionState.Closed)release();};
         try
         {
             connection.Open();
@@ -48,7 +56,7 @@ public sealed partial class VoucherStore : IDisposable
         }
         catch
         {
-            connection.Dispose();
+            connection.Dispose();release();
             throw;
         }
     }
@@ -188,6 +196,21 @@ public sealed partial class VoucherStore : IDisposable
         if(printSnapshot is not null)
             WriteBatchPrintSnapshot(db,tx,printSnapshot);
         tx.Commit();
+    }
+
+    // A single SELECT holds one SQLite read snapshot through the entire export.
+    // UI list limits must never silently truncate a file. Public exports do not
+    // select encrypted password bytes or require the Windows DPAPI key.
+    public IReadOnlyList<Voucher> GetVouchersForExport(bool includePasswords=false)
+    {
+        using var db=Open();using var cmd=db.CreateCommand();
+        var secret=includePasswords?"password_protected":"NULL";
+        cmd.CommandText=$"""
+            SELECT username,{secret},profile,batch_id,created_at,
+                sent,service,customer,delivery_status,router_id,attempt_id,updated_utc,last_error,router_record_id
+            FROM vouchers ORDER BY created_at DESC,router_id,service,username
+            """;
+        return ReadVoucherRows(cmd);
     }
 
     public IReadOnlyList<Voucher> GetVouchers(int limit = 10000)
@@ -464,11 +487,11 @@ public sealed partial class VoucherStore : IDisposable
             DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) +
             "-" + Guid.NewGuid().ToString("N")[..8] + ".db");
         using var original = Open();
-        using var snapshot = new SqliteConnection($"Data Source={backup};Pooling=False");
+        using var snapshot = new SqliteConnection(new SqliteConnectionStringBuilder
+            {DataSource=backup,Pooling=false}.ToString());
         snapshot.Open();
         original.BackupDatabase(snapshot);
         return backup;
     }
 
-    public void Dispose() { }
 }

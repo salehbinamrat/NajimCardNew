@@ -123,7 +123,7 @@ public sealed class UserManagerSessionsScreen : UserControl
             using var request=new CancellationTokenSource();pending=request;
             try
             {
-                var data=await gateway.ReadUmSessionsAsync(request.Token,force);
+                var data=await Task.Run(()=>gateway.ReadUmSessionsAsync(request.Token,force));
                 if(!IsLoaded || request.IsCancellationRequested)return;
                 if(!data.IsComplete)throw new InvalidDataException(data.Diagnostic);
                 snapshot=data;page=0;
@@ -209,7 +209,7 @@ public sealed class UserManagerSessionsScreen : UserControl
         pageSize.SelectionChanged+=(_,_)=>{page=0;Update();};
         previous.Click+=(_,_)=>{page--;Update();};
         next.Click+=(_,_)=>{page++;Update();};
-        download.Click+=(_,_) =>
+        download.Click+=async(_,_) =>
         {
             if(filtered.Length==0)return;
             var picker=new SaveFileDialog {Filter="CSV (*.csv)|*.csv",DefaultExt=".csv",
@@ -218,15 +218,18 @@ public sealed class UserManagerSessionsScreen : UserControl
             if(picker.ShowDialog()!=true)return;
             try
             {
-                UmCsv.Export(picker.FileName,
+                var exportRows=filtered;
+                download.IsEnabled=false;
+                await Task.Run(()=>UmCsv.Export(picker.FileName,
                     ["المستخدم","وقت الاتصال","وقت الانتهاء","المدة","IP",
                         "MAC","التنزيل","الرفع","الحالة"],
-                    filtered.Select(x=>(IReadOnlyList<string>)[x.Name,x.Started,
+                    exportRows.Select(x=>(IReadOnlyList<string>)[x.Name,x.Started,
                         x.Source.Ended,x.Duration,x.Address,x.Mac,
-                        x.Download,x.Upload,x.Status]));
-                status.Text="تم تصدير "+filtered.Length+" جلسة فعلية إلى CSV.";
+                        x.Download,x.Upload,x.Status])));
+                status.Text="تم تصدير "+exportRows.Length+" جلسة فعلية إلى CSV.";
             }
             catch(Exception ex){status.Text="فشل التصدير: "+ex.Message;}
+            finally{download.IsEnabled=filtered.Length>0;}
         };
         print.Click+=(_,_) =>
         {

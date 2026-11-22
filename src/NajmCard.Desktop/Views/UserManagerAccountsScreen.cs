@@ -211,8 +211,8 @@ public sealed class UserManagerAccountsScreen : UserControl
                 using var historyRequest=new CancellationTokenSource();historyPending=historyRequest;
                 try
                 {
-                    var sessions=await gateway.ReadUmSessionsForAccountAsync(
-                        row.Name,row.Id,historyRequest.Token);
+                    var sessions=await Task.Run(()=>gateway.ReadUmSessionsForAccountAsync(
+                        row.Name,row.Id,historyRequest.Token));
                     if(!window.IsLoaded)return;
                     if(!sessions.IsComplete)throw new InvalidDataException(sessions.Diagnostic);
                     if(sessions.Generation!=version)
@@ -257,7 +257,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             pageSize.SelectionChanged+=(_,_)=>{sessionPage=0;RenderHistory();};
             previousSessions.Click+=(_,_)=>{sessionPage--;RenderHistory();};
             nextSessions.Click+=(_,_)=>{sessionPage++;RenderHistory();};
-            export.Click+=(_,_) =>
+            export.Click+=async(_,_) =>
             {
                 if(!sessionsLoaded||filtered.Length==0)return;
                 var picker=new SaveFileDialog
@@ -269,17 +269,20 @@ public sealed class UserManagerAccountsScreen : UserControl
                 if(picker.ShowDialog(window)!=true)return;
                 try
                 {
-                    UmCsv.Export(picker.FileName,
+                    var exportRows=filtered;
+                export.IsEnabled=false;
+                await Task.Run(()=>UmCsv.Export(picker.FileName,
                         ["الكرت","بداية الاتصال","انتهاء الاتصال","المدة",
                             "الحالة","IP","MAC","التنزيل","الرفع","الإجمالي"],
-                        filtered.Select(x=>(IReadOnlyList<string>)[
+                        exportRows.Select(x=>(IReadOnlyList<string>)[
                             row.Name,x.Started,x.Ended,x.Uptime,x.Status,x.Address,
                             x.Mac,UmUi.Bytes(x.DownloadBytes),UmUi.Bytes(x.UploadBytes),
-                            UmUi.Bytes(x.TotalBytes)]));
-                    pageLabel.Text="تم تصدير "+filtered.Length+
+                            UmUi.Bytes(x.TotalBytes)])));
+                    pageLabel.Text="تم تصدير "+exportRows.Length+
                         " جلسة مثبتة دون بيانات اعتماد.";
                 }
                 catch(Exception ex){pageLabel.Text="فشل تصدير الجلسات: "+ex.Message;}
+                finally{export.IsEnabled=filtered.Length>0;}
             };
             manage.Click+=(_,_)=>{window.Close();openLegacy();};
             close.Click+=(_,_)=>window.Close();
@@ -398,7 +401,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             pending=request;
             try
             {
-                var snap=await gateway.ReadUmAccountsAsync(request.Token,force);
+                var snap=await Task.Run(()=>gateway.ReadUmAccountsAsync(request.Token,force));
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 all=snap.Rows;version=snap.Generation;
                 SyncFilters();
@@ -484,7 +487,7 @@ public sealed class UserManagerAccountsScreen : UserControl
             var removed=0;
             try
             {
-                var fresh=await gateway.ReadUserManagerV6InventoryAsync();
+                var fresh=await Task.Run(()=>gateway.ReadUserManagerV6InventoryAsync());
                 if(!fresh.IsComplete)
                     throw new InvalidOperationException("البيانات غير مكتملة؛ أُوقف الحذف.");
                 var targets=rows.Select(row=>fresh.Users.SingleOrDefault(x=>
@@ -532,7 +535,7 @@ public sealed class UserManagerAccountsScreen : UserControl
         pageSize.SelectionChanged+=(_,_)=>{page=0;Draw();};
         previous.Click+=(_,_)=>{if(page>0){page--;Draw();}};
         next.Click+=(_,_)=>{page++;Draw();};
-        export.Click+=(_,_) =>
+        export.Click+=async(_,_) =>
         {
             if(filtered.Length==0)return;
             var save=new SaveFileDialog
@@ -543,13 +546,16 @@ public sealed class UserManagerAccountsScreen : UserControl
             if(save.ShowDialog()!=true)return;
             try
             {
-                UmCsv.Export(save.FileName,["الاسم","الباقة","الحالة","الحجم",
+                var exportRows=filtered;
+                export.IsEnabled=false;
+                await Task.Run(()=>UmCsv.Export(save.FileName,["الاسم","الباقة","الحالة","الحجم",
                     "الاستهلاك","المتبقي","انتهاء الباقة"],
-                    filtered.Select(x=>(IReadOnlyList<string>)[x.Name,x.Profile,
-                        x.Status,x.Quota,x.Used,x.Remaining,x.End]));
-                message.Text="تم تصدير "+filtered.Length+" حسابا دون كلمات مرور.";
+                    exportRows.Select(x=>(IReadOnlyList<string>)[x.Name,x.Profile,
+                        x.Status,x.Quota,x.Used,x.Remaining,x.End])));
+                message.Text="تم تصدير "+exportRows.Length+" حسابا دون كلمات مرور.";
             }
             catch(Exception ex){message.Text="فشل التصدير: "+ex.Message;}
+            finally{export.IsEnabled=filtered.Length>0;}
         };
         print.Click+=(_,_) =>
         {

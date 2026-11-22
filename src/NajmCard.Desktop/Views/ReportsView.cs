@@ -23,7 +23,7 @@ public class ReportsView : UserControl
         var exportExcelSecrets = PageUi.Button("تصدير Excel مع كلمات المرور", false);
         stack.Children.Add(PageUi.Hint(
             "ملفات Excel بصيغة XLSX وبأعمدة حضرموت الأصلية. الحقول غير المتوفرة في قاعدة نجم كارد الحالية تُترك فارغة. " +
-            "لا يُصدّر أي رمز سري إلا بعد تأكيد مستقل."));
+            "ورقة Delivery تتضمن بيانات الإرسال المحفوظة فعلياً. لا يُصدّر أي رمز سري إلا بعد تأكيد مستقل."));
         var buttons = new StackPanel { Orientation = Orientation.Horizontal };
         buttons.Children.Add(exportCsv); buttons.Children.Add(exportCsvSecrets);
         stack.Children.Add(buttons);
@@ -46,7 +46,14 @@ public class ReportsView : UserControl
         Content = PageUi.Wrap("التقارير والتصدير",
             "تصدير CSV وExcel إلى ملفات محلية دون تعديل بيانات الشبكة.", PageUi.Surface(stack, "#377E98"));
 
-        void ExportCsv(bool withPasswords)
+        void SetExportBusy(bool busy)
+        {
+            foreach(var button in new[]{exportCsv,exportCsvSecrets,exportExcel,exportExcelSecrets,exportTxt,exportRsc})
+                button.IsEnabled=!busy;
+            if(busy)status.Text="جارٍ تصدير جميع السجلات؛ يرجى الانتظار...";
+        }
+
+        async Task ExportCsv(bool withPasswords)
         {
             if (withPasswords && !PageUi.Confirm(
                     "سيحتوي ملف CSV على كلمات مرور الكروت بنص مكشوف. تأكيد؟"))
@@ -60,14 +67,16 @@ public class ReportsView : UserControl
                 };
                 if (dialog.ShowDialog() == true)
                 {
-                    store.ExportCsv(dialog.FileName, withPasswords);
+                    SetExportBusy(true);
+                    await Task.Run(()=>store.ExportCsv(dialog.FileName, withPasswords));
                     status.Text = "تم حفظ CSV: " + dialog.FileName;
                 }
             }
             catch (Exception ex) { status.Text = "فشل تصدير CSV: " + ex.Message; }
+            finally {SetExportBusy(false);}
         }
 
-        void ExportExcel(bool withPasswords)
+        async Task ExportExcel(bool withPasswords)
         {
             if (withPasswords && !PageUi.Confirm(
                     "سيحتوي ملف Excel على كلمات مرور جميع الكروت بنص قابل للقراءة. هل تؤكد؟"))
@@ -82,19 +91,25 @@ public class ReportsView : UserControl
                     FileName = "NajmCard-Cards-" + DateTime.Now.ToString("yyyyMMdd") + ".xlsx"
                 };
                 if (dialog.ShowDialog() != true) return;
-                var rows = store.GetVouchers();
-                VoucherExcelExporter.Export(rows, dialog.FileName, "NajmCard", withPasswords);
-                status.Text = "تم حفظ Excel: " + dialog.FileName + " | عدد الكروت: " + rows.Count;
+                SetExportBusy(true);
+                var count=await Task.Run(()=>
+                {
+                    var rows=store.GetVouchersForExport(withPasswords);
+                    VoucherExcelExporter.Export(rows,dialog.FileName,"NajmCard",withPasswords);
+                    return rows.Count;
+                });
+                status.Text = "تم حفظ Excel: " + dialog.FileName + " | عدد الكروت: " + count;
             }
             catch (Exception ex) { status.Text = "فشل تصدير Excel: " + ex.Message; }
+            finally {SetExportBusy(false);}
         }
 
-        exportCsv.Click += (_, _) => ExportCsv(false);
-        exportCsvSecrets.Click += (_, _) => ExportCsv(true);
-        exportExcel.Click += (_, _) => ExportExcel(false);
-        exportExcelSecrets.Click += (_, _) => ExportExcel(true);
+        exportCsv.Click += async(_, _) => await ExportCsv(false);
+        exportCsvSecrets.Click += async(_, _) => await ExportCsv(true);
+        exportExcel.Click += async(_, _) => await ExportExcel(false);
+        exportExcelSecrets.Click += async(_, _) => await ExportExcel(true);
 
-        void ExportLegacy(bool asScript)
+        async Task ExportLegacy(bool asScript)
         {
             string kind=asScript?"RSC":"TXT";
             if(!PageUi.Confirm(
@@ -114,23 +129,22 @@ public class ReportsView : UserControl
                         (asScript?".rsc":".txt")
                 };
                 if(dialog.ShowDialog()!=true)return;
-                var rows=store.GetVouchers();
-                if(rows.Count==0)
+                SetExportBusy(true);
+                var count=await Task.Run(()=>
                 {
-                    status.Text="لا توجد كروت محفوظة للتصدير.";
-                    return;
-                }
-                if(asScript)
-                    VoucherOfflineExporter.ExportRouterOs6Script(rows,dialog.FileName);
-                else
-                    VoucherOfflineExporter.ExportCredentialsText(rows,dialog.FileName);
+                    var rows=store.GetVouchersForExport(true);
+                    if(asScript)VoucherOfflineExporter.ExportRouterOs6Script(rows,dialog.FileName);
+                    else VoucherOfflineExporter.ExportCredentialsText(rows,dialog.FileName);
+                    return rows.Count;
+                });
                 status.Text="حُفظ "+kind+" محليا: "+dialog.FileName+
-                    " | "+rows.Count+" كرت | لم يُرسل أي أمر إلى الراوتر.";
+                    " | "+count+" كرت | لم يُرسل أي أمر إلى الراوتر.";
             }
             catch(Exception ex) { status.Text="فشل تصدير "+kind+": "+ex.Message; }
+            finally {SetExportBusy(false);}
         }
 
-        exportTxt.Click += (_, _) => ExportLegacy(false);
-        exportRsc.Click += (_, _) => ExportLegacy(true);
+        exportTxt.Click += async(_, _) => await ExportLegacy(false);
+        exportRsc.Click += async(_, _) => await ExportLegacy(true);
     }
 }
