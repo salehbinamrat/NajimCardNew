@@ -42,6 +42,12 @@ public static class UserManagerReportFilters
             // Date-only fields cannot prove an exact midnight boundary.
             bool interval=start.HasValue&&end.HasValue&&end>start&&session.IsActive==false&&
                 session.Started.Contains(':')&&session.Ended.Contains(':');
+            if(scoped&&start.HasValue&&end.HasValue&&end<start)
+            {
+                // Contradictory timestamps cannot prove that the record is
+                // outside the period, even when its start lies after the filter.
+                unknownDate++;unknownProfile|=profileFilter;continue;
+            }
             if(scoped)
             {
                 if(start.HasValue&&upper.HasValue&&start>=upper)continue;

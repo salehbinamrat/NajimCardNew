@@ -10,6 +10,17 @@ public sealed class UserManagerTrafficStage5Tests
         new("*1","card",start,end,"",down,up,"","",false,RouterGateway.ParseUmDate(start),"");
 
     [Fact]
+    public void ReversedTimestampOutsideStartFilterCannotCertifyACompletePeriod()
+    {
+        var rows=new[]{Session("2026-11-22 01:00:00","2026-11-22 02:00:00"),
+            Session("2026-11-24 03:00:00","2026-11-22 02:00:00") with {Id="*bad"}};
+        var result=UserManagerReportFilters.SelectTraffic(rows,Day,Day,null);
+        Assert.False(result.IsComplete);
+        Assert.Equal(1,result.UncertainDateCount);
+        Assert.Equal(1000,result.KnownBytes);
+    }
+
+    [Fact]
     public void EmptyReportExportsUnknownConsumptionLikeTheDisplayedMetric()
     {
         var traffic=UserManagerReportFilters.SelectTraffic([],Day,Day,null);
@@ -78,7 +89,7 @@ public sealed class UserManagerTrafficStage5Tests
         var rows=new[]{Session("",""),Session("2026-11-22 03:00:00","2026-11-22 02:00:00"),
             Session("2026-11-22 01:00:00","2026-11-22 02:00:00",null,5)};
         var result=UserManagerReportFilters.SelectTraffic(rows,Day,Day,null);
-        Assert.Equal(1,result.UncertainDateCount);
+        Assert.Equal(2,result.UncertainDateCount);
         Assert.All(result.Rows,x=>Assert.Null(x.PeriodBytes));
         Assert.False(result.IsComplete);
         Assert.Empty(result.DailyBytes);

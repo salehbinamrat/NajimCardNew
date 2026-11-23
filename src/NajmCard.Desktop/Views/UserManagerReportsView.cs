@@ -261,6 +261,7 @@ public sealed class UserManagerReportsView : UserControl
                 message.Text=accountData.ReadLabel+" | جلسات: "+sessionData.ReadLabel+" | "+$"RouterOS {(int)accountData.Generation} | "+
                     $"الحسابات: {users.Length} | سجلات الفترة: {dated.Length} | "+
                     $"المؤرخة منها: {dateKnownInScope} | بلا تاريخ في القاعدة: {undatedInDatabase}. "+
+                    $"سجلات بتاريخ مفقود أو متناقض للفترة: {trafficScope.UncertainDateCount}. "+
                     $"سجلات لم يثبت توزيعها اليومي: {trafficScope.UnallocatedDailyCount}. "+
                     "الجلسات العابرة لحدود الفترة لا يُنسب إجماليها للفترة؛ لا يُفترض توزيع متساوٍ. "+
                     "الرسوم تعرض آخر 12 يوماً متاحاً؛ التصدير يشمل جميع سجلات المرشحات. الحسابات تعكس حالتها الحالية. "+
