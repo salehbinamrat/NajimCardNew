@@ -98,7 +98,5 @@ public sealed partial class RouterGateway
         }
     }
 
-    private static bool IsDisabledValue(string value) =>
-        value.Equals("yes",StringComparison.OrdinalIgnoreCase) ||
-        value.Equals("true",StringComparison.OrdinalIgnoreCase) || value=="1";
+    private static bool? IsDisabledValue(string value) => RouterOsBoolean.Parse(value);
 }

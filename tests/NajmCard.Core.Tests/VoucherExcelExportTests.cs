@@ -75,7 +75,10 @@ public sealed class VoucherExcelExportTests
             Assert.Empty(sheet.Descendants(ns + "f")); // no executable spreadsheet formula
             using var workbookStream = zip.GetEntry("xl/workbook.xml")!.Open();
             var workbook = XDocument.Load(workbookStream);
-            var title = workbook.Descendants(ns + "sheet").Single().Attribute("name")!.Value;
+            var sheets=workbook.Descendants(ns + "sheet").ToArray();
+            Assert.Equal(2,sheets.Length);
+            Assert.Equal("Delivery",sheets[1].Attribute("name")!.Value);
+            var title = sheets[0].Attribute("name")!.Value;
             Assert.DoesNotContain('/', title);
             Assert.DoesNotContain(':', title);
             Assert.True(title.Length <= 31);

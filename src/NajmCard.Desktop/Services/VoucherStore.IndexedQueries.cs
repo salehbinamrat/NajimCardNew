@@ -86,7 +86,7 @@ public sealed partial class VoucherStore
         var rows=new List<Voucher>();
         while(reader.Read())
         {
-            rows.Add(new Voucher(reader.GetString(0),Unprotect(reader.GetString(1)),
+            rows.Add(new Voucher(reader.GetString(0),reader.IsDBNull(1)?"":Unprotect(reader.GetString(1)),
                 reader.GetString(2),reader.GetString(3),
                 DateTimeOffset.Parse(reader.GetString(4),CultureInfo.InvariantCulture),
                 reader.GetInt64(5)==1,reader.GetString(6),reader.GetString(7),

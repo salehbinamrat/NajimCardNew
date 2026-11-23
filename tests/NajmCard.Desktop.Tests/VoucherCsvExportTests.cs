@@ -22,6 +22,20 @@ public sealed class VoucherCsvExportTests : IDisposable
             DateTimeOffset.Parse("2026-11-07T12:00:00+00:00").AddMinutes(minutes));
 
     [Fact]
+    public void FullBackupRetainsDpapiPasswordsAndIndependentFilesAcrossRestore()
+    {
+        var sourcePath=Path.Combine(folder,"source");var targetPath=Path.Combine(folder,"target");
+        using var source=new VoucherStore(sourcePath);source.SaveBatch([Card("00123","secret+1")]);
+        var archive=source.BackupArchive();
+        using var target=new VoucherStore(targetPath);
+        var independent=Path.Combine(targetPath,"license-sentinel.dat");File.WriteAllText(independent,"unchanged independent file");
+        target.RestoreBackup(archive);
+        using var restored=new VoucherStore(targetPath);
+        Assert.Equal("secret+1",Assert.Single(restored.GetVouchers()).Password);
+        Assert.Equal("unchanged independent file",File.ReadAllText(independent));
+    }
+
+    [Fact]
     public void Metadata_Only_Csv_Streams_Without_Decrypting_Unreadable_Password_Blobs()
     {
         using var store=new VoucherStore(folder);
@@ -45,6 +59,7 @@ public sealed class VoucherCsvExportTests : IDisposable
         Assert.Contains("000002",csv);
         Assert.DoesNotContain("mySecret!",csv);
         Assert.DoesNotContain("secret2",csv);
+        Assert.All(store.GetVouchersForExport(),card=>Assert.Empty(card.Password));
         Assert.ThrowsAny<Exception>(()=>store.GetVouchers());
     }
 

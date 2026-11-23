@@ -10,12 +10,7 @@ namespace NajmCard.Core.Services;
 public sealed partial class RouterGateway
 {
     private static bool? NetworkFlag(IReadOnlyDictionary<string,string> row,string key)
-        => Get(row,key).Trim().ToLowerInvariant() switch
-        {
-            "yes" or "true" or "1" => true,
-            "no" or "false" or "0" => false,
-            _ => null
-        };
+        => RouterOsBoolean.Parse(Get(row,key));
 
     public async Task<RouterNetworkInventory> ReadNetworkInventoryAsync(CancellationToken ct = default)
     {

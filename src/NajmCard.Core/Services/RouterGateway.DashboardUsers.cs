@@ -47,7 +47,7 @@ public sealed partial class RouterGateway
             }
         }
         if(rows.Any(row=>string.IsNullOrWhiteSpace(Get(row,"name")) ||
-            !row.ContainsKey("profile") || Get(row,"disabled") is not ("yes" or "no" or "true" or "false" or "1" or "0") ||
+            !row.ContainsKey("profile") || !HasDisabledState(row) ||
             !ValidCounter(row,"bytes-in") || !ValidCounter(row,"bytes-out") || !ValidCounter(row,"limit-bytes-total")))
             throw new InvalidDataException("لم يُعد الراوتر أسماء مستخدمي Hotspot اللازمة للوحة الرئيسية.");
         // Full RouterOS read is the legacy fallback, but the DTO still masks passwords.

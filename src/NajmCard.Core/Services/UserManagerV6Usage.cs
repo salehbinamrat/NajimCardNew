@@ -38,16 +38,10 @@ public static class UserManagerV6Usage
     }
 
     private static bool Truth(string value) =>
-        value.Equals("true",StringComparison.OrdinalIgnoreCase)
-        || value.Equals("yes",StringComparison.OrdinalIgnoreCase)
-        || value=="1";
+        RouterOsBoolean.Parse(value)==true;
 
     internal static bool TryBoolean(string value,out bool result)
-    {
-        var text=value.Trim().ToLowerInvariant();
-        result=text is "true" or "yes" or "1";
-        return result||text is "false" or "no" or "0";
-    }
+        => RouterOsBoolean.TryParse(value,out result);
 
     // One strict parser is shared by validation and the actual calculation.
     // Decimal avoids rounding the Int64 boundary through a double conversion.

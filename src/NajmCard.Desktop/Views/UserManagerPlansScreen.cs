@@ -190,7 +190,7 @@ public sealed class UserManagerPlansScreen : UserControl
             using var request=new CancellationTokenSource();pending=request;
             try
             {
-                var result=await gateway.ReadCachedUmPlansAsync(force,request.Token);
+                var result=await Task.Run(()=>gateway.ReadCachedUmPlansAsync(force,request.Token));
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 snapshot=result;editing=null;page=0;
                 limitOptions.Items.Clear();limitOptions.Items.Add("اختر قيدا");

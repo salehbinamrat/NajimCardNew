@@ -12,9 +12,9 @@ namespace NajmCard.Core.Services;
 public sealed partial class RouterGateway
 {
     private static bool IsYes(string value) =>
-        value is "yes" or "true" or "1";
+        RouterOsBoolean.Parse(value)==true;
     private static bool IsNo(string value) =>
-        value is "no" or "false" or "0";
+        RouterOsBoolean.Parse(value)==false;
 
     /// <summary>
     /// Checks only RouterOS read menus; never creates users or changes RADIUS,

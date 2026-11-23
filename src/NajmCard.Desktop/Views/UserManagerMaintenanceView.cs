@@ -79,7 +79,7 @@ public sealed class UserManagerMaintenanceView : UserControl
             "نسخ نجم كارد المحلية لا تستعيد حسابات User Manager من الراوتر.",
             12,false,UmUi.Gray);
         var local=UmUi.Panel(UmUi.Stack(
-            UmUi.Label("بيانات نجم كارد المحلية (SQLite + Windows DPAPI)",15,true),
+            UmUi.Label("بيانات نجم كارد المحلية (القاعدة وصور القوالب)",15,true),
             UmUi.Row(localBackup,localRefresh,localExport),
             localTable,localStatus));
         Content=UmUi.Scroller(UmUi.Stack(header,grid,local));
@@ -105,7 +105,7 @@ public sealed class UserManagerMaintenanceView : UserControl
             using var request=new CancellationTokenSource();pending=request;
             try
             {
-                var files=await gateway.ReadUmRouterBackupsAsync(request.Token);
+                var files=await Task.Run(()=>gateway.ReadUmRouterBackupsAsync(request.Token));
                 if(!IsLoaded||request.IsCancellationRequested)return;
                 list.ItemsSource=files.OrderByDescending(x=>x.CreatedAt).ToArray();
                 fileStatus.Text="عدد النسخ .umb الموجودة على الراوتر: "+
@@ -131,7 +131,7 @@ public sealed class UserManagerMaintenanceView : UserControl
                 if(!IsLoaded)return;
                 if(version==RouterOsGeneration.V6)
                 {
-                    var state=await gateway.ReadUserManagerV6DatabaseStatusAsync();
+                    var state=await Task.Run(()=>gateway.ReadUserManagerV6DatabaseStatusAsync());
                     status.Text=state.Diagnostic+
                         " | حجم القاعدة: "+state.DbSize+
                         " | القرص الحر: "+state.FreeSpace;
@@ -170,27 +170,28 @@ public sealed class UserManagerMaintenanceView : UserControl
             finally{SetBusy(false);}
         };
 
-        void RefreshLocal()
+        async Task RefreshLocal()
         {
             if(store is null)return;
             try
             {
                 var folder=Path.Combine(store.DirectoryPath,"Backups");
-                var rows=Directory.Exists(folder)
-                    ?Directory.EnumerateFiles(folder,"*.db",SearchOption.TopDirectoryOnly)
+                var rows=await Task.Run(()=>Directory.Exists(folder)
+                    ?Directory.EnumerateFiles(folder,"*",SearchOption.TopDirectoryOnly)
+                        .Where(path=>Path.GetExtension(path).Equals(".db",StringComparison.OrdinalIgnoreCase)||Path.GetExtension(path).Equals(".najmbackup",StringComparison.OrdinalIgnoreCase))
                         .Select(path=>new FileInfo(path))
                         .OrderByDescending(info=>info.CreationTimeUtc)
                         .Select(info=>new LocalBackup(info.Name,
                             UmUi.Bytes(info.Length),
                             info.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss"),info.FullName)).ToArray()
-                    :[];
+                    :[]);
                 localTable.ItemsSource=rows;
-                localStatus.Text="عدد نسخ SQLite المحلية: "+rows.Length+
+                localStatus.Text="عدد النسخ المحلية: "+rows.Length+
                     " | لا تتضمن قاعدة User Manager على المايكروتيك.";
             }
             catch(Exception ex){localStatus.Text="فشل عرض النسخ المحلية: "+ex.Message;}
         }
-        localBackup.Click+=(_,_) =>
+        localBackup.Click+=async(_,_) =>
         {
             if(busy||store is null)return;
             if(!PageUi.Confirm(
@@ -198,17 +199,20 @@ public sealed class UserManagerMaintenanceView : UserControl
                 "وليس لقاعدة User Manager على الراوتر؟"))return;
             try
             {
-                var file=store.Backup();
+                SetBusy(true);
+                localStatus.Text="جارٍ نسخ القاعدة وصور القوالب...";
+                var file=await Task.Run(()=>store.BackupArchive());
                 localStatus.Text="تم إنشاء النسخة المحلية: "+file;
-                RefreshLocal();
+                await RefreshLocal();
             }
             catch(Exception ex){localStatus.Text="فشل النسخ المحلي: "+ex.Message;}
+            finally{SetBusy(false);}
         };
-        localRefresh.Click+=(_,_)=>RefreshLocal();
-        localExport.Click+=(_,_) =>
+        localRefresh.Click+=async(_,_)=>await RefreshLocal();
+        localExport.Click+=async(_,_) =>
         {
             if(localTable.SelectedItem is not LocalBackup selected)return;
-            var dialog=new SaveFileDialog {Filter="SQLite (*.db)|*.db",
+            var dialog=new SaveFileDialog {Filter=Path.GetExtension(selected.Path).Equals(".db",StringComparison.OrdinalIgnoreCase)?"SQLite (*.db)|*.db":"نسخة كاملة (*.najmbackup)|*.najmbackup",
                 FileName=selected.Name};
             if(dialog.ShowDialog()!=true)return;
             try
@@ -216,14 +220,16 @@ public sealed class UserManagerMaintenanceView : UserControl
                 if(Path.GetFullPath(dialog.FileName).Equals(selected.Path,
                     StringComparison.OrdinalIgnoreCase))
                     throw new IOException("اختر مسارا مختلفا عن ملف النسخة الأصلية.");
-                File.Copy(selected.Path,dialog.FileName,overwrite:false);
-                localStatus.Text="تم نسخ ملف SQLite؛ تظل كلمات المرور "+
+                SetBusy(true);
+                await Task.Run(()=>File.Copy(selected.Path,dialog.FileName,overwrite:false));
+                localStatus.Text="تم نسخ ملف النسخة المحلية؛ تظل كلمات المرور "+
                     "مرتبطة بحماية Windows DPAPI للمستخدم الحالي.";
             }
             catch(Exception ex){localStatus.Text="تعذر تصدير النسخة: "+ex.Message;}
+            finally{SetBusy(false);}
         };
         Unloaded+=(_,_)=>pending?.Cancel();
         SetBusy(false);
-        RefreshLocal();
+        Loaded+=async(_,_)=>await RefreshLocal();
     }
 }

@@ -29,7 +29,7 @@ class UserManagerReportReliabilityContracts(unittest.TestCase):
     def test_profile_filter_excludes_unattributable_historical_session_totals(self):
         code=(VIEWS/"UserManagerReportsView.cs").read_text(encoding="utf-8")
         self.assertIn('!allPackages?"غير متاح حسب الباقة"',code)
-        self.assertIn('if(allPackages)\n                DrawBars(traffic',code)
+        self.assertRegex(code,r'if\(allPackages\)\s+DrawBars\(traffic')
         self.assertIn('ResetChart(traffic,',code)
 
     def test_approved_payments_are_filtered_by_actual_payment_profile(self):
