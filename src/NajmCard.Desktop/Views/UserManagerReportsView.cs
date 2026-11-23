@@ -112,7 +112,7 @@ public sealed class UserManagerReportsView : UserControl
                 .OrderBy(x=>x.Date).TakeLast(12).ToArray();
             if(grouped.Length==0)
             {
-                target.Children.Add(UmUi.Label("لا توجد بيانات مؤرخة لهذه الفترة.",
+                target.Children.Add(UmUi.Label("لا توجد قيم مثبتة يمكن نسبتها إلى يوم محدد في هذه الفترة.",
                     12,false,UmUi.Gray));
                 return;
             }

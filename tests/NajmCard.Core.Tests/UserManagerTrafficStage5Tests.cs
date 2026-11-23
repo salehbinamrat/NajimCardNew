@@ -10,6 +10,14 @@ public sealed class UserManagerTrafficStage5Tests
         new("*1","card",start,end,"",down,up,"","",false,RouterGateway.ParseUmDate(start),"");
 
     [Fact]
+    public void EmptyReportExportsUnknownConsumptionLikeTheDisplayedMetric()
+    {
+        var traffic=UserManagerReportFilters.SelectTraffic([],Day,Day,null);
+        var summary=Assert.Single(UserManagerReportCsv.Rows([],traffic,null,Day,Day,null,"fresh"));
+        Assert.Equal("غير معروف",summary[13]);
+    }
+
+    [Fact]
     public void ExportUsesSelectedProfileAndDateSnapshotWithoutGlobalSessionsOrPayments()
     {
         var traffic=UserManagerReportFilters.SelectTraffic([Session("2026-11-22 01:00:00","2026-11-22 02:00:00")],Day,Day,"gold");

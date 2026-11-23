@@ -21,8 +21,8 @@ public static class UserManagerReportCsv
             return row;
         }
         static string Bytes(long? value)=>value?.ToString(CultureInfo.InvariantCulture)??"غير معروف";
-        var summary=Row("summary");summary[7]=traffic.IsComplete?"مكتمل":"جزئي / غير متاح";
-        summary[13]=traffic.KnownCount>0||traffic.IsComplete?Bytes(traffic.KnownBytes):"غير معروف";
+        var summary=Row("summary");summary[7]=traffic.IsComplete&&traffic.KnownCount>0?"مكتمل":"جزئي / غير متاح";
+        summary[13]=traffic.KnownCount>0?Bytes(traffic.KnownBytes):"غير معروف";
         summary[14]=$"جلسات بلا تاريخ صالح للفترة: {traffic.UncertainDateCount}؛ توزيع يومي غير معروف: {traffic.UnallocatedDailyCount}"+
             (traffic.HasUnknownProfile?"؛ باقة الجلسات التاريخية غير معروفة":"")+
             (payments is null?"؛ المدفوعات غير متاحة":!payments.IsComplete?"؛ بيانات المدفوعات ناقصة":"");
