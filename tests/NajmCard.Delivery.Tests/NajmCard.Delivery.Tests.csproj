@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/NajmCard.Desktop/Services/WindowViewport.cs" Link="WindowViewport.cs" />
     <ProjectReference Include="../../src/NajmCard.Core/NajmCard.Core.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.2" />

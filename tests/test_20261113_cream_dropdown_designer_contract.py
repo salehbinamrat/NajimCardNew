@@ -28,16 +28,16 @@ class CreamDropdownAndDesignerTests(unittest.TestCase):
 
     def test_print_batch_dropdowns_follow_same_palette(self):
         style = read(VIEWS / "PrintingView.BurgundyDropdowns.cs")
-        self.assertIn('ConvertFrom("#FFF4DF")', style)
+        self.assertIn('ConvertFrom("#E8EDF5")', style)
         self.assertIn('Control.ForegroundProperty,Brushes.Black', style)
-        self.assertIn('ConvertFrom("#75203E")', style)
+        self.assertIn('ConvertFrom("#075DFF")', style)
         self.assertNotIn('Brushes.White', style)
 
     def test_advanced_window_is_cream_with_maroon_frames_and_black_text(self):
         designer = read(VIEWS / "GeneratorView.AdvancedEditor.cs")
-        self.assertIn('Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!', designer)
+        self.assertIn('Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!', designer)
         self.assertIn('Foreground=Brushes.Black', designer)
-        self.assertIn('BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!', designer)
+        self.assertIn('BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!', designer)
         self.assertIn('entry.Visibility=Visibility.Collapsed', designer)
         self.assertIn('selector.ItemTemplate=itemTemplate', designer)
         self.assertIn('section.Children.Add(selector)', designer)

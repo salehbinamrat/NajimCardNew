@@ -73,11 +73,11 @@ public sealed class UserManagerDisplaySnapshotsTests
         var router=new Router("7.21");
         var rows=await new RouterGateway(router).ReadUmPlansAsync();
         Assert.Equal(2,rows.Rows.Count);
-        var profile=Assert.Single(rows.Rows.Where(x=>x.Kind=="Profile"));
+        var profile=Assert.Single(rows.Rows,x=>x.Kind=="Profile");
         Assert.Equal("Night",profile.Name);
         Assert.Equal("125",profile.Price);
         Assert.Equal("quota",profile.AssociatedLimits);
-        var limit=Assert.Single(rows.Rows.Where(x=>x.Kind=="Limitation"));
+        var limit=Assert.Single(rows.Rows,x=>x.Kind=="Limitation");
         Assert.Equal("1073741824",limit.TransferLimit);
         Assert.Equal("1024k",limit.DownloadRate);
     }

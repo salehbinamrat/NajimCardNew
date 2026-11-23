@@ -268,8 +268,8 @@ public partial class PrintingView : UserControl
             // Size to the last working control; never fill the left column
             // with an empty 300px bordered block.
             printPanel.VerticalAlignment=VerticalAlignment.Top;
-            printPanel.Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
-            printPanel.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
+            printPanel.Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!;
+            printPanel.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!;
             _status.Margin=new Thickness(2,0,2,1);
             _status.Foreground=(Brush)new BrushConverter().ConvertFrom("#542037")!;
         }

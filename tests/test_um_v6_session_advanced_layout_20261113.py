@@ -11,10 +11,10 @@ class UserManagerV6VisualParity(unittest.TestCase):
     def test_advanced_dropdowns_use_cream_black_and_maroon(self):
         s=read(VIEW,"GeneratorView.AdvancedEditor.cs")
         self.assertIn('TextBox Choices(string label,string current,string[] presets)',s)
-        self.assertIn('ConvertFrom("#FFF4DF")',s)
+        self.assertIn('ConvertFrom("#E8EDF5")',s)
         self.assertIn('entry.Foreground=Brushes.Black',s)
         self.assertIn('Foreground=Brushes.Black',s)
-        self.assertIn('Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!',s)
+        self.assertIn('Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!',s)
         self.assertIn('popupChoices.IsOpen=!popupChoices.IsOpen',s)
         self.assertIn('entry.ToolTip="اختر قيمة من القائمة أو أدخل قيمة مخصصة."',s)
         self.assertNotIn('IsEditable=true,ItemsSource=presets',s)

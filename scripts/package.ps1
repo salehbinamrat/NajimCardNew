@@ -1,9 +1,11 @@
 param(
     [ValidateSet('x86','x64')][string]$Arch,
-    [string]$Version = '0.1.0',
+    [string]$Version = '1.0.0-rc.1',
     [string]$Output = 'out'
 )
 $ErrorActionPreference = 'Stop'
+if ($Version -notmatch '^(\d+\.\d+\.\d+)(?:-rc\.\d+)?$') { throw 'Invalid package version' }
+$numericVersion = $Matches[1] + '.0'
 $root = Resolve-Path (Join-Path $PSScriptRoot '..')
 Set-Location $root
 $rid = if ($Arch -eq 'x86') {'win-x86'} else {'win-x64'}
@@ -22,7 +24,7 @@ New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
 # program UI is Arabic, and fallback English is embedded in base assemblies.
 # Do not use PublishTrimmed, single-file extraction or invariant globalization.
 # Symbols stay in CI build output, not in end-user installers/portable ZIPs.
-dotnet publish src/NajmCard.Desktop/NajmCard.Desktop.csproj --configuration Release --runtime $rid --self-contained true --output $publishDir -p:PublishReadyToRun=false -p:PublishTrimmed=false -p:DebugType=none -p:DebugSymbols=false '-p:SatelliteResourceLanguages=ar%3Ben'
+dotnet publish src/NajmCard.Desktop/NajmCard.Desktop.csproj --configuration Release --runtime $rid --self-contained true --output $publishDir "-p:Version=$Version" -p:PublishReadyToRun=false -p:PublishTrimmed=false -p:DebugType=none -p:DebugSymbols=false '-p:SatelliteResourceLanguages=ar%3Ben'
 if ($LASTEXITCODE -ne 0) { throw "Publish failed for $rid" }
 
 # Never ship debug symbol files in public packages. This does not remove any
@@ -155,7 +157,7 @@ finally { $archive.Dispose() }
 $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
 if (!$iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
 if (!(Test-Path $iscc)) { throw "Inno Setup compiler ISCC.exe missing: $iscc" }
-& $iscc "/DSourceDir=$portableDir" "/DArch=$Arch" "/DAppVersion=$Version" "/O$outRoot" "/FNajimCardNew-v$Version-$Arch-Installer" /Q installer/NajmCard.iss
+& $iscc "/DSourceDir=$portableDir" "/DArch=$Arch" "/DAppVersion=$Version" "/DNumericVersion=$numericVersion" "/O$outRoot" "/FNajimCardNew-v$Version-$Arch-Installer" /Q installer/NajmCard.iss
 if ($LASTEXITCODE -ne 0) { throw "Installer compilation failed for $Arch" }
 $installer = Join-Path $outRoot "NajimCardNew-v$Version-$Arch-Installer.exe"
 if (!(Test-Path $installer)) { throw "Installer missing: $installer" }

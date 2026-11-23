@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 using NajmCard.Desktop.Services.Licensing;
@@ -43,6 +44,8 @@ public partial class MainWindow : Window
     private string? _pendingVoucherService;
     private string? _pendingVoucherProfile;
     private readonly NavEntry[] _pages;
+    private Viewbox? _fittedViewport;
+    private bool _windowPositioned;
 
     private static NavEntry Entry(string key, string iconKey, string accent,
         string background, string title, string subtitle) => new(key,
@@ -68,7 +71,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        var version=typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion.Split('+')[0]??"";
+        ProductVersionLabel.Text="تريم كارد "+version+
+            (version.Contains("-rc.",StringComparison.Ordinal)?"\nمرشح للاختبار":"");
         Loaded+=async(_,_)=>{FitWindowToWorkArea();await RestoreSavedPaidLicenseAsync();};
+        DpiChanged+=(_,_)=>Dispatcher.BeginInvoke(new Action(FitWindowToWorkArea));
         try
         {
             _localTrial=new LocalTrialService(new ProtectedLocalTrialStore(),
@@ -103,11 +111,35 @@ public partial class MainWindow : Window
     /// on Windows laptops; the creator scrolls only its form on short displays.</summary>
     private void FitWindowToWorkArea()
     {
-        var screen=SystemParameters.WorkArea;
+        if(_closed)return;
+        var screen=WindowMonitor.WorkArea(this);
         if(screen.Width<=0||screen.Height<=0)return;
-        // Fixed owner-approved window geometry. Never shrink or maximize automatically.
-        Left=screen.Width>=Width?screen.Left+(screen.Width-Width)/2:screen.Left;
-        Top=screen.Height>=Height?screen.Top+(screen.Height-Height)/2:screen.Top;
+        // Preserve the approved design at normal sizes. A high Windows scale
+        // can make the work area smaller than 1260x730 DIPs; uniformly contain
+        // the existing design so the login and footer actions stay reachable.
+        if(_fittedViewport is null && Content is FrameworkElement design)
+        {
+            var designWidth=design.ActualWidth;
+            var designHeight=design.ActualHeight;
+            if(designWidth<=0||designHeight<=0)return;
+            Content=null;
+            design.Width=designWidth;design.Height=designHeight;
+            _fittedViewport=new Viewbox
+            {
+                Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,
+                HorizontalAlignment=HorizontalAlignment.Center,
+                VerticalAlignment=VerticalAlignment.Center,Child=design
+            };
+            Content=_fittedViewport;
+        }
+        var fit=WindowViewport.Fit(screen.Width,screen.Height);
+        MinWidth=fit.Width;MinHeight=fit.Height;
+        Width=fit.Width;Height=fit.Height;
+        Left=_windowPositioned?Math.Clamp(Left,screen.Left,screen.Right-Width)
+            :screen.Left+(screen.Width-Width)/2;
+        Top=_windowPositioned?Math.Clamp(Top,screen.Top,screen.Bottom-Height)
+            :screen.Top+(screen.Height-Height)/2;
+        _windowPositioned=true;
     }
 
     private string ActiveConnectionMode => RemoteModeInput.IsChecked == true ? "remote" : "local";
@@ -257,8 +289,8 @@ public partial class MainWindow : Window
     private void About_Click(object sender,RoutedEventArgs e)
     {
         MessageBox.Show(
-            "تريم كارد 0.1.0 — C#/.NET 10 WPF\n" +
-            "برنامج مستقل لإدارة MikroTik وإنشاء الكروت، بهوية عنابية ذهبية.\n" +
+            ProductVersionLabel.Text+"\n" +
+            "برنامج مستقل لإدارة MikroTik وإنشاء الكروت، بهوية الأزرق الكهربائي والفضي.\n" +
             "التجربة المجانية المحلية: 20 يوما تبدأ بعد أول اتصال ناجح بـ MikroTik. "+
             "الترخيص المدفوع متوافق مع خدمة الترخيص، ويرتبط بجهاز واحد عبر HTTPS.",
             "حول تريم كارد",MessageBoxButton.OK,MessageBoxImage.Information);

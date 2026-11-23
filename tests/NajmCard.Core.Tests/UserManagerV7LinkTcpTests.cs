@@ -64,7 +64,7 @@ public sealed class UserManagerV7LinkTcpTests
             Assert.Equal("/user-manager/profile-limitation/print",verify[0]);
             Assert.Contains("?.id=*A",verify);
             Assert.Contains("=.proplist=.id,profile,limitation",verify);
-            Assert.Single(verify.Where(x=>x.StartsWith("?.id=",StringComparison.Ordinal)));
+            Assert.Single(verify,x=>x.StartsWith("?.id=",StringComparison.Ordinal));
             await RouterOsProtocol.WriteSentenceAsync(stream,
                 ["!re","=.id=*A","=profile=monthly","=limitation=quota"],deadline.Token);
             await RouterOsProtocol.WriteSentenceAsync(stream,["!done"],deadline.Token);

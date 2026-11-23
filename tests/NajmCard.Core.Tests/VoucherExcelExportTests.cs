@@ -56,10 +56,10 @@ public sealed class VoucherExcelExportTests
             using var sheetStream = zip.GetEntry("xl/worksheets/sheet1.xml")!.Open();
             var sheet = XDocument.Load(sheetStream);
             XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-            Assert.True(sheet.Descendants(ns + "sheetView").Any(x =>
-                (string?)x.Attribute("rightToLeft") == "1"));
-            Assert.True(sheet.Descendants(ns + "pane").Any(x =>
-                (string?)x.Attribute("topLeftCell") == "A2"));
+            Assert.Contains(sheet.Descendants(ns + "sheetView"), x =>
+                (string?)x.Attribute("rightToLeft") == "1");
+            Assert.Contains(sheet.Descendants(ns + "pane"), x =>
+                (string?)x.Attribute("topLeftCell") == "A2");
             var expected = new[]
             {
                 "sequence", "username", "password", "profile", "server", "limit_uptime",

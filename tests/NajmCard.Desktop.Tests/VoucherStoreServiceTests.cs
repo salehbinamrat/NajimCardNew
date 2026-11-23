@@ -35,16 +35,16 @@ public sealed class VoucherStoreServiceTests
             ]);
             var saved = store.GetVouchers();
             Assert.Equal(2, saved.Count);
-            var hotspot = Assert.Single(saved.Where(x => x.Service == "hotspot"));
-            var um = Assert.Single(saved.Where(x => x.Service == "userman"));
+            var hotspot = Assert.Single(saved,x => x.Service == "hotspot");
+            var um = Assert.Single(saved,x => x.Service == "userman");
             Assert.Equal("00102", hotspot.Username);
             Assert.Equal("00102", um.Username);
             Assert.Equal("admin", um.Customer);
             Assert.Equal("same-pass", um.Password);
             store.FinishSend(store.BeginSend(um),"SENT");
             saved = store.GetVouchers();
-            Assert.True(Assert.Single(saved.Where(x => x.Service == "userman")).SentToRouter);
-            Assert.False(Assert.Single(saved.Where(x => x.Service == "hotspot")).SentToRouter);
+            Assert.True(Assert.Single(saved,x => x.Service == "userman").SentToRouter);
+            Assert.False(Assert.Single(saved,x => x.Service == "hotspot").SentToRouter);
         }
         finally { Directory.Delete(root, true); }
     }

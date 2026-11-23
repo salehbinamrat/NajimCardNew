@@ -16,6 +16,33 @@ namespace NajmCard.Core.Tests;
 public sealed class HotspotFtpLoopbackIntegrationTests
 {
     [Fact]
+    public async Task CancellationStopsAStalledDirectoryDataStreamWithoutWaitingForServerClose()
+    {
+        var server=new LoopbackFtpServer{StallListing=true};
+        server.Files["hotspot/login.html"]=Encoding.UTF8.GetBytes("old");
+        var parent=Directory.CreateTempSubdirectory("najm-ftp-cancel-").FullName;
+        using var cancel=new CancellationTokenSource();
+        Task<HotspotFtpDownloadResult>? operation=null;
+        try
+        {
+            operation=new HotspotFtpTransferService(new HotspotFtpWebRequestConnector())
+                .DownloadSnapshotAsync(new HotspotFtpConnection("127.0.0.1",server.Port,
+                    "admin","test",UseTls:false,AllowPlainFtp:true),"hotspot",parent,cancel.Token);
+            await server.ListingOpened.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            cancel.Cancel();
+            var completed=await Task.WhenAny(operation,Task.Delay(TimeSpan.FromSeconds(2)));
+            Assert.Same(operation,completed);
+            Assert.NotNull(await Record.ExceptionAsync(()=>operation));
+            Assert.Empty(Directory.GetDirectories(parent));
+        }
+        finally
+        {
+            await server.DisposeAsync();
+            if(operation is not null)await Record.ExceptionAsync(()=>operation);
+            Directory.Delete(parent,true);
+        }
+    }
+    [Fact]
     public async Task Real_Ftp_Sockets_Download_Nested_Hotspot_Files()
     {
         await using var server=new LoopbackFtpServer();
@@ -86,6 +113,8 @@ public sealed class HotspotFtpLoopbackIntegrationTests
         public ConcurrentDictionary<string,byte[]> Files {get;}=new(StringComparer.Ordinal);
         public ConcurrentQueue<string> Commands {get;}=new();
         public int Port=>((IPEndPoint)_listener.LocalEndpoint).Port;
+        public bool StallListing;
+        public TaskCompletionSource ListingOpened {get;}=new(TaskCreationOptions.RunContinuationsAsynchronously);
         public LoopbackFtpServer()
         {
             _listener=new TcpListener(IPAddress.Loopback,0);
@@ -180,6 +209,8 @@ public sealed class HotspotFtpLoopbackIntegrationTests
                                 using(var data=await passive.AcceptTcpClientAsync(ct))
                                 await using(var stream=data.GetStream())
                                 {
+                                    ListingOpened.TrySetResult();
+                                    if(StallListing)await Task.Delay(Timeout.Infinite,ct);
                                     var prefix=path.Length==0?"":path+"/";
                                     var names=Files.Keys.Where(x=>x.StartsWith(prefix,StringComparison.Ordinal))
                                         .Select(x=>x[prefix.Length..].Split('/')[0])

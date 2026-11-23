@@ -82,15 +82,15 @@ public sealed class PppInventoryTests
         Assert.Single(inventory.Profiles);
         Assert.Equal("gold", inventory.Profiles[0].Name);
         Assert.Equal("8M/8M", inventory.Profiles[0].RateLimit);
-        var account = Assert.Single(inventory.Accounts.Where(x => x.Name == "001234"));
+        var account = Assert.Single(inventory.Accounts,x => x.Name == "001234");
         Assert.True(account.Online);
         Assert.False(account.Disabled);
         Assert.Equal("pppoe", account.Service);
         Assert.Equal("Site Alpha", account.Comment);
-        Assert.True(Assert.Single(inventory.Accounts.Where(x => x.Name == "009876")).Disabled);
-        Assert.False(Assert.Single(inventory.Accounts.Where(x => x.Name == "mobile")).Online);
+        Assert.True(Assert.Single(inventory.Accounts,x => x.Name == "009876").Disabled);
+        Assert.False(Assert.Single(inventory.Accounts,x => x.Name == "mobile").Online);
         Assert.Equal("192.0.2.25",
-            Assert.Single(inventory.ActiveSessions.Where(x => x.Name == "001234")).Address);
+            Assert.Single(inventory.ActiveSessions,x => x.Name == "001234").Address);
         Assert.Equal([
             "/ppp/secret/print", "/ppp/profile/print", "/ppp/active/print"
         ], spy.Commands);

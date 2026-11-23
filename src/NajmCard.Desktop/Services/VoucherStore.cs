@@ -71,15 +71,21 @@ public sealed partial class VoucherStore : IDisposable
     // No password is a legitimate Hadramout code_only voucher. Do not call
     // Windows DPAPI with an empty byte array; store a non-secret marker.
     private const string EmptyPasswordMarker="no-password:v1";
-    private static string Protect(string raw) => raw.Length==0
-        ? EmptyPasswordMarker
-        : Convert.ToBase64String(ProtectedData.Protect(
+    private static string Protect(string raw)
+    {
+        if(raw.Length==0)return EmptyPasswordMarker;
+        if(!OperatingSystem.IsWindows())throw new PlatformNotSupportedException("Windows DPAPI is required.");
+        return Convert.ToBase64String(ProtectedData.Protect(
             Encoding.UTF8.GetBytes(raw), null, DataProtectionScope.CurrentUser));
+    }
 
-    private static string Unprotect(string coded) => coded==EmptyPasswordMarker
-        ? ""
-        : Encoding.UTF8.GetString(ProtectedData.Unprotect(
+    private static string Unprotect(string coded)
+    {
+        if(coded==EmptyPasswordMarker)return "";
+        if(!OperatingSystem.IsWindows())throw new PlatformNotSupportedException("Windows DPAPI is required.");
+        return Encoding.UTF8.GetString(ProtectedData.Unprotect(
             Convert.FromBase64String(coded), null, DataProtectionScope.CurrentUser));
+    }
 
     private static void Validate(Voucher voucher)
     {

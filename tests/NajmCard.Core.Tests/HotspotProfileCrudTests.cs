@@ -15,7 +15,6 @@ public sealed class HotspotProfileCrudTests
         public bool MissingReceipt;
         public bool Reject;
         public bool Drop;
-        public bool Changed;
         public Dictionary<string,string>? Current=NewRow();
         private static Dictionary<string,string> NewRow(string name="gold",string rate="2M/512k",
             string timeout="1h",string shared="1")=>new()
@@ -33,7 +32,7 @@ public sealed class HotspotProfileCrudTests
             Assert.Equal("/ip/hotspot/user/profile/print",command);
             Assert.Equal("*A",id);
             IReadOnlyList<IReadOnlyDictionary<string,string>> rows=Current is null?[]:
-                [Changed?NewRow(name:"different"):new(Current)];
+                [new Dictionary<string,string>(Current)];
             return Task.FromResult(rows);
         }
         public async Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> CommandAsync(

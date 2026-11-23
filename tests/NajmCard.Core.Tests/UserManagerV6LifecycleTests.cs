@@ -76,14 +76,14 @@ public sealed class UserManagerV6LifecycleTests
         Assert.Equal(1, report.Disabled);
         Assert.Equal(1, report.Incomplete);
         Assert.Equal(2, report.Unclassified);
-        var expired = Assert.Single(report.Users.Where(x=>x.Username=="expired"));
+        var expired = Assert.Single(report.Users,x=>x.Username=="expired");
         Assert.Equal("expired", expired.Status);
         Assert.Equal("transfer-limit",expired.ExpirySource);
         Assert.Equal(105,expired.ConsumedBytes);
         Assert.Equal(100,expired.TransferLimit);
-        Assert.Equal("valid",Assert.Single(report.Users.Where(x=>x.Username=="time-zero")).Status);
+        Assert.Equal("valid",Assert.Single(report.Users,x=>x.Username=="time-zero").Status);
         Assert.Equal("unclassified",
-            Assert.Single(report.Users.Where(x=>x.Username=="no-profile-expired")).Status);
+            Assert.Single(report.Users,x=>x.Username=="no-profile-expired").Status);
         Assert.Equal(1, fake.Calls.Count(x=>x.StartsWith("/tool/user-manager/user/print")));
     }
 

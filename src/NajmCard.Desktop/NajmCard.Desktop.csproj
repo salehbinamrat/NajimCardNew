@@ -8,7 +8,8 @@
     <AssemblyTitle>تريم كارد</AssemblyTitle>
     <RootNamespace>NajmCard.Desktop</RootNamespace>
     <ApplicationIcon>Assets\NajmCard.ico</ApplicationIcon>
-    <Version>0.1.0</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0-rc.1</Version>
   </PropertyGroup>
   <!-- Works also when a developer runs dotnet build or publish manually. -->
   <Target Name="GenerateNajmIcon" BeforeTargets="PrepareForBuild"

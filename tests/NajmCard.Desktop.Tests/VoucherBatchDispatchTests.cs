@@ -35,7 +35,8 @@ public sealed class VoucherBatchDispatchTests
             string command, IReadOnlyDictionary<string,string>? attributes = null,
             CancellationToken cancellationToken = default)
         {
-            Writes.Add((command, new Dictionary<string,string>(attributes!)));
+            ArgumentNullException.ThrowIfNull(attributes);
+            Writes.Add((command, new Dictionary<string,string>(attributes)));
             if(command.EndsWith("/add",StringComparison.Ordinal))
             {
                 LastUsername=attributes!.GetValueOrDefault("username")??attributes.GetValueOrDefault("name");
@@ -146,8 +147,8 @@ public sealed class VoucherBatchDispatchTests
             Assert.Equal("*A", spy.Writes[1].Data["numbers"]);
             Assert.Equal("admin", spy.Writes[1].Data["customer"]);
             var saved = store.GetVouchers();
-            Assert.True(Assert.Single(saved.Where(x => x.Service == "userman")).SentToRouter);
-            Assert.False(Assert.Single(saved.Where(x => x.Service == "hotspot")).SentToRouter);
+            Assert.True(Assert.Single(saved,x => x.Service == "userman").SentToRouter);
+            Assert.False(Assert.Single(saved,x => x.Service == "hotspot").SentToRouter);
         }
         finally { Directory.Delete(root, true); }
     }
@@ -433,7 +434,7 @@ public sealed class VoucherBatchDispatchTests
                 "pppoe"=>"/ppp/secret/add",
                 _=>"/ip/hotspot/user/add"
             };
-            var attributes=Assert.Single(spy.Writes.Where(x=>x.Name==addPath)).Data;
+            var attributes=Assert.Single(spy.Writes,x=>x.Name==addPath).Data;
             Assert.Equal(card.Username,attributes[service=="userman"?"username":"name"]);
             if(mode=="username-only")
             {

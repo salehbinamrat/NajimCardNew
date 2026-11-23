@@ -23,7 +23,6 @@ public sealed class PppSingleDeleteAndDisconnectTests
         public IReadOnlyList<IReadOnlyDictionary<string,string>> Secrets = [Secret()];
         public IReadOnlyList<IReadOnlyDictionary<string,string>> Sessions = [Active()];
         public bool LostReply;
-        public bool DefiniteTrap;
         public bool IgnoreWrite;
         public bool PermissionDenied;
         public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> QueryByIdAsync(
@@ -53,7 +52,6 @@ public sealed class PppSingleDeleteAndDisconnectTests
                 throw new InvalidOperationException("Unexpected command: "+path);
             Assert.Equal(path=="/ppp/secret/remove"?"*A":"*B",attributes![".id"]);
             Assert.Single(attributes);
-            if (DefiniteTrap) throw new RouterOsTrapException("not permitted");
             if (LostReply) throw new IOException("connection lost after write");
             if (!IgnoreWrite)
             {
