@@ -16,7 +16,7 @@ class ReleaseAppearance(unittest.TestCase):
         self.assertTrue(wrapping, 'Long Arabic tooltips must wrap instead of losing their tail')
 
     def test_creator_service_selection_uses_electric_blue_and_silver(self):
-        text = (DESKTOP / 'Views/VoucherWorkspaceView.cs').read_text()
+        text = (DESKTOP / 'Views/VoucherWorkspaceView.cs').read_text(encoding="utf-8")
         self.assertFalse('#EAC77C' in text, 'The active service still uses the retired gold palette')
         self.assertFalse('#49142C' in text, 'The active service still uses the retired burgundy text')
 
@@ -26,7 +26,7 @@ class ReleaseAppearance(unittest.TestCase):
             'PrintingView.BurgundyDropdowns.cs': ('#FFF4DF', '#75203E'),
         }.items():
             with self.subTest(view=name):
-                text = (DESKTOP / 'Views' / name).read_text()
+                text = (DESKTOP / 'Views' / name).read_text(encoding="utf-8")
                 for color in colors:
                     self.assertFalse(color in text, 'A popup retains the retired identity')
 
@@ -34,7 +34,7 @@ class ReleaseAppearance(unittest.TestCase):
         for name in ('GeneratorView.AdvancedEditor.cs','GeneratorView.DesignerPanel.cs',
                      'GeneratorView.CardDesign.cs','PrintingView.cs','VoucherOperationProgressWindow.cs'):
             with self.subTest(view=name):
-                text = (DESKTOP / 'Views' / name).read_text()
+                text = (DESKTOP / 'Views' / name).read_text(encoding="utf-8")
                 for color in ('#FFF4DF','#75203E','#341326','#F4D18C'):
                     self.assertFalse('ConvertFrom("'+color+'")' in text)
 
@@ -42,17 +42,17 @@ class ReleaseAppearance(unittest.TestCase):
         project = ET.parse(DESKTOP / 'NajmCard.Desktop.csproj').getroot()
         manifest = project.find('.//ApplicationManifest')
         self.assertIsNotNone(manifest, 'Windows must receive an explicit DPI awareness declaration')
-        self.assertIn('PerMonitorV2', (DESKTOP / manifest.text).read_text())
+        self.assertIn('PerMonitorV2', (DESKTOP / manifest.text).read_text(encoding="utf-8"))
 
     def test_about_dialog_uses_the_current_version_and_identity(self):
-        source = (DESKTOP / 'MainWindow.xaml.cs').read_text()
+        source = (DESKTOP / 'MainWindow.xaml.cs').read_text(encoding="utf-8")
         about = source.split('private void About_Click', 1)[1].split('private static string TrialNotice', 1)[0]
         self.assertNotIn('0.1.0', about)
         self.assertNotIn('عنابية', about)
         self.assertIn('ProductVersionLabel.Text', about)
 
     def test_progress_dialog_can_grow_for_long_failure_messages(self):
-        source = (DESKTOP / 'Views/VoucherOperationProgressWindow.cs').read_text()
+        source = (DESKTOP / 'Views/VoucherOperationProgressWindow.cs').read_text(encoding="utf-8")
         self.assertIn('SizeToContent=SizeToContent.Height', source)
         self.assertNotIn('MaxHeight=176', source)
 
