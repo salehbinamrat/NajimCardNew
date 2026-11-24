@@ -40,8 +40,8 @@ public sealed class VoucherDeliveryProgressCacheTests
             Assert.Equal(48,persisted.Count);
             Assert.Equal(42,persisted.Count(x=>x.DeliveryStatus=="SENT"));
             Assert.Equal(6,persisted.Count(x=>x.DeliveryStatus=="FAILED"));
-            var audit=Assert.Single(store.ReadRecentActivities(8).Where(x=>
-                x.Action=="إرسال دفعة كروت"));
+            var audit=Assert.Single(store.ReadRecentActivities(8),x=>
+                x.Action=="إرسال دفعة كروت");
             Assert.Equal("PARTIAL",audit.Status);
             Assert.Contains("ناجح 42 من 48",audit.Detail);
             Assert.Contains("فاشل 6",audit.Detail);
@@ -72,8 +72,8 @@ public sealed class VoucherDeliveryProgressCacheTests
                 cards[1]=session.BeginSend(cards[1]);
                 session.FinishSend(cards[1],"SENT");
             }
-            var audit=Assert.Single(store.ReadRecentActivities(8).Where(x=>
-                x.Action=="إرسال دفعة كروت"));
+            var audit=Assert.Single(store.ReadRecentActivities(8),x=>
+                x.Action=="إرسال دفعة كروت");
             Assert.Equal("SUCCESS",audit.Status);
             Assert.Contains("ناجح 3 من 3",audit.Detail);
         }
@@ -102,8 +102,8 @@ public sealed class VoucherDeliveryProgressCacheTests
             }
             var rows=store.GetBatchVouchers("userman","batch-perf");
             Assert.All(rows,row=>Assert.Equal("SENT",row.DeliveryStatus));
-            var audit=Assert.Single(store.ReadRecentActivities(8).Where(x=>
-                x.Action=="إرسال دفعة كروت"));
+            var audit=Assert.Single(store.ReadRecentActivities(8),x=>
+                x.Action=="إرسال دفعة كروت");
             Assert.Equal("SUCCESS",audit.Status);
             Assert.Contains("ناجح 2 من 2",audit.Detail);
             Assert.Contains("فاشل 0",audit.Detail);

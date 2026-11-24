@@ -61,8 +61,8 @@ public sealed class PppoeVoucherDeliveryTests
             Assert.Equal(missing,response.UncertainOutcome);
             Assert.Equal(["/ppp/secret/add"],client.Writes);
             var saved=store.GetVouchers();
-            Assert.Equal(state,Assert.Single(saved.Where(x=>x.Service=="pppoe")).DeliveryStatus);
-            Assert.Equal("CREATED",Assert.Single(saved.Where(x=>x.Service=="hotspot")).DeliveryStatus);
+            Assert.Equal(state,Assert.Single(saved,x=>x.Service=="pppoe").DeliveryStatus);
+            Assert.Equal("CREATED",Assert.Single(saved,x=>x.Service=="hotspot").DeliveryStatus);
             if(missing)
                 await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
                     new VoucherBatchDispatcher(new RouterGateway(client),store)

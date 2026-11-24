@@ -61,7 +61,7 @@ public sealed class LiveHotspotConnectedGroupTests
         Assert.Equal(5,rows.Count);
         Assert.Equal(2,rows.Count(x=>x.Origin==HotspotConnectionOrigin.UserManagerRadius));
         Assert.Equal(2,rows.Count(x=>x.Origin==HotspotConnectionOrigin.LocalHotspot));
-        Assert.Single(rows.Where(x=>x.Origin==HotspotConnectionOrigin.Unknown));
+        Assert.Single(rows,x=>x.Origin==HotspotConnectionOrigin.Unknown);
         Assert.Equal(1,api.Commands);
         Assert.Equal("10.0.1.2",rows[0].Address);
         Assert.Equal("AA:BB:CC:DD:EE:01",rows[0].MacAddress);

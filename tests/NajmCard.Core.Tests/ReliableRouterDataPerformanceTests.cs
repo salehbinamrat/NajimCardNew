@@ -88,8 +88,8 @@ public sealed class ReliableRouterDataPerformanceTests
         var snapshot=await new RouterGateway(router).ReadUmAccountsAsync();
         Assert.True(snapshot.IsComplete);
         Assert.Equal(1,router.UserReads);
-        Assert.Equal("استخدم",Assert.Single(snapshot.Rows.Where(x=>x.Name=="card-1")).Status);
-        Assert.Equal("صالح",Assert.Single(snapshot.Rows.Where(x=>x.Name=="card-2")).Status);
+        Assert.Equal("استخدم",Assert.Single(snapshot.Rows,x=>x.Name=="card-1").Status);
+        Assert.Equal("صالح",Assert.Single(snapshot.Rows,x=>x.Name=="card-2").Status);
     }
 
     private sealed class VersionRouter : IRouterCommandClient
@@ -173,8 +173,8 @@ public sealed class ReliableRouterDataPerformanceTests
         var data=await new RouterGateway(new PlansRouter()).ReadUmPlansAsync();
         Assert.True(data.IsComplete);
         var rows=data.Rows.Where(x=>x.Kind=="Limitation").ToArray();
-        Assert.Equal("Gold، Silver",Assert.Single(rows.Where(x=>x.Name=="LimitA")).AssociatedLimits);
-        Assert.Equal("Gold",Assert.Single(rows.Where(x=>x.Name=="LimitB")).AssociatedLimits);
-        Assert.Equal("LimitA، LimitB",Assert.Single(data.Rows.Where(x=>x.Name=="Gold")).AssociatedLimits);
+        Assert.Equal("Gold، Silver",Assert.Single(rows,x=>x.Name=="LimitA").AssociatedLimits);
+        Assert.Equal("Gold",Assert.Single(rows,x=>x.Name=="LimitB").AssociatedLimits);
+        Assert.Equal("LimitA، LimitB",Assert.Single(data.Rows,x=>x.Name=="Gold").AssociatedLimits);
     }
 }

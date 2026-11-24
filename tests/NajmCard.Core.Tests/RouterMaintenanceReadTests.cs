@@ -12,7 +12,7 @@ public sealed class RouterMaintenanceReadTests
     {
         public List<(string Name,IReadOnlyDictionary<string,string>? Args)> Calls = [];
         public string CountValue="2";
-        public bool RejectCount,RejectNeighbors;
+        public bool RejectNeighbors;
         public bool UnknownServerState;
         public Task<RouterCommandReply> CommandWithReceiptAsync(string command,
             IReadOnlyDictionary<string,string>? attributes=null,CancellationToken cancellationToken=default)
@@ -23,7 +23,6 @@ public sealed class RouterMaintenanceReadTests
             Assert.NotNull(attributes);
             Assert.Single(attributes);
             Assert.Equal("",attributes["count-only"]);
-            if(RejectCount)throw new RouterOsTrapException("not enough permissions");
             return Task.FromResult(new RouterCommandReply([],new Dictionary<string,string>
                 {["ret"]=CountValue}));
         }

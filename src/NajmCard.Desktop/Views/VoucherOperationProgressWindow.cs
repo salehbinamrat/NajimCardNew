@@ -13,7 +13,7 @@ namespace NajmCard.Desktop.Views;
 internal sealed class VoucherOperationProgressWindow : Window
 {
     private readonly TextBlock _stage;
-    private readonly TextBlock _confirmed=new(){Foreground=Brushes.White,FontSize=12,TextWrapping=TextWrapping.Wrap};
+    private readonly TextBlock _confirmed=new(){Foreground=new SolidColorBrush(Color.FromRgb(11,44,96)),FontSize=12,TextWrapping=TextWrapping.Wrap};
     private readonly ProgressBar _indicator;
 
     public VoucherOperationProgressWindow(string operation)
@@ -23,19 +23,20 @@ internal sealed class VoucherOperationProgressWindow : Window
         MinWidth=395;
         MaxWidth=395;
         MinHeight=176;
-        MaxHeight=176;
+        SizeToContent=SizeToContent.Height;
+        MaxHeight=Math.Max(MinHeight,SystemParameters.WorkArea.Height);
         ResizeMode=ResizeMode.NoResize;
         WindowStyle=WindowStyle.None;
         WindowStartupLocation=WindowStartupLocation.CenterOwner;
         ShowInTaskbar=false;
-        Background=(Brush)new BrushConverter().ConvertFrom("#341326")!;
+        Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!;
         FlowDirection=FlowDirection.RightToLeft;
         FontFamily=new FontFamily("Arial");
 
         var heading=new TextBlock
         {
             Text=operation,
-            Foreground=(Brush)new BrushConverter().ConvertFrom("#F4D18C")!,
+            Foreground=(Brush)new BrushConverter().ConvertFrom("#0B2C60")!,
             FontSize=17,
             FontWeight=FontWeights.Bold,
             TextWrapping=TextWrapping.Wrap,
@@ -44,7 +45,7 @@ internal sealed class VoucherOperationProgressWindow : Window
         _stage=new TextBlock
         {
             Text="جار التحقق من إعدادات العملية...",
-            Foreground=Brushes.White,
+            Foreground=new SolidColorBrush(Color.FromRgb(11,44,96)),
             FontSize=13,
             TextWrapping=TextWrapping.Wrap,
             MinHeight=42,
@@ -54,8 +55,8 @@ internal sealed class VoucherOperationProgressWindow : Window
         {
             Height=8,
             IsIndeterminate=true,
-            Foreground=(Brush)new BrushConverter().ConvertFrom("#E4B863")!,
-            Background=(Brush)new BrushConverter().ConvertFrom("#5B3047")!,
+            Foreground=(Brush)new BrushConverter().ConvertFrom("#075DFF")!,
+            Background=(Brush)new BrushConverter().ConvertFrom("#DDE5F1")!,
             Margin=new Thickness(0,8,0,1)
         };
         var content=new StackPanel();
@@ -65,12 +66,17 @@ internal sealed class VoucherOperationProgressWindow : Window
         content.Children.Add(_indicator);
         Content=new Border
         {
-            Background=(Brush)new BrushConverter().ConvertFrom("#341326")!,
-            BorderBrush=(Brush)new BrushConverter().ConvertFrom("#CB9F64")!,
+            Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!,
+            BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!,
             BorderThickness=new Thickness(2),
             CornerRadius=new CornerRadius(11),
             Padding=new Thickness(17,14,17,12),
-            Child=content
+            Child=new ScrollViewer
+            {
+                VerticalScrollBarVisibility=ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,
+                Content=content
+            }
         };
     }
 

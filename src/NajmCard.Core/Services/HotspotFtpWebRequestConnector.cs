@@ -82,11 +82,13 @@ internal sealed class HotspotFtpWebRequestSession(HotspotFtpConnection credentia
             ?? throw new IOException("تعذر قراءة قائمة ملفات FTP.");
         using var reader=new StreamReader(source,new UTF8Encoding(false,true),
             detectEncodingFromByteOrderMarks:true);
+        // The request must remain abortable during the data stream, not only
+        // while receiving its response headers. EndOfStream performs a blocking read.
+        using var cancelBody=ct.Register(static value=>((FtpWebRequest)value!).Abort(),request);
         var names=new List<string>();
-        while(!reader.EndOfStream)
+        while(await reader.ReadLineAsync(ct) is { } raw)
         {
             ct.ThrowIfCancellationRequested();
-            var raw=await reader.ReadLineAsync(ct);
             if(string.IsNullOrEmpty(raw))continue;
             // NLST may return "file", "/hotspot/file" or "hotspot/file"
             // depending on RouterOS version. Strip ONLY the requested prefix.

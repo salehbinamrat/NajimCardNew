@@ -29,7 +29,7 @@ class IndependentProductContract(unittest.TestCase):
             self.assertIn(name, package)
         self.assertIn("arch: [x86, x64]", ci)
         self.assertIn("needs: [windows-core, windows-release]", ci)
-        self.assertIn("NajimCardNew-v0.1.0-", ci)
+        self.assertIn("NajimCardNew-v${{ env.RELEASE_VERSION }}-", ci)
 
     def test_independent_user_data_and_licensing(self):
         paths = [

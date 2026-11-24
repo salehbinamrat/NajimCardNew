@@ -152,10 +152,10 @@ internal static class UmUi
         // a scoped LIGHT burgundy / WHITE palette, including month-year buttons.
         // Calendar's explicit child-style properties are reliable even if the
         // default Windows theme supplies its own CalendarItem template.
-        var lightBurgundy=Solid("#AF5472");
-        var highlightedBurgundy=Solid("#C47490");
-        var selectedBurgundy=Solid("#7D2A4C");
-        var popupBorder=Solid("#823452");
+        var lightBurgundy=Solid("#075DFF");
+        var highlightedBurgundy=Solid("#276AD9");
+        var selectedBurgundy=Solid("#0B2C60");
+        var popupBorder=Solid("#075DFF");
         var days=new Style(typeof(CalendarDayButton));
         days.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.White));
         days.Setters.Add(new Setter(Control.BackgroundProperty,lightBurgundy));
@@ -368,7 +368,7 @@ internal static class UmUi
         {
             var highlighted=new Trigger{Property=triggerProperty,Value=true};
             highlighted.Setters.Add(new Setter(Control.BackgroundProperty,
-                Solid("#F0E2CC")));
+                Solid("#D9E4F4")));
             highlighted.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
             template.Triggers.Add(highlighted);
         }
@@ -388,7 +388,7 @@ internal static class UmUi
             HeadersVisibility=DataGridHeadersVisibility.Column,
             GridLinesVisibility=DataGridGridLinesVisibility.Horizontal,
             HorizontalGridLinesBrush=FromTheme("LineBrush","#A6BCD7"),
-            RowBackground=Light,AlternatingRowBackground=Solid("#F4E3D7"),
+            RowBackground=Light,AlternatingRowBackground=Solid("#F6F8FC"),
             AlternationCount=2,RowHeight=35,ColumnHeaderHeight=36,
             EnableRowVirtualization=true,EnableColumnVirtualization=true,
             BorderBrush=Gray,BorderThickness=new Thickness(1),
@@ -477,7 +477,7 @@ internal static class UmUi
     {
         var item=new Border
         {
-            Background=background??Solid("#F4E3D7"),
+            Background=background??Solid("#F6F8FC"),
             Padding=new Thickness(7,4,7,4),
             CornerRadius=new CornerRadius(7),
             Margin=new Thickness(2)

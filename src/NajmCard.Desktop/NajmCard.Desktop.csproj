@@ -8,7 +8,8 @@
     <AssemblyTitle>تريم كارد</AssemblyTitle>
     <RootNamespace>NajmCard.Desktop</RootNamespace>
     <ApplicationIcon>Assets\NajmCard.ico</ApplicationIcon>
-    <Version>0.1.0</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0-rc.1</Version>
   </PropertyGroup>
   <!-- Works also when a developer runs dotnet build or publish manually. -->
   <Target Name="GenerateNajmIcon" BeforeTargets="PrepareForBuild"
@@ -26,6 +27,7 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <!-- Managed RFC 8032 Ed25519 verification for the signed shared license feed. -->
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+    <!-- WindowsDesktop supplies ProtectedData; the portable Delivery tests
+         retain their explicit package because they do not reference WPF. -->
   </ItemGroup>
 </Project>

@@ -14,9 +14,9 @@ public partial class PrintingView
     private static Style BurgundyDropdownItemStyle()
     {
         if(cachedBurgundyItem is not null)return cachedBurgundyItem;
-        var normal=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
-        var highlighted=(Brush)new BrushConverter().ConvertFrom("#F0E2CC")!;
-        var selected=(Brush)new BrushConverter().ConvertFrom("#E8D2B5")!;
+        var normal=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!;
+        var highlighted=(Brush)new BrushConverter().ConvertFrom("#D9E4F4")!;
+        var selected=(Brush)new BrushConverter().ConvertFrom("#C5D6F0")!;
         var style=new Style(typeof(ComboBoxItem));
         style.Setters.Add(new Setter(Control.BackgroundProperty,normal));
         style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
@@ -63,10 +63,10 @@ public partial class PrintingView
         var style=new Style(typeof(ComboBox),
             (Style)Application.Current.FindResource("DarkComboBox"));
         style.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
+            (Brush)new BrushConverter().ConvertFrom("#E8EDF5")!));
         style.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Black));
         style.Setters.Add(new Setter(Control.BorderBrushProperty,
-            (Brush)new BrushConverter().ConvertFrom("#75203E")!));
+            (Brush)new BrushConverter().ConvertFrom("#075DFF")!));
         style.Setters.Add(new Setter(ComboBox.MaxDropDownHeightProperty,235d));
         style.Setters.Add(new Setter(Control.FontFamilyProperty,new FontFamily("Arial")));
         style.Setters.Add(new Setter(Control.FontWeightProperty,FontWeights.SemiBold));

@@ -32,7 +32,6 @@ public sealed class UserManagerV6DataSafetyTests
         public int UserReads,TargetReads;
         public List<string> Removed=[];
         public Action? BeforeTargetRead;
-        public bool DenyLimits;
         public Exception? TargetError;
 
         public Task<IReadOnlyList<IReadOnlyDictionary<string,string>>> CommandAsync(
@@ -45,8 +44,6 @@ public sealed class UserManagerV6DataSafetyTests
                 Removed.Add(attributes![".id"]);
                 return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>([]);
             }
-            if(DenyLimits&&command=="/tool/user-manager/profile/print")
-                throw new RouterOsTrapException("permission denied");
             if(command=="/tool/user-manager/user/print")UserReads++;
             IEnumerable<Dictionary<string,string>> rows=command switch
             {

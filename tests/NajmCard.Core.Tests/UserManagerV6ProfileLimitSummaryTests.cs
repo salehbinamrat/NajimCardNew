@@ -50,12 +50,12 @@ public sealed class UserManagerV6ProfileLimitSummaryTests
         var spy=new Spy();
         var rows=await new RouterGateway(spy).ReadUserManagerV6ProfileLimitSummaryAsync();
         Assert.Equal(2,rows.Count);
-        var gold=Assert.Single(rows.Where(x=>x.ProfileName=="gold"));
+        var gold=Assert.Single(rows,x=>x.ProfileName=="gold");
         Assert.Equal(1024L*1024,gold.EffectiveTransferLimitBytes);
         Assert.Equal(2,gold.LinkedLimitationCount);
         Assert.Contains("limit-2M",gold.LimitationNames);
         Assert.Contains("limit-1M",gold.LimitationNames);
-        var silver=Assert.Single(rows.Where(x=>x.ProfileName=="silver"));
+        var silver=Assert.Single(rows,x=>x.ProfileName=="silver");
         Assert.Equal(0,silver.EffectiveTransferLimitBytes);
         Assert.Equal(1,silver.LinkedLimitationCount);
         Assert.Equal([

@@ -7,10 +7,14 @@
 #ifndef SourceDir
   #error SourceDir must be passed from the packaging workflow
 #endif
+#ifndef NumericVersion
+  #error NumericVersion must be passed from the packaging workflow
+#endif
 [Setup]
 AppId={{CF6AAB62-DA00-49AF-B3D2-1DD83FF90143}
 AppName=تريم كارد
 AppVersion={#AppVersion}
+VersionInfoVersion={#NumericVersion}
 AppPublisher=تريم كارد
 DefaultDirName={localappdata}\Programs\NajmCardNew
 DefaultGroupName=تريم كارد

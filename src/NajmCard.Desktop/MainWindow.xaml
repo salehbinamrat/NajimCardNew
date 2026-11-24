@@ -29,7 +29,7 @@
                         <Button Content="حول تريم كارد" Style="{StaticResource OutlineButton}" Margin="0,3,0,10" Click="About_Click"/>
                         <TextBlock Text="خدمة العملاء: لم تُربط بعد" Foreground="#E3EDFF" TextWrapping="Wrap" Margin="5,8"/>
                     </StackPanel>
-                    <TextBlock DockPanel.Dock="Bottom" Text="تريم كارد 0.1.0&#10;C# / .NET 10" Foreground="#E9F4FF" HorizontalAlignment="Center" TextAlignment="Center" FontSize="12"/>
+                    <TextBlock x:Name="ProductVersionLabel" DockPanel.Dock="Bottom" Text="تريم كارد" Foreground="#E9F4FF" HorizontalAlignment="Center" TextAlignment="Center" FontSize="12"/>
                 </DockPanel>
             </Border>
             <!-- RouterOS login, independent 20-day local trial and signed shared paid licensing. -->

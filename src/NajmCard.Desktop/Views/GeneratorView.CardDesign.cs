@@ -22,8 +22,8 @@ public partial class GeneratorView
         surface.Padding=new Thickness(4);
         surface.Margin=new Thickness(0);
         surface.CornerRadius=new CornerRadius(9);
-        surface.Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
-        surface.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
+        surface.Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!;
+        surface.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!;
         RestyleCompactText(content);
         return surface;
     }

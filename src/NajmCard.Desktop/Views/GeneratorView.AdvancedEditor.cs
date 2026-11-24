@@ -28,7 +28,7 @@ public partial class GeneratorView
                 Width=860,Height=630,MinWidth=740,MinHeight=540,
                 WindowStartupLocation=WindowStartupLocation.CenterOwner,
                 Owner=Window.GetWindow(this),FlowDirection=FlowDirection.RightToLeft,
-                Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!
+                Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!
             };
             // One cohesive modal: fixed header/actions and grouped, uniformly
             // sized cream controls. The editable values remain in the original
@@ -66,7 +66,7 @@ public partial class GeneratorView
             save.Foreground=Brushes.White;
             var cancel=PageUi.Button("إلغاء",false);
             cancel.MinWidth=95;cancel.Height=38;cancel.Margin=new Thickness(3);
-            cancel.Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
+            cancel.Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!;
             cancel.Foreground=Brushes.Black;
             cancel.Click+=(_,_)=>popup.Close();
             var saveRow=new StackPanel
@@ -116,8 +116,8 @@ public partial class GeneratorView
                 {
                     Text=value,FontFamily=new FontFamily("Arial"),
                     FontSize=13,Foreground=Brushes.Black,
-                    Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,
-                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
+                    Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!,
+                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!,
                     BorderThickness=new Thickness(1),Height=34,MinHeight=34,MaxHeight=34,
                     VerticalContentAlignment=VerticalAlignment.Center,
                     Padding=new Thickness(9,4,9,4),
@@ -154,7 +154,7 @@ public partial class GeneratorView
                 arrow.Margin=new Thickness(3,0,0,0);
                 arrow.Background=(Brush)new BrushConverter().ConvertFrom("#F1DBCC")!;
                 arrow.Foreground=Brushes.Black;
-                arrow.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
+                arrow.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!;
                 entry.Margin=new Thickness(0);entry.Foreground=Brushes.Black;
                 entry.CaretBrush=Brushes.Black;
                 DockPanel.SetDock(arrow,Dock.Left);
@@ -172,16 +172,16 @@ public partial class GeneratorView
                     option.MinWidth=64;option.MinHeight=32;
                     option.Margin=new Thickness(2);option.Padding=new Thickness(7,4,7,4);
                     option.FontSize=12;option.Foreground=Brushes.Black;
-                    option.Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
-                    option.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
+                    option.Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!;
+                    option.BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!;
                     option.BorderThickness=new Thickness(1);
                     option.Click+=(_,_)=>{entry.Text=value;popupChoices.IsOpen=false;};
                     list.Children.Add(option);
                 }
                 popupChoices.Child=new Border
                 {
-                    Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,
-                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
+                    Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!,
+                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!,
                     BorderThickness=new Thickness(1),Padding=new Thickness(6),
                     CornerRadius=new CornerRadius(7),Child=list
                 };
@@ -227,9 +227,9 @@ public partial class GeneratorView
                 {
                     Style=comboStyle,Height=34,MinHeight=34,MaxHeight=34,
                     ItemsSource=choices,MaxDropDownHeight=250,
-                    Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,
+                    Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!,
                     Foreground=Brushes.Black,
-                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
+                    BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!,
                     BorderThickness=new Thickness(1),
                     Margin=new Thickness(0,5,0,0),
                     HorizontalAlignment=HorizontalAlignment.Stretch
@@ -244,7 +244,7 @@ public partial class GeneratorView
                 swatch.SetValue(Border.CornerRadiusProperty,new CornerRadius(4));
                 swatch.SetValue(Border.BorderThicknessProperty,new Thickness(1));
                 swatch.SetValue(Border.BorderBrushProperty,
-                    (Brush)new BrushConverter().ConvertFrom("#75203E")!);
+                    (Brush)new BrushConverter().ConvertFrom("#075DFF")!);
                 swatch.SetValue(FrameworkElement.MarginProperty,new Thickness(0,0,7,0));
                 swatch.SetBinding(Border.BackgroundProperty,
                     new System.Windows.Data.Binding(nameof(CardPaletteEntry.Swatch)));

@@ -15,13 +15,15 @@ namespace NajmCard.VisualSmoke;
 /// <summary>
 /// Renders the production WPF shell and card creator without a router.
 /// </summary>
-internal static class Program
+internal static partial class Program
 {
     [STAThread]
     private static int Main(string[] args)
     {
         try
         {
+            if(args.Length>0&&args[0].StartsWith("--lifecycle-",StringComparison.Ordinal))
+                return RunLifecycleProbe(args);
             var destination=Path.GetFullPath(args.Length>0
                 ? args[0] : "out/creator-1260x730.png");
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
@@ -114,7 +116,7 @@ internal static class Program
             if(!serviceNames.SequenceEqual(new[]{"يوزمنجر v6","هوتسبوت","برودباند PPPoE"}))
                 throw new InvalidDataException("Creator tabs are not User Manager, Hotspot, Broadband.");
             if(serviceButtons[0].Background is not SolidColorBrush activeColor ||
-                activeColor.Color!=Color.FromRgb(0xEA,0xC7,0x7C))
+                activeColor.Color!=Color.FromRgb(0x07,0x5D,0xFF))
                 throw new InvalidDataException("User Manager is not visually active at first paint.");
 
             var workspace=(DockPanel)creator.Content;
@@ -192,6 +194,11 @@ internal static class Program
                     "Settings view must use the shared silver card background.");
             Capture(root,width,height,Path.Combine(Path.GetDirectoryName(destination)!,
                 "settings-1260x730.png"));
+            AuditAdditionalPages(root,pageHost,window,offline,store,width,height,
+                Path.GetDirectoryName(destination)!);
+            AuditLiveShell(offline,Path.GetDirectoryName(destination)!);
+            WriteReleaseAudit(Path.GetDirectoryName(destination)!);
+            window.Close();
             return 0;
         }
         catch(Exception ex)
@@ -203,14 +210,7 @@ internal static class Program
 
     private static void Capture(Grid root,int width,int height,string destination)
     {
-        var bitmap=new RenderTargetBitmap(width,height,96,96,PixelFormats.Pbgra32);
-        bitmap.Render(root);
-        var encoder=new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using(var stream=File.Create(destination))encoder.Save(stream);
-        if(new FileInfo(destination).Length<10_000)
-            throw new InvalidDataException("Rendered UI PNG appears empty or incomplete.");
-        Console.WriteLine("WPF screenshot: "+destination);
+        CaptureDpiVariants(root,width,height,destination);
     }
 
     private static void VerifyDashboardPanels(DashboardView dashboard)
@@ -492,6 +492,8 @@ internal static class Program
             CancellationToken cancellationToken=default)
         {
             // Read-only fake: offscreen constructor cannot contact a router.
+            if(!command.EndsWith("/print",StringComparison.Ordinal))
+                throw new InvalidOperationException("The visual fixture rejects router mutations: "+command);
             if(withProfiles && command=="/tool/user-manager/profile/print")
                 return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string,string>>>(
                     [new Dictionary<string,string>{{".id","*1"},{"name","200RY"}}]);

@@ -29,7 +29,7 @@ public sealed class RouterOsExactIdQueryTcpTests
             Assert.Equal("/tool/user-manager/user/print",request[0]);
             Assert.Contains("=.proplist=.id,username,disabled,actual-profile",request);
             Assert.Contains("?.id=*A",request);
-            Assert.Single(request.Where(x=>x.StartsWith("?.id=",StringComparison.Ordinal)));
+            Assert.Single(request,x=>x.StartsWith("?.id=",StringComparison.Ordinal));
             Assert.Equal(3,request.Count);
 
             await RouterOsProtocol.WriteSentenceAsync(stream,

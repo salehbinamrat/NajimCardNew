@@ -24,7 +24,7 @@ public sealed class SavedRouterConnectionTests : IDisposable
         var records=new SavedRouterConnectionStore(folder).Load();
         Assert.Equal(2,records.Count);
         Assert.Contains(records,x=>x.Mode=="remote" && x.UseTls && x.Host=="vpn.example");
-        Assert.Equal("",Assert.Single(records.Where(x=>x.Mode=="local")).Password);
+        Assert.Equal("",Assert.Single(records,x=>x.Mode=="local").Password);
         Assert.DoesNotContain("myPrivateRouterPassword!",File.ReadAllText(Path.Combine(folder,"profiles.json")));
     }
 

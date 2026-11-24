@@ -33,7 +33,10 @@ class ReferenceImageFinalFit(unittest.TestCase):
         # without either adaptive scaling or a content-only vertical scroll.
         # The six-button footer must never disappear off the physical display.
         win=(ROOT/"MainWindow.xaml").read_text(encoding="utf-8")
-        self.assertIn("SystemParameters.WorkArea",self.main)
+        self.assertIn("WindowMonitor.WorkArea(this)",self.main)
+        monitor=(ROOT/"Services/WindowMonitor.cs").read_text(encoding="utf-8")
+        self.assertIn("GetMonitorInfo",monitor)
+        self.assertIn("SystemParameters.WorkArea",monitor)
         self.assertIn("MinHeight",win)
         self.assertIn("VerticalScrollBarVisibility=ScrollBarVisibility.Hidden",self.workspace)
         self.assertIn("HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled",self.workspace)

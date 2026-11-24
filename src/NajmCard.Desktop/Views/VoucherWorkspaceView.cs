@@ -36,21 +36,21 @@ public sealed class VoucherWorkspaceView : UserControl
         creator.RefreshPageCount();
 
         var root=new DockPanel{LastChildFill=true,FlowDirection=FlowDirection.RightToLeft,
-            Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!};
+            Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!};
         // Keep the creator's compact dimensions on the shared dark templates.
         var dropdown=new Style(typeof(ComboBox),(Style)Application.Current.FindResource("DarkComboBox"));
         dropdown.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,30d));
         dropdown.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty,30d));
         dropdown.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
+            (Brush)new BrushConverter().ConvertFrom("#E8EDF5")!));
         dropdown.Setters.Add(new Setter(Control.ForegroundProperty,
             (Brush)new BrushConverter().ConvertFrom("#000000")!));
         dropdown.Setters.Add(new Setter(Control.BorderBrushProperty,
-            (Brush)new BrushConverter().ConvertFrom("#75203E")!));
+            (Brush)new BrushConverter().ConvertFrom("#075DFF")!));
         // The global dark ComboBox template creates white TextBlocks inside
         // SelectionBoxItem. Explicit local item text fixes contrast on cream
         // WITHOUT changing the dark sidebar or the application's theme.
-        var cream=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
+        var cream=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!;
         var maroon=(Brush)new BrushConverter().ConvertFrom("#000000")!;
         // Cream input dropdowns need cream rows and maroon text in every
         // state; the shared burgundy popup style must not obscure the list.
@@ -74,11 +74,11 @@ public sealed class VoucherWorkspaceView : UserControl
         optionStyle.Setters.Add(new Setter(Control.TemplateProperty,optionControlTemplate));
         var hovered=new Trigger{Property=ComboBoxItem.IsHighlightedProperty,Value=true};
         hovered.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#F0E2CC")!));
+            (Brush)new BrushConverter().ConvertFrom("#D9E4F4")!));
         optionStyle.Triggers.Add(hovered);
         var selected=new Trigger{Property=ComboBoxItem.IsSelectedProperty,Value=true};
         selected.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#E8D2B5")!));
+            (Brush)new BrushConverter().ConvertFrom("#C5D6F0")!));
         optionStyle.Triggers.Add(selected);
         dropdown.Setters.Add(new Setter(ItemsControl.ItemContainerStyleProperty,optionStyle));
         dropdown.Setters.Add(new Setter(ComboBox.MaxDropDownHeightProperty,240d));
@@ -102,11 +102,11 @@ public sealed class VoucherWorkspaceView : UserControl
         input.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty,30d));
         input.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(5,2,5,2)));
         input.Setters.Add(new Setter(Control.BackgroundProperty,
-            (Brush)new BrushConverter().ConvertFrom("#FFF4DF")!));
+            (Brush)new BrushConverter().ConvertFrom("#E8EDF5")!));
         input.Setters.Add(new Setter(Control.ForegroundProperty,
             (Brush)new BrushConverter().ConvertFrom("#000000")!));
         input.Setters.Add(new Setter(Control.BorderBrushProperty,
-            (Brush)new BrushConverter().ConvertFrom("#75203E")!));
+            (Brush)new BrushConverter().ConvertFrom("#075DFF")!));
         root.Resources[typeof(TextBox)]=input;
         var fields=new Grid{ClipToBounds=true,UseLayoutRounding=true};
         fields.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
@@ -137,20 +137,19 @@ public sealed class VoucherWorkspaceView : UserControl
             foreach(var (name,btn) in tabButtons)
             {
                 bool selected=name==creator.CurrentService;
-                // Only the active service uses the strong gold highlight.
-                // A permanent gold Hotspot tab previously made it look active
-                // even when User Manager was the selected default.
-                var background=selected?"#EAC77C":name switch
+                // Only the selected service uses electric blue; the other
+                // services retain the neutral silver surface.
+                var background=selected?"#075DFF":name switch
                 {
-                    "hotspot"=>"#F4E0D3",
-                    "userman"=>"#F2DFCF",
-                    _=>"#EEE0D7"
+                    "hotspot"=>"#E8EDF5",
+                    "userman"=>"#E8EDF5",
+                    _=>"#E8EDF5"
                 };
                 btn.Background=(Brush)new BrushConverter().ConvertFrom(background)!;
                 btn.Foreground=(Brush)new BrushConverter().ConvertFrom(
-                    selected?"#49142C":"#642E45")!;
+                    selected?"#FFFFFF":"#0B2C60")!;
                 btn.BorderBrush=(Brush)new BrushConverter().ConvertFrom(
-                    selected?"#C9A45B":"#CCAA9A")!;
+                    selected?"#075DFF":"#A6BCD7")!;
                 btn.BorderThickness=new Thickness(selected?2:1);
                 btn.Opacity=1.0;
                 var label=(TextBlock)btn.Content;
@@ -179,13 +178,13 @@ public sealed class VoucherWorkspaceView : UserControl
         // Footer remains visible while forms and print preview are scrolled.
         var footer=new StackPanel
         {
-            Background=(Brush)new BrushConverter().ConvertFrom("#270E20")!,
+            Background=(Brush)new BrushConverter().ConvertFrom("#DDE5F1")!,
             Margin=new Thickness(0,2,0,0)
         };
         var status=new TextBlock
         {
             Text="احفظ إعدادات الباقة والتصميم والطباعة من زر الحفظ بجانب عنوان الصفحة. طباعة الدفعات المؤكدة فقط.",
-            Foreground=new SolidColorBrush(Color.FromRgb(255,224,169)),
+            Foreground=new SolidColorBrush(Color.FromRgb(11,44,96)),
             TextWrapping=TextWrapping.Wrap,FontSize=11,
             FontWeight=FontWeights.SemiBold,
             TextAlignment=TextAlignment.Center,
@@ -228,7 +227,7 @@ public sealed class VoucherWorkspaceView : UserControl
             return button;
         }
         var actions=new[]{
-            MakeButton("إنشاء وإرسال وحفظ","#EAC477","#49142C"),
+            MakeButton("إنشاء وإرسال وحفظ","#CDDAE9","#0B2C60"),
             MakeButton("إنشاء وإرسال فقط","#13653E","#FFF5E6"),
             MakeButton("معاينة قبل الإنشاء","#1756AE","#FFFFFF"),
             MakeButton("ملف PDF","#641A81","#FFF5E6"),

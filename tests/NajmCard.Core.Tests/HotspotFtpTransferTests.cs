@@ -189,6 +189,29 @@ public sealed class HotspotFtpTransferTests
     }
 
     [Fact]
+    public async Task FailedUploadKeepsTheCompletedBackupAndDoesNotRetry()
+    {
+        var parent=Temp();
+        try
+        {
+            var local=Directory.CreateDirectory(Path.Combine(parent,"local")).FullName;
+            File.WriteAllText(Path.Combine(local,"login.html"),"new");
+            var ftp=new FakeFtp{FailUpload=true};
+            ftp.Files["hotspot/login.html"]=System.Text.Encoding.UTF8.GetBytes("original");
+            var backup=Path.Combine(parent,"recovery.zip");
+            await Assert.ThrowsAnyAsync<IOException>(()=>
+                new HotspotFtpTransferService(new FakeConnector(ftp)).UploadWithBackupAsync(
+                    Connection(),HotspotTemplateWorkspace.Open(local),"hotspot",backup));
+            using var zip=ZipFile.OpenRead(backup);
+            using var reader=new StreamReader(zip.GetEntry("login.html")!.Open());
+            Assert.Equal("original",reader.ReadToEnd());
+            Assert.Single(ftp.Events,e=>e.StartsWith("PUT "));
+            Assert.Equal("original",System.Text.Encoding.UTF8.GetString(ftp.Files["hotspot/login.html"]));
+        }
+        finally{Directory.Delete(parent,true);}
+    }
+
+    [Fact]
     public async Task Failed_Remote_Backup_Stops_Upload_Without_Any_Ftp_Write()
     {
         var parent=Temp();

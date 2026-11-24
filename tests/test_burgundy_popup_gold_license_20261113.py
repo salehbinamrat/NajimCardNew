@@ -14,8 +14,8 @@ NS={"w":"http://schemas.microsoft.com/winfx/2006/xaml/presentation",
 class BurgundyPopupGoldLicenceTests(unittest.TestCase):
     def test_template_popup_cream_background_black_text_normal_and_hover(self):
         s=(VIEWS/"GeneratorView.DesignerPanel.cs").read_text(encoding="utf-8")
-        self.assertIn('ConvertFrom("#FFF4DF")',s)
-        self.assertIn('ConvertFrom("#F0E2CC")',s)
+        self.assertIn('ConvertFrom("#E8EDF5")',s)
+        self.assertIn('ConvertFrom("#D9E4F4")',s)
         self.assertIn('new Setter(Control.ForegroundProperty,Brushes.Black)',s)
         self.assertIn('label.SetValue(TextElement.ForegroundProperty,Brushes.Black)',s)
         self.assertIn('Header="قالب نجم نت الافتراضي",Style=themeItemStyle',s)
@@ -25,8 +25,8 @@ class BurgundyPopupGoldLicenceTests(unittest.TestCase):
 
     def test_um_calendar_popup_is_burgundy_white_without_changing_date_entry(self):
         s=(VIEWS/"UmUi.cs").read_text(encoding="utf-8")
-        self.assertIn('var lightBurgundy=Solid("#AF5472")',s)
-        self.assertIn('var highlightedBurgundy=Solid("#C47490")',s)
+        self.assertIn('var lightBurgundy=Solid("#075DFF")',s)
+        self.assertIn('var highlightedBurgundy=Solid("#276AD9")',s)
         self.assertIn("Calendar.CalendarDayButtonStyleProperty,days",s)
         self.assertIn("Calendar.CalendarButtonStyleProperty,monthButtons",s)
         self.assertIn("Calendar.CalendarItemStyleProperty,calendarItem",s)

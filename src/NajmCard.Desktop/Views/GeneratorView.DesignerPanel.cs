@@ -52,19 +52,19 @@ public partial class GeneratorView
             PlacementTarget=button,Placement=PlacementMode.Bottom,
             StaysOpen=false,AllowsTransparency=true
         };
-        var palette=new UniformGrid{Columns=6,Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!};
+        var palette=new UniformGrid{Columns=6,Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!};
         foreach(var hex in CardPaletteColors)
         {
             var sample=new Button{Width=25,Height=25,Margin=new Thickness(2),
                 Background=(Brush)new BrushConverter().ConvertFrom(hex)!,
-                BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
+                BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!,
                 BorderThickness=new Thickness(1),ToolTip="لون"};
             sample.Click+=(_,_)=>{target.Text=hex;popup.IsOpen=false;};
             palette.Children.Add(sample);
         }
         popup.Child=new Border
         {
-            Background=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!,BorderBrush=(Brush)new BrushConverter().ConvertFrom("#75203E")!,
+            Background=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!,BorderBrush=(Brush)new BrushConverter().ConvertFrom("#075DFF")!,
             BorderThickness=new Thickness(2),Padding=new Thickness(5),
             Child=palette
         };
@@ -111,15 +111,15 @@ public partial class GeneratorView
             button.Padding=new Thickness(3,1,3,1);
             button.FontSize=10;button.FontWeight=FontWeights.Bold;
             button.MinHeight=21;button.Foreground=Brushes.FloralWhite;
-            button.Background=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
+            button.Background=(Brush)new BrushConverter().ConvertFrom("#075DFF")!;
             toolbar.Children.Add(button);
         }
         // Explicit MenuItem controls need an explicit style; ContextMenu's
         // ItemContainerStyle alone can be ignored for prebuilt MenuItem rows.
         // Keep captions white in normal, hover and keyboard-highlight states.
-        var popupBurgundy=(Brush)new BrushConverter().ConvertFrom("#FFF4DF")!;
-        var hoveredBurgundy=(Brush)new BrushConverter().ConvertFrom("#F0E2CC")!;
-        var popupBorder=(Brush)new BrushConverter().ConvertFrom("#75203E")!;
+        var popupBurgundy=(Brush)new BrushConverter().ConvertFrom("#E8EDF5")!;
+        var hoveredBurgundy=(Brush)new BrushConverter().ConvertFrom("#D9E4F4")!;
+        var popupBorder=(Brush)new BrushConverter().ConvertFrom("#075DFF")!;
         var themeMenu=new ContextMenu
         {
             PlacementTarget=templateImage,Placement=PlacementMode.Bottom,
